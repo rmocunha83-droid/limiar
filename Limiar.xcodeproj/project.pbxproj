@@ -377,6 +377,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Limiar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Limiar;
@@ -402,6 +403,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Limiar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Limiar;
@@ -427,6 +429,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -447,6 +450,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -467,6 +471,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldAction/ShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -487,6 +492,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldAction/ShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -507,6 +513,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -527,6 +534,7 @@
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 384GU3R5AG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
