@@ -14,6 +14,7 @@ MARKETING = ROOT / "marketing"
 ASSETS = MARKETING / "assets"
 BRAND = MARKETING / "brand"
 APP_STORE = MARKETING / "app-store"
+PUBLIC_APP_STORE = ROOT / "app-store"
 SITE_ASSETS = MARKETING / "site" / "assets"
 
 GENERATED_SOURCE = Path(
@@ -50,7 +51,7 @@ def font(path: str, size: int) -> ImageFont.FreeTypeFont:
 
 
 def ensure_dirs() -> None:
-    for folder in (ASSETS, BRAND, APP_STORE, SITE_ASSETS):
+    for folder in (ASSETS, BRAND, APP_STORE, PUBLIC_APP_STORE, SITE_ASSETS):
         folder.mkdir(parents=True, exist_ok=True)
 
 
@@ -130,6 +131,115 @@ def draw_wrapped(
         bbox = draw.textbbox((x, y), line, font=font_obj)
         y = bbox[3] + line_spacing
     return y
+
+
+def draw_centered_wrapped(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    y: int,
+    font_obj: ImageFont.FreeTypeFont,
+    fill: tuple[int, int, int] | tuple[int, int, int, int],
+    max_width: int,
+    canvas_width: int,
+    line_spacing: int,
+) -> int:
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        test = word if not current else f"{current} {word}"
+        if draw.textbbox((0, 0), test, font=font_obj)[2] <= max_width:
+            current = test
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font_obj)
+        x = (canvas_width - (bbox[2] - bbox[0])) // 2
+        draw.text((x, y), line, font=font_obj, fill=fill)
+        y += (bbox[3] - bbox[1]) + line_spacing
+    return y
+
+
+def draw_instagram_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    size = x2 - x1
+    draw.rounded_rectangle(box, radius=max(18, size // 5), fill=(192, 54, 139, 255))
+    draw.ellipse((x1 + int(size * 0.04), y1 + int(size * 0.54), x1 + int(size * 0.58), y2 - int(size * 0.02)), fill=(245, 156, 70, 220))
+    draw.ellipse((x1 + int(size * 0.46), y1 + int(size * 0.02), x2 - int(size * 0.02), y1 + int(size * 0.5)), fill=(104, 74, 202, 210))
+    pad = int(size * 0.23)
+    draw.rounded_rectangle((x1 + pad, y1 + pad, x2 - pad, y2 - pad), radius=int(size * 0.18), outline=(255, 255, 255, 236), width=max(3, size // 14))
+    draw.ellipse((x1 + int(size * 0.42), y1 + int(size * 0.42), x1 + int(size * 0.58), y1 + int(size * 0.58)), outline=(255, 255, 255, 236), width=max(3, size // 16))
+    draw.ellipse((x1 + int(size * 0.66), y1 + int(size * 0.28), x1 + int(size * 0.74), y1 + int(size * 0.36)), fill=(255, 255, 255, 236))
+
+
+def draw_youtube_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=(x2 - x1) // 4, fill=(255, 0, 0, 255))
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    s = (x2 - x1) // 3
+    draw.polygon([(cx - s // 3, cy - s // 2), (cx - s // 3, cy + s // 2), (cx + s // 2, cy)], fill=(255, 255, 255, 255))
+
+
+def draw_tiktok_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    size = x2 - x1
+    draw.rounded_rectangle(box, radius=size // 5, fill=(5, 10, 11, 255))
+    note_font = font(ARIAL_BOLD, int(size * 0.72))
+    draw.text((x1 + int(size * 0.28), y1 + int(size * 0.13)), "♪", font=note_font, fill=(255, 45, 85, 255))
+    draw.text((x1 + int(size * 0.22), y1 + int(size * 0.08)), "♪", font=note_font, fill=(105, 201, 208, 255))
+    draw.text((x1 + int(size * 0.25), y1 + int(size * 0.1)), "♪", font=note_font, fill=(255, 255, 255, 255))
+
+
+def draw_x_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    size = x2 - x1
+    draw.rounded_rectangle(box, radius=size // 5, fill=(18, 22, 24, 255))
+    draw.line((x1 + size * 0.28, y1 + size * 0.26, x2 - size * 0.26, y2 - size * 0.25), fill=(255, 255, 255, 245), width=max(5, size // 12))
+    draw.line((x2 - size * 0.28, y1 + size * 0.26, x1 + size * 0.26, y2 - size * 0.25), fill=(255, 255, 255, 245), width=max(5, size // 12))
+
+
+def draw_screen_time_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    size = x2 - x1
+    draw.rounded_rectangle(box, radius=size // 4, fill=COLORS["sage"] + (255,))
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    r = int(size * 0.28)
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), outline=COLORS["deep_ink"] + (235,), width=max(4, size // 14))
+    draw.line((cx, cy, cx, cy - int(size * 0.18)), fill=COLORS["deep_ink"] + (235,), width=max(4, size // 16))
+    draw.line((cx, cy, cx + int(size * 0.16), cy + int(size * 0.1)), fill=COLORS["deep_ink"] + (235,), width=max(4, size // 16))
+
+
+def draw_book_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: tuple[int, int, int] = COLORS["sage"]) -> None:
+    x1, y1, x2, y2 = box
+    w = x2 - x1
+    draw.rounded_rectangle(box, radius=w // 5, fill=fill + (255,))
+    pad = int(w * 0.22)
+    mid = x1 + w // 2
+    top = y1 + pad
+    bottom = y2 - pad
+    stroke = COLORS["deep_ink"] + (235,)
+    draw.line((mid, top, mid, bottom), fill=stroke, width=max(3, w // 18))
+    draw.line((x1 + pad, top + 4, mid, top + int(w * 0.14)), fill=stroke, width=max(4, w // 16))
+    draw.line((x1 + pad, top + 4, x1 + pad, bottom - 4), fill=stroke, width=max(4, w // 16))
+    draw.line((x1 + pad, bottom - 4, mid, bottom), fill=stroke, width=max(4, w // 16))
+    draw.line((mid, top + int(w * 0.14), x2 - pad, top + 4), fill=stroke, width=max(4, w // 16))
+    draw.line((x2 - pad, top + 4, x2 - pad, bottom - 4), fill=stroke, width=max(4, w // 16))
+    draw.line((mid, bottom, x2 - pad, bottom - 4), fill=stroke, width=max(4, w // 16))
+
+
+def draw_return_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    size = x2 - x1
+    draw.rounded_rectangle(box, radius=size // 5, fill=COLORS["gold"] + (255,))
+    draw.arc((x1 + size * 0.22, y1 + size * 0.18, x2 - size * 0.18, y2 - size * 0.18), 45, 285, fill=COLORS["deep_ink"] + (245,), width=max(5, size // 13))
+    draw.polygon([(x1 + size * 0.28, y1 + size * 0.55), (x1 + size * 0.12, y1 + size * 0.58), (x1 + size * 0.21, y1 + size * 0.42)], fill=COLORS["deep_ink"] + (245,))
 
 
 def make_mark_svg() -> str:
@@ -261,7 +371,7 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
     y = 450
     panel((x, y, 1092, y + 312))
     draw.text((x + 28, y + 26), "APP BLOQUEADO", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
-    draw.rounded_rectangle((x + 28, y + 88, x + 142, y + 202), radius=24, fill=(179, 92, 146, 255))
+    draw_instagram_icon(draw, (x + 28, y + 88, x + 142, y + 202))
     draw.text((x + 170, y + 82), "Instagram", font=font(GEORGIA, 62), fill=COLORS["ivory"] + (255,))
     draw.text((x + 172, y + 158), "Você abriu as 21:42", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
 
@@ -302,7 +412,6 @@ def make_card(
     screenshot_path: Path | None,
     visual: Image.Image,
     accent: tuple[int, int, int],
-    phone_side: str = "right",
 ) -> None:
     size = (1290, 2796)
     card = gradient(size, COLORS["deep_ink_2"], COLORS["deep_ink"]).convert("RGBA")
@@ -320,35 +429,75 @@ def make_card(
         sd.rounded_rectangle((i, i, size[0] - i, size[1] - i), radius=80, outline=(0, 0, 0, alpha), width=10)
     card.alpha_composite(shade)
 
-    draw.text((88, 118), kicker.upper(), font=font(ARIAL_BOLD, 34), fill=COLORS["gold"] + (255,))
-    y = draw_wrapped(draw, headline, (88, 190), font(GEORGIA_BOLD, 92), COLORS["ivory"] + (255,), 1020, 22)
-    y = draw_wrapped(draw, body, (92, y + 34), font(ARIAL, 39), COLORS["soft_text"] + (255,), 920, 18)
+    draw.text((88, 112), kicker.upper(), font=font(ARIAL_BOLD, 34), fill=COLORS["gold"] + (255,))
+    y = draw_wrapped(draw, headline, (88, 184), font(GEORGIA_BOLD, 86), COLORS["ivory"] + (255,), 1010, 20)
+    y = draw_wrapped(draw, body, (92, y + 26), font(ARIAL, 37), COLORS["soft_text"] + (255,), 920, 16)
 
     draw.rounded_rectangle((88, 2440, 1202, 2596), radius=46, fill=COLORS["sage"] + (238,))
     draw.text((138, 2484), "Limiar", font=font(GEORGIA_BOLD, 60), fill=COLORS["deep_ink"] + (255,))
     draw.text((400, 2504), "Pausa espiritual antes do impulso", font=font(ARIAL_BOLD, 33), fill=COLORS["deep_ink"] + (220,))
 
     if screenshot_path and screenshot_path.exists():
-        framed = phone_frame(Image.open(screenshot_path), 1530)
-        x = size[0] - framed.width - 72 if phone_side == "right" else 72
-        if phone_side == "center":
-            x = (size[0] - framed.width) // 2
-        card.alpha_composite(framed, (x, 790))
-    else:
-        # Feature card with three quiet chips.
-        chip_y = 790
-        for label, detail in [
-            ("Escolha os apps", "Use o seletor nativo do Tempo de Uso."),
-            ("Leia com calma", "Trechos e reflexões de acordo com sua tradição."),
-            ("Retome consciente", "Libere por um tempo e volte com presença."),
-        ]:
-            draw.rounded_rectangle((104, chip_y, 1186, chip_y + 300), radius=42, fill=(5, 10, 11, 196), outline=accent + (118,), width=2)
-            draw.ellipse((144, chip_y + 72, 244, chip_y + 172), fill=accent + (255,))
-            draw.text((292, chip_y + 64), label, font=font(GEORGIA_BOLD, 50), fill=COLORS["ivory"] + (255,))
-            draw_wrapped(draw, detail, (294, chip_y + 138), font(ARIAL, 35), COLORS["soft_text"] + (255,), 760, 12)
-            chip_y += 356
+        framed = phone_frame(Image.open(screenshot_path), 1380)
+        x = (size[0] - framed.width) // 2
+        visual_y = max(740, y + 86)
+        visual_y = min(visual_y, 2384 - framed.height)
 
-    card.convert("RGB").save(APP_STORE / filename, quality=95)
+        glow = Image.new("RGBA", size, (0, 0, 0, 0))
+        gd = ImageDraw.Draw(glow)
+        gd.ellipse((x - 120, visual_y - 72, x + framed.width + 120, visual_y + framed.height + 128), fill=accent + (42,))
+        glow = glow.filter(ImageFilter.GaussianBlur(42))
+        card.alpha_composite(glow)
+
+        if filename.startswith("01"):
+            pill = (162, visual_y - 86, 1128, visual_y + 22)
+            draw.rounded_rectangle(pill, radius=36, fill=(5, 10, 11, 196), outline=COLORS["sage"] + (95,), width=2)
+            icon_x = pill[0] + 36
+            for icon_drawer in (draw_instagram_icon, draw_tiktok_icon, draw_youtube_icon, draw_x_icon):
+                icon_drawer(draw, (icon_x, pill[1] + 20, icon_x + 68, pill[1] + 88))
+                icon_x += 84
+            draw.text((icon_x + 12, pill[1] + 28), "Apps sociais ganham um limiar", font=font(ARIAL_BOLD, 34), fill=COLORS["ivory"] + (238,))
+
+        card.alpha_composite(framed, (x, visual_y))
+    else:
+        panel_x1, panel_y1, panel_x2, panel_y2 = 118, 760, 1172, 2246
+        draw.rounded_rectangle((panel_x1, panel_y1, panel_x2, panel_y2), radius=58, fill=(5, 10, 11, 184), outline=COLORS["sage"] + (88,), width=2)
+        draw.text((panel_x1 + 64, panel_y1 + 68), "Apps com limiar", font=font(GEORGIA_BOLD, 62), fill=COLORS["ivory"] + (255,))
+        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha onde você quer pausar antes de abrir.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
+
+        app_y = panel_y1 + 260
+        social_icons = [
+            ("Instagram", draw_instagram_icon),
+            ("TikTok", draw_tiktok_icon),
+            ("YouTube", draw_youtube_icon),
+            ("X", draw_x_icon),
+        ]
+        for index, (label, icon_drawer) in enumerate(social_icons):
+            row = index // 2
+            col = index % 2
+            x1 = panel_x1 + 64 + col * 472
+            y1 = app_y + row * 186
+            draw.rounded_rectangle((x1, y1, x1 + 412, y1 + 142), radius=34, fill=(255, 255, 255, 22), outline=COLORS["sage"] + (70,), width=2)
+            icon_drawer(draw, (x1 + 28, y1 + 29, x1 + 112, y1 + 113))
+            draw.text((x1 + 138, y1 + 36), label, font=font(ARIAL_BOLD, 35), fill=COLORS["deep_ink"] + (245,))
+            draw.text((x1 + 138, y1 + 82), "pausar antes", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
+
+        chip_y = panel_y1 + 716
+        features = [
+            ("Tempo de Uso", "Permissões nativas do iPhone.", draw_screen_time_icon),
+            ("Leitura guiada", "Trechos e reflexões breves.", draw_book_icon),
+            ("Retorno consciente", "Libere por um tempo e volte.", draw_return_icon),
+        ]
+        for label, detail, icon_drawer in features:
+            draw.rounded_rectangle((panel_x1 + 64, chip_y, panel_x2 - 64, chip_y + 210), radius=40, fill=(5, 10, 11, 214), outline=accent + (108,), width=2)
+            icon_drawer(draw, (panel_x1 + 104, chip_y + 48, panel_x1 + 218, chip_y + 162))
+            draw.text((panel_x1 + 252, chip_y + 48), label, font=font(GEORGIA_BOLD, 46), fill=COLORS["ivory"] + (255,))
+            draw_wrapped(draw, detail, (panel_x1 + 254, chip_y + 110), font(ARIAL, 32), COLORS["soft_text"] + (255,), 720, 10)
+            chip_y += 260
+
+    out = card.convert("RGB")
+    out.save(APP_STORE / filename, quality=95)
+    out.save(PUBLIC_APP_STORE / filename, quality=95)
 
 
 def make_app_store_cards() -> None:
@@ -363,7 +512,6 @@ def make_app_store_cards() -> None:
             "O Limiar cria um espaço breve entre o impulso e o aplicativo bloqueado.",
             onboarding,
             COLORS["sage"],
-            "right",
         ),
         (
             "02-leitura-com-proposito.png",
@@ -372,7 +520,6 @@ def make_app_store_cards() -> None:
             "Trechos, reflexões e aplicações práticas ajudam você a retomar a atenção.",
             dashboard,
             COLORS["gold"],
-            "right",
         ),
         (
             "03-protecao-nativa.png",
@@ -381,7 +528,6 @@ def make_app_store_cards() -> None:
             "O bloqueio usa recursos nativos do iPhone e fica sob seu controle.",
             None,
             COLORS["sage"],
-            "center",
         ),
         (
             "04-tradicao-espiritual.png",
@@ -390,7 +536,6 @@ def make_app_store_cards() -> None:
             "Católica, evangélica, judaica ou espírita: você escolhe o tom da leitura.",
             onboarding,
             COLORS["gold"],
-            "left",
         ),
         (
             "05-retome-consciente.png",
@@ -399,12 +544,11 @@ def make_app_store_cards() -> None:
             "O objetivo não é punir o uso do celular. É devolver a escolha para você.",
             dashboard,
             COLORS["sage"],
-            "left",
         ),
     ]
     for item in cards:
-        filename, kicker, headline, body, screenshot_path, accent, phone_side = item
-        make_card(filename, kicker, headline, body, screenshot_path, visual, accent, phone_side)
+        filename, kicker, headline, body, screenshot_path, accent = item
+        make_card(filename, kicker, headline, body, screenshot_path, visual, accent)
 
 
 def make_hero_exports() -> None:
