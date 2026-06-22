@@ -18,6 +18,7 @@
 		LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000031 /* ShieldConfigurationExtension.swift */; };
 		LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000041 /* ShieldActionExtension.swift */; };
 		LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000051 /* DeviceActivityMonitorExtension.swift */; };
+		LIMI00000000000000000101 /* ShieldIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000100 /* ShieldIcon.png */; };
 		LIMI0000000000000000000C /* LimiarShieldConfigurationExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000061 /* LimiarShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI0000000000000000000D /* LimiarShieldActionExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI0000000000000000000E /* LimiarDeviceActivityMonitorExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -77,6 +78,7 @@
 		LIMI00000000000000000031 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000032 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		LIMI00000000000000000033 /* ShieldConfiguration.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldConfiguration.entitlements; sourceTree = "<group>"; };
+		LIMI00000000000000000100 /* ShieldIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ShieldIcon.png; sourceTree = "<group>"; };
 		LIMI00000000000000000041 /* ShieldActionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldActionExtension.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000042 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		LIMI00000000000000000043 /* ShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldAction.entitlements; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 				LIMI00000000000000000031 /* ShieldConfigurationExtension.swift */,
 				LIMI00000000000000000032 /* Info.plist */,
 				LIMI00000000000000000033 /* ShieldConfiguration.entitlements */,
+				LIMI00000000000000000100 /* ShieldIcon.png */,
 			);
 			path = Limiar/Extensions/ShieldConfiguration;
 			sourceTree = "<group>";
@@ -190,7 +193,7 @@
 		LIMI00000000000000000081 /* LimiarShieldConfigurationExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = LIMI00000000000000000091 /* Build configuration list for PBXNativeTarget "LimiarShieldConfigurationExtension" */;
-			buildPhases = (LIMI00000000000000000054 /* Sources */, LIMI00000000000000000021 /* Frameworks */);
+			buildPhases = (LIMI00000000000000000054 /* Sources */, LIMI00000000000000000021 /* Frameworks */, LIMI00000000000000000102 /* Resources */);
 			buildRules = ();
 			dependencies = ();
 			name = LimiarShieldConfigurationExtension;
@@ -261,6 +264,14 @@
 			files = (
 				LIMI00000000000000000007 /* Assets.xcassets in Resources */,
 				LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		LIMI00000000000000000102 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				LIMI00000000000000000101 /* ShieldIcon.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
