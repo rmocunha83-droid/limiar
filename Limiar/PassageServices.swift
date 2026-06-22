@@ -370,7 +370,7 @@ struct PassageRecommendationService {
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil,
         recentlyShownPassageIDs: [String] = [],
-        targetMinutes: Int = 10
+        minimumCount: Int = 5
     ) -> [ScripturePassage] {
         let ranked = rankedPassages(
             for: profile,
@@ -379,16 +379,21 @@ struct PassageRecommendationService {
             recentlyShownPassageIDs: recentlyShownPassageIDs
         )
         var plan: [ScripturePassage] = []
-        var totalMinutes = 0
 
         for passage in ranked {
             guard !plan.contains(where: { $0.id == passage.id }) else { continue }
             plan.append(passage)
-            totalMinutes += passage.estimatedMinutes
-            if totalMinutes >= targetMinutes { break }
+            if plan.count >= minimumCount { break }
         }
 
-        return plan.isEmpty ? Array(passages.prefix(1)) : plan
+        if plan.count < minimumCount {
+            for passage in passages where !plan.contains(where: { $0.id == passage.id }) {
+                plan.append(passage)
+                if plan.count >= minimumCount { break }
+            }
+        }
+
+        return plan.isEmpty ? Array(passages.prefix(minimumCount)) : plan
     }
 
     private func rankedPassages(
@@ -417,6 +422,162 @@ struct PassageRecommendationService {
             + passages.filter { passage in
                 !traditionMatches.contains(where: { $0.id == passage.id })
             }
+    }
+}
+
+struct AISpiritualReadingRequest: Codable, Hashable {
+    let tradition: FaithTradition
+    let favoriteSections: [BibleSection]
+    let favoriteBooks: [BibleBook]
+    let favoriteThemes: [SpiritualTheme]
+    let explanationDepth: ExplanationDepth
+    let candidateReferences: [String]
+
+    var cacheKey: String {
+        let rawKey = [
+            tradition.rawValue,
+            favoriteSections.map(\.rawValue).sorted().joined(separator: ","),
+            favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
+            favoriteThemes.map(\.rawValue).sorted().joined(separator: ","),
+            explanationDepth.rawValue,
+            candidateReferences.joined(separator: "+")
+        ].joined(separator: "|")
+        return Data(rawKey.utf8).base64EncodedString()
+    }
+
+    var compactPrompt: String {
+        let sections = favoriteSections.map(\.title).joined(separator: ", ")
+        let books = favoriteBooks.map(\.title).joined(separator: ", ")
+        let themes = favoriteThemes.map(\.title).joined(separator: ", ")
+        let references = candidateReferences.joined(separator: "; ")
+        return """
+        Gere uma leitura espiritual para um usuário \(tradition.title). Use pelo menos 5 trechos. Seja acolhedor, simples e pastoral, em tom de homilia. Retorne itens com referência, texto religioso, explicação e conclusão prática. Não invente conteúdo bíblico.
+        Seções: \(sections)
+        Livros: \(books)
+        Temas: \(themes)
+        Profundidade: \(explanationDepth.title)
+        Referências sugeridas: \(references)
+        """
+    }
+}
+
+protocol AISpiritualReadingGenerating {
+    func generateReadingItems(
+        for request: AISpiritualReadingRequest,
+        passages: [ScripturePassage]
+    ) -> [SpiritualReadingItem]
+}
+
+struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
+    func generateReadingItems(
+        for request: AISpiritualReadingRequest,
+        passages: [ScripturePassage]
+    ) -> [SpiritualReadingItem] {
+        passages.prefix(max(5, passages.count)).map { passage in
+            SpiritualReadingItem(
+                id: "\(request.cacheKey).\(passage.id)",
+                reference: passage.reference,
+                text: passage.text,
+                homily: homily(for: passage, request: request),
+                practicalConclusion: practicalConclusion(for: passage, request: request)
+            )
+        }
+    }
+
+    private func homily(for passage: ScripturePassage, request: AISpiritualReadingRequest) -> String {
+        let traditionOpening = switch request.tradition {
+        case .catholic:
+            "Este trecho pode ser acolhido como uma pequena homilia para o coração."
+        case .protestant:
+            "Este trecho pode ser acolhido como uma meditação devocional simples e fiel."
+        case .jewish:
+            "Este trecho pode ser acolhido como sabedoria do Tanakh para orientar a escolha presente."
+        case .spiritist:
+            "Este trecho pode ser acolhido como convite à reforma íntima e à caridade concreta."
+        }
+
+        let themeLine = switch passage.theme {
+        case .faith:
+            "Ele lembra que a fé amadurece quando a pessoa escolhe confiar antes de reagir."
+        case .hope:
+            "Ele reacende esperança sem pressa, como quem deixa a alma respirar antes do próximo passo."
+        case .forgiveness:
+            "Ele ensina que perdoar começa em pequenas respostas mais livres e menos impulsivas."
+        case .discipline:
+            "Ele mostra que disciplina espiritual não é peso, mas cuidado com aquilo que governa a atenção."
+        case .wisdom:
+            "Ele oferece sabedoria para perceber o que merece espaço e o que pode esperar."
+        case .family:
+            "Ele convida a levar mais mansidão e presença para os vínculos que importam."
+        case .work:
+            "Ele ajuda a recolocar os planos diante de Deus antes de voltar às tarefas."
+        case .anxiety:
+            "Ele fala ao coração inquieto e recorda que a paz também pode ser escolhida em passos pequenos."
+        case .presence:
+            "Ele chama a pessoa de volta ao presente, onde a graça pode ser reconhecida com simplicidade."
+        case .purpose:
+            "Ele ajuda a ordenar desejos e decisões ao redor de um propósito mais alto."
+        }
+
+        return "\(traditionOpening) \(themeLine)"
+    }
+
+    private func practicalConclusion(for passage: ScripturePassage, request: AISpiritualReadingRequest) -> String {
+        switch request.explanationDepth {
+        case .short:
+            "Antes de voltar ao app, respire e escolha uma atitude concreta que proteja sua atenção."
+        case .medium:
+            "Leve este trecho como uma pequena decisão: use o próximo período com presença, sem deixar que o impulso escolha por você."
+        case .deep:
+            "Permaneça alguns instantes com a pergunta que este trecho abre: o que Deus, a consciência e a vida estão pedindo de você agora? Depois, volte ao app com mais liberdade interior."
+        }
+    }
+}
+
+struct AISpiritualReadingCache {
+    private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+    private let keyPrefix = "aiSpiritualReadingCache."
+
+    func readingItems(for request: AISpiritualReadingRequest) -> [SpiritualReadingItem]? {
+        guard let data = defaults.data(forKey: keyPrefix + request.cacheKey) else { return nil }
+        return try? JSONDecoder().decode([SpiritualReadingItem].self, from: data)
+    }
+
+    func save(_ items: [SpiritualReadingItem], for request: AISpiritualReadingRequest) {
+        guard let data = try? JSONEncoder().encode(items) else { return }
+        defaults.set(data, forKey: keyPrefix + request.cacheKey)
+    }
+}
+
+struct AISpiritualReadingService {
+    private let cache: AISpiritualReadingCache
+    private let generator: any AISpiritualReadingGenerating
+
+    init(
+        cache: AISpiritualReadingCache = AISpiritualReadingCache(),
+        generator: any AISpiritualReadingGenerating = LocalSpiritualReadingGenerator()
+    ) {
+        self.cache = cache
+        self.generator = generator
+    }
+
+    func readingItems(for passages: [ScripturePassage], profile: UserFaithProfile) -> [SpiritualReadingItem] {
+        let request = AISpiritualReadingRequest(
+            tradition: profile.tradition,
+            favoriteSections: profile.favoriteBibleSections,
+            favoriteBooks: profile.favoriteBooks,
+            favoriteThemes: profile.favoriteThemes,
+            explanationDepth: profile.explanationDepth,
+            candidateReferences: passages.map(\.reference)
+        )
+
+        if let cached = cache.readingItems(for: request), cached.count >= 5 {
+            return cached
+        }
+
+        let items = generator.generateReadingItems(for: request, passages: passages)
+        cache.save(items, for: request)
+        return items
     }
 }
 

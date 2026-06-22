@@ -169,6 +169,14 @@ struct AIReflection: Codable, Equatable {
     let meditationQuestion: String
 }
 
+struct SpiritualReadingItem: Identifiable, Codable, Equatable {
+    let id: String
+    let reference: String
+    let text: String
+    let homily: String
+    let practicalConclusion: String
+}
+
 struct ReadingHistoryItem: Identifiable, Codable, Equatable {
     let id: UUID
     let passageID: String
@@ -200,6 +208,7 @@ final class LimiarAppModel {
     var blockingEnabled = true
     var selection = FamilyActivitySelection()
     var currentReadingPlan: [ScripturePassage] = []
+    var currentSpiritualReadingItems: [SpiritualReadingItem] = []
     var currentPassage = ScripturePassage(
         id: "starter",
         tradition: .catholic,
@@ -230,6 +239,7 @@ final class LimiarAppModel {
 
     private let recommender = PassageRecommendationService()
     private let reflectionService = AIReflectionService()
+    private let spiritualReadingService = AISpiritualReadingService()
     private let policyStore = ScreenTimePolicyStore()
     private let screenTimeController = ScreenTimeController()
     private var lastForegroundRefreshAt = Date.distantPast
@@ -299,17 +309,25 @@ final class LimiarAppModel {
     }
 
     var currentReadingText: String {
-        currentReadingPlan.enumerated().map { index, passage in
-            if currentReadingPlan.count == 1 {
-                return passage.text
-            }
-            return "\(index + 1). \(passage.reference)\n\(passage.text)"
+        currentSpiritualReadingItems.enumerated().map { index, item in
+            "\(index + 1). \(item.reference)\n\(item.text)"
         }
         .joined(separator: "\n\n")
     }
 
     var currentReadingNarrationText: String {
-        "\(currentReadingTitle). \(currentReadingReference). \(currentReadingText)"
+        currentSpiritualReadingItems.enumerated().map { index, item in
+            """
+            \(index + 1). \(item.reference). \(item.text)
+            \(item.homily)
+            \(item.practicalConclusion)
+            """
+        }
+        .joined(separator: "\n\n")
+    }
+
+    var unlockDurationDescription: String {
+        "\(unlockDurationMinutes) minutos"
     }
 
     func completeOnboarding() {
@@ -374,6 +392,28 @@ final class LimiarAppModel {
                     passageID: currentReadingSessionID,
                     passageTitle: currentReadingTitle,
                     reference: currentReadingReference,
+                    savedAt: Date()
+                ),
+                at: 0
+            )
+        }
+        policyStore.saveFavorites(favoritePassages)
+    }
+
+    func isFavorite(_ item: SpiritualReadingItem) -> Bool {
+        favoritePassages.contains { $0.passageID == item.id }
+    }
+
+    func toggleFavorite(_ item: SpiritualReadingItem) {
+        if isFavorite(item) {
+            favoritePassages.removeAll { $0.passageID == item.id }
+        } else {
+            favoritePassages.insert(
+                FavoritePassageItem(
+                    id: UUID(),
+                    passageID: item.id,
+                    passageTitle: item.reference,
+                    reference: item.reference,
                     savedAt: Date()
                 ),
                 at: 0
@@ -452,6 +492,7 @@ final class LimiarAppModel {
         let resolvedPlan = plan.isEmpty ? [currentPassage] : plan
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
+        currentSpiritualReadingItems = spiritualReadingService.readingItems(for: resolvedPlan, profile: profile)
         currentReflection = reflectionService.reflection(for: resolvedPlan, profile: profile)
         rememberShownPassages(resolvedPlan)
     }

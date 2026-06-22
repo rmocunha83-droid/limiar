@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import FamilyControls
+import ManagedSettings
 import SwiftUI
 
 struct ContentView: View {
@@ -68,10 +69,11 @@ private struct DashboardView: View {
                         .accessibilityLabel("Abrir configurações")
                     }
 
-                    blockedAppCard
+                    blockedAppsStrip
                     readingRequirementHeader
-                    passagePreviewCard
+                    readingItemsList
                     chooseAppsButton
+                    completionExplanation
                     unlockButton
                     footer
                 }
@@ -102,31 +104,28 @@ private struct DashboardView: View {
         }
     }
 
-    private var blockedAppCard: some View {
+    private var blockedAppsStrip: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("APP BLOQUEADO")
+            Text("APPS BLOQUEADOS")
                 .font(.system(size: 13, weight: .bold))
                 .tracking(1.5)
                 .foregroundStyle(Color.warmGold)
 
-            HStack(spacing: 14) {
-                InstagramIcon()
-                .frame(width: 54, height: 54)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Instagram")
-                        .font(.system(size: 31, weight: .regular, design: .serif))
-                        .foregroundStyle(Color.ivory)
-                    Text("Você abriu às 21:42")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Color.softText)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    let tokens = Array(model.selection.applicationTokens)
+                    if tokens.isEmpty {
+                        InstagramIcon()
+                            .frame(width: 58, height: 58)
+                            .accessibilityLabel("Instagram")
+                    } else {
+                        ForEach(tokens, id: \.self) { token in
+                            BlockedApplicationIcon(token: token)
+                        }
+                    }
                 }
+                .padding(.vertical, 2)
             }
-
-            Divider()
-                .overlay(Color.sageButton.opacity(0.28))
-                .padding(.trailing, 250)
-                .padding(.top, 8)
         }
         .padding(18)
         .limiarPanel()
@@ -145,55 +144,39 @@ private struct DashboardView: View {
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Uma pausa com trechos suficientes para atravessar com calma.")
+            Text("Leia com calma e conclua para liberar seus APPs pelo tempo escolhido.")
                 .font(.system(size: 18))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(5)
         }
     }
 
-    private var passagePreviewCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label(model.currentReadingReference, systemImage: "quote.opening")
-                Spacer()
-                Label("\(model.currentReadingEstimatedMinutes) min", systemImage: "timer")
-            }
-            .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(Color.warmGold)
-
-            Text(model.currentReadingText)
-                .font(.system(size: 22, weight: .regular, design: .serif))
-                .foregroundStyle(Color.ivory)
-                .lineSpacing(7)
-                .fixedSize(horizontal: false, vertical: true)
-
+    private var readingItemsList: some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Button {
                     narration.toggle(text: model.currentReadingNarrationText)
                 } label: {
-                    Label(narration.isSpeaking ? "Parar narração" : "Ouvir trecho", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
+                    Label(narration.isSpeaking ? "Parar narração" : "Ouvir leitura", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
                         .lineLimit(1)
                 }
                 .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
-
-                Button {
-                    model.toggleFavoriteCurrentPassage()
-                } label: {
-                    Label(model.isCurrentPassageFavorite ? "Salvo" : "Gostei", systemImage: model.isCurrentPassageFavorite ? "heart.fill" : "heart")
-                        .lineLimit(1)
-                }
-                .buttonStyle(ReadingActionButtonStyle(isHighlighted: model.isCurrentPassageFavorite))
             }
-            .padding(.top, 2)
 
-            Text("A reflexão ajuda a aplicar o trecho ao momento, sem alterar o texto-base.")
-                .font(.system(size: 14))
-                .foregroundStyle(Color.softText)
-                .lineSpacing(4)
+            ForEach(model.currentSpiritualReadingItems) { item in
+                SpiritualReadingCard(
+                    item: item,
+                    isSaved: model.isFavorite(item),
+                    saveAction: {
+                        model.toggleFavorite(item)
+                    },
+                    listenAction: {
+                        narration.toggle(text: "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)")
+                    },
+                    isSpeaking: narration.isSpeaking
+                )
+            }
         }
-        .padding(18)
-        .limiarPanel()
     }
 
     private var chooseAppsButton: some View {
@@ -228,20 +211,28 @@ private struct DashboardView: View {
         .padding(.top, 8)
     }
 
+    private var completionExplanation: some View {
+        Text("Após concluir a leitura, seus APPs bloqueados serão liberados por \(model.unlockDurationDescription). Quando esse tempo terminar, será necessário fazer uma nova leitura para liberar o acesso novamente.")
+            .font(.system(size: 14))
+            .foregroundStyle(Color.softText)
+            .lineSpacing(5)
+            .padding(.horizontal, 2)
+    }
+
     private var unlockButton: some View {
-        NavigationLink {
-            ReadingView()
+        Button {
+            model.finishReading()
         } label: {
             HStack(spacing: 18) {
-                Image(systemName: "lock.fill")
+                Image(systemName: "lock.open.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.deepInk.opacity(0.70))
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Começar leitura")
-                        .font(.system(size: 24, weight: .regular, design: .serif))
+                    Text("Li com calma, liberar acesso")
+                        .font(.system(size: 22, weight: .regular, design: .serif))
                         .foregroundStyle(Color.deepInk)
-                    Text("Atravesse com calma e retome em seguida")
+                    Text("Libera por \(model.unlockDurationDescription)")
                         .font(.system(size: 15))
                         .foregroundStyle(Color.deepInk.opacity(0.70))
                 }
@@ -305,6 +296,86 @@ private struct InstagramIcon: View {
     }
 }
 
+private struct BlockedApplicationIcon: View {
+    let token: ApplicationToken
+
+    var body: some View {
+        Label(token)
+            .labelStyle(.iconOnly)
+            .frame(width: 58, height: 58)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.sageButton.opacity(0.20), lineWidth: 1)
+            )
+            .accessibilityLabel("APP bloqueado")
+    }
+}
+
+private struct SpiritualReadingCard: View {
+    let item: SpiritualReadingItem
+    let isSaved: Bool
+    let saveAction: () -> Void
+    let listenAction: () -> Void
+    let isSpeaking: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 12) {
+                Label(item.reference, systemImage: "quote.opening")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.warmGold)
+                    .lineLimit(2)
+
+                Spacer()
+
+                Button(action: saveAction) {
+                    Image(systemName: isSaved ? "heart.fill" : "heart")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(isSaved ? Color.sageButton : Color.ivory)
+                        .frame(width: 42, height: 42)
+                        .background(Color.white.opacity(0.08), in: Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                }
+                .accessibilityLabel(isSaved ? "Remover trecho salvo" : "Salvar trecho")
+            }
+
+            Text(item.text)
+                .font(.system(size: 22, weight: .regular, design: .serif))
+                .foregroundStyle(Color.ivory)
+                .lineSpacing(7)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Explicação espiritual")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.1)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(item.homily)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(5)
+
+                Text(item.practicalConclusion)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.ivory.opacity(0.9))
+                    .lineSpacing(5)
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+
+            Button(action: listenAction) {
+                Label(isSpeaking ? "Parar narração" : "Ouvir este trecho", systemImage: isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
+                    .lineLimit(1)
+            }
+            .buttonStyle(ReadingActionButtonStyle(isHighlighted: isSpeaking))
+        }
+        .padding(18)
+        .limiarPanel()
+    }
+}
+
 private struct ReadingView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -329,13 +400,11 @@ private struct ReadingView: View {
                     HStack {
                         Label(model.currentReadingReference, systemImage: "book.closed")
                         Spacer()
-                        Label("\(model.currentReadingEstimatedMinutes) min", systemImage: "timer")
                     }
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.warmGold)
 
                     readingActions
-                    progressBar
 
                     Text(model.currentReadingText)
                         .font(.system(size: 24, weight: .regular, design: .serif))
@@ -380,28 +449,10 @@ private struct ReadingView: View {
             Button {
                 model.toggleFavoriteCurrentPassage()
             } label: {
-                Label(model.isCurrentPassageFavorite ? "Salvo" : "Gostei", systemImage: model.isCurrentPassageFavorite ? "heart.fill" : "heart")
+                Label(model.isCurrentPassageFavorite ? "Salvo" : "Salvar", systemImage: model.isCurrentPassageFavorite ? "heart.fill" : "heart")
                     .lineLimit(1)
             }
             .buttonStyle(ReadingActionButtonStyle(isHighlighted: model.isCurrentPassageFavorite))
-        }
-    }
-
-    private var progressBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.12))
-                    Capsule()
-                        .fill(Color.aqua)
-                        .frame(width: proxy.size.width * max(0.08, model.readingProgress))
-                }
-            }
-            .frame(height: 8)
-
-            Text("Tempo de leitura: \(Int(now.timeIntervalSince(model.readingStartedAt)))s")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.softText)
         }
     }
 
