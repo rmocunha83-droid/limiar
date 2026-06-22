@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Limiar logo mark</title>
+  <desc id="desc">A calm threshold-shaped mark combining an open doorway and an open book.</desc>
+  <rect width="256" height="256" rx="56" fill="#050A0B"/>
+  <path d="M72 206V57c0-6 5-11 11-11h83c10 0 18 8 18 18v142" fill="none" stroke="#B3CFB8" stroke-width="13" stroke-linecap="round"/>
+  <path d="M100 72h51c6 0 11 5 11 11v96" fill="none" stroke="#EFE9D8" stroke-width="9" stroke-linecap="round" opacity=".82"/>
+  <path d="M57 201c31-16 59-16 84 0 25-16 52-16 83 0" fill="none" stroke="#D49F6E" stroke-width="12" stroke-linecap="round"/>
+  <path d="M141 90v112" fill="none" stroke="#D49F6E" stroke-width="7" stroke-linecap="round"/>
+</svg>

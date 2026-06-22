@@ -1,0 +1,42 @@
+{
+  "brand": "Limiar",
+  "positioning": "Pausa espiritual antes de abrir apps que roubam atenção.",
+  "source_imagegen_asset": "/Users/romeucunha/.codex/generated_images/019eed3d-bedf-7aa2-bdb0-3e7cbe0d3fb7/ig_05da238ddc92832e016a38a3a05fc8819180a3b28165c5b145.png",
+  "workspace_visual": "marketing/assets/limiar-threshold-visual.png",
+  "assets": {
+    "campaign_base": [
+      "marketing/assets/limiar-threshold-visual.png",
+      "marketing/assets/limiar-dashboard-marketing.png"
+    ],
+    "logo": [
+      "marketing/brand/logo-mark.svg",
+      "marketing/brand/logo-lockup-dark.svg",
+      "marketing/brand/logo-lockup-light.svg",
+      "marketing/brand/logo-mark-1024.png",
+      "marketing/brand/logo-lockup-dark.png",
+      "marketing/brand/logo-lockup-light.png"
+    ],
+    "app_store_cards": [
+      "marketing/app-store/01-pausa-antes-do-impulso.png",
+      "marketing/app-store/02-leitura-com-proposito.png",
+      "marketing/app-store/03-protecao-nativa.png",
+      "marketing/app-store/04-tradicao-espiritual.png",
+      "marketing/app-store/05-retome-consciente.png"
+    ],
+    "landing_assets": [
+      "marketing/site/assets/app-dashboard.png",
+      "marketing/site/assets/app-onboarding.png",
+      "marketing/site/assets/hero-portrait.jpg",
+      "marketing/site/assets/hero-wide.jpg",
+      "marketing/site/assets/limiar-threshold-visual.png",
+      "marketing/site/assets/logo-mark-1024.png"
+    ]
+  },
+  "colors": {
+    "deep_ink": "#050A0B",
+    "ivory": "#F0E9D8",
+    "sage": "#B3CFB8",
+    "gold": "#D49F6E",
+    "soft_text": "#C0C2BA"
+  }
+}

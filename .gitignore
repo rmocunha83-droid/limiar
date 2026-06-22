@@ -1,0 +1,19 @@
+.DS_Store
+.vercel
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.ipa
+*.dSYM
+*.mobileprovision
+
+# SwiftPM / temporary outputs
+.build/
+.swiftpm/
+
+# macOS
+__MACOSX/
+node_modules
