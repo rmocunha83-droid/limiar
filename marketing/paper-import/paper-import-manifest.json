@@ -1,0 +1,10 @@
+{
+  "paper_import_boards": [
+    "marketing/paper-import/paper-board-01-brand-kit.png",
+    "marketing/paper-import/paper-board-02-app-store-cards.png",
+    "marketing/paper-import/paper-board-03-landing-legal.png"
+  ],
+  "index": "marketing/paper-import/index.html",
+  "zip": "marketing/paper-import/limiar-paper-import-pack.zip",
+  "note": "Boards prontos para revis\u00e3o e importa\u00e7\u00e3o no Paper."
+}

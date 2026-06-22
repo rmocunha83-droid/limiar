@@ -180,7 +180,7 @@ def make_index_html(board_paths: list[Path]) -> Path:
 </head>
 <body>
   <h1>Limiar Paper Import Pack</h1>
-  <p>Boards prontos para inserir no Paper quando a cota MCP estiver disponível: marca, cards App Store e landing/legal.</p>
+  <p>Boards prontos para revisão e importação no Paper: marca, cards App Store e landing/legal.</p>
   {asset_rows}
   <section><h2>Manifesto de arquivos</h2><ul>{asset_list}</ul></section>
 </body>
@@ -225,7 +225,7 @@ def main() -> None:
         "paper_import_boards": [str(p.relative_to(ROOT)) for p in boards],
         "index": str(index.relative_to(ROOT)),
         "zip": "marketing/paper-import/limiar-paper-import-pack.zip",
-        "note": "Paper MCP write was unavailable because the weekly MCP limit was reached.",
+        "note": "Boards prontos para revisão e importação no Paper.",
     }
     (OUT / "paper-import-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     make_zip([*boards, index, OUT / "paper-import-manifest.json"])

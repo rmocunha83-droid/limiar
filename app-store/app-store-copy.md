@@ -3,26 +3,29 @@
 ## Nome
 Limiar
 
-## Subtitulo
-Pausa espiritual antes do impulso
+## Subtítulo
+Pausa espiritual antes dos APPs
 
 ## Texto promocional
-Crie uma pausa antes de abrir apps que roubam sua atenção. Leia alguns minutos, reflita e retome com mais presença.
+Crie uma pausa antes de abrir APPs que roubam sua atenção. Leia uma jornada com trechos e explicações espirituais, conclua com calma e libere o acesso pelo tempo escolhido.
 
 ## Descrição
 Limiar ajuda você a transformar o impulso em escolha.
 
-Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app convida você a ler um trecho breve, refletir com calma e só então retomar o uso.
+Escolha APPs, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma jornada na própria tela inicial, com pelo menos cinco trechos religiosos, explicações espirituais e opção individual de salvar cada trecho.
 
 O app foi pensado para quem quer menos automático e mais presença no celular.
 
 Recursos:
 - Bloqueio com recursos nativos do Tempo de Uso do iPhone.
-- Leituras e reflexões breves para uma pausa consciente.
+- APPs bloqueados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
+- Pelo menos cinco trechos na tela inicial para uma leitura com mais calma.
+- Explicação espiritual para cada trecho, com resumo, aplicação prática e pergunta de meditação.
+- Opção individual de salvar os trechos que tocaram você.
 - Preferências por tradição espiritual: católica, evangélica, judaica ou espírita.
 - Temas como disciplina, esperança, sabedoria, família, trabalho, ansiedade e propósito.
-- Histórico de leituras e passagens favoritas.
-- Controle de tempo de desbloqueio depois da leitura.
+- Rotação de trechos para evitar repetições próximas a cada nova abertura relevante do app.
+- Botão “Li com calma, liberar acesso” com cadeado e liberação pelo tempo escolhido no onboarding.
 
 Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
 
@@ -35,5 +38,5 @@ foco,tempo de uso,bloqueio,espiritualidade,bíblia,devocional,atenção,discipli
 - Support URL: publicar `marketing/site/support.html`
 - Terms URL: publicar `marketing/site/terms.html`
 
-## Observacoes de revisao
+## Observações de revisão
 O app usa recursos nativos do iOS relacionados ao Tempo de Uso para aplicar bloqueios escolhidos pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.

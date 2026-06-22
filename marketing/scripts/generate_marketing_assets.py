@@ -242,6 +242,20 @@ def draw_return_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) 
     draw.polygon([(x1 + size * 0.28, y1 + size * 0.55), (x1 + size * 0.12, y1 + size * 0.58), (x1 + size * 0.21, y1 + size * 0.42)], fill=COLORS["deep_ink"] + (245,))
 
 
+def draw_lock_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: tuple[int, int, int] = COLORS["deep_ink"]) -> None:
+    x1, y1, x2, y2 = box
+    size = x2 - x1
+    stroke = fill + (245,)
+    body = (x1 + int(size * 0.22), y1 + int(size * 0.44), x2 - int(size * 0.22), y2 - int(size * 0.14))
+    shackle = (x1 + int(size * 0.30), y1 + int(size * 0.18), x2 - int(size * 0.30), y1 + int(size * 0.60))
+    draw.arc(shackle, 180, 360, fill=stroke, width=max(4, size // 12))
+    draw.rounded_rectangle(body, radius=max(5, size // 10), outline=stroke, width=max(4, size // 13))
+    cx = (x1 + x2) // 2
+    cy = y1 + int(size * 0.62)
+    draw.ellipse((cx - size * 0.055, cy - size * 0.055, cx + size * 0.055, cy + size * 0.055), fill=stroke)
+    draw.line((cx, cy + size * 0.04, cx, cy + size * 0.18), fill=stroke, width=max(3, size // 18))
+
+
 def make_mark_svg() -> str:
     return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
   <title id="title">Limiar logo mark</title>
@@ -368,39 +382,45 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
     def panel(box):
         draw.rounded_rectangle(box, radius=34, fill=(5, 10, 11, 222), outline=COLORS["sage"] + (92,), width=2)
 
-    y = 450
-    panel((x, y, 1092, y + 312))
-    draw.text((x + 28, y + 26), "APP BLOQUEADO", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
-    draw_instagram_icon(draw, (x + 28, y + 88, x + 142, y + 202))
-    draw.text((x + 170, y + 82), "Instagram", font=font(GEORGIA, 62), fill=COLORS["ivory"] + (255,))
-    draw.text((x + 172, y + 158), "Você abriu as 21:42", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
+    y = 442
+    panel((x, y, 1092, y + 220))
+    draw.text((x + 28, y + 26), "APPs BLOQUEADOS", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
+    icon_x = x + 30
+    for icon_drawer in (draw_instagram_icon, draw_tiktok_icon, draw_youtube_icon, draw_x_icon):
+        icon_drawer(draw, (icon_x, y + 86, icon_x + 98, y + 184))
+        icon_x += 126
+    draw_wrapped(draw, "Somente os ícones aparecem antes da leitura.", (x + 548, y + 88), font(ARIAL, 32), COLORS["soft_text"] + (255,), 430, 9)
 
-    y += 398
+    y += 300
     draw.text((x, y), "SEU LIMIAR", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
     y += 54
-    draw_wrapped(draw, "O Senhor conduz", (x, y), font(GEORGIA, 78), COLORS["ivory"] + (255,), 940, 10)
+    draw_wrapped(draw, "Caminho de leitura", (x, y), font(GEORGIA, 78), COLORS["ivory"] + (255,), 940, 10)
     y += 120
-    draw_wrapped(draw, "Uma pausa com trechos suficientes para atravessar com calma.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 920, 12)
+    draw_wrapped(draw, "Leia com calma e conclua para liberar seus APPs pelo tempo escolhido.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 920, 12)
 
-    y += 150
-    panel((x, y, 1092, y + 540))
-    draw.text((x + 30, y + 30), "Salmo 23", font=font(ARIAL_BOLD, 31), fill=COLORS["gold"] + (255,))
-    draw.text((930, y + 30), "5 min", font=font(ARIAL_BOLD, 31), fill=COLORS["gold"] + (255,))
+    y += 132
+    panel((x, y, 1092, y + 680))
+    draw.text((x + 30, y + 30), "1. Salmo 23", font=font(ARIAL_BOLD, 31), fill=COLORS["gold"] + (255,))
+    draw.text((958, y + 30), "Salvar", font=font(ARIAL_BOLD, 31), fill=COLORS["sage"] + (255,))
     quote = "O Senhor é meu pastor: nada me faltará. Em verdes pastagens me faz repousar, para fontes tranquilas me conduz."
-    draw_wrapped(draw, quote, (x + 30, y + 112), font(GEORGIA, 47), COLORS["ivory"] + (255,), 930, 16)
-    draw_wrapped(draw, "A reflexão ajuda a aplicar o trecho ao momento, sem alterar o texto-base.", (x + 30, y + 384), font(ARIAL, 29), COLORS["soft_text"] + (255,), 900, 12)
+    next_quote = "2. Mateus 11, 28-30: Venham a mim todos os que estão cansados e sobrecarregados, e eu lhes darei descanso."
+    draw_wrapped(draw, quote, (x + 30, y + 112), font(GEORGIA, 43), COLORS["ivory"] + (255,), 930, 14)
+    draw_wrapped(draw, next_quote, (x + 30, y + 338), font(GEORGIA, 39), COLORS["ivory"] + (240,), 930, 14)
+    draw.text((x + 30, y + 524), "Explicação espiritual", font=font(ARIAL_BOLD, 28), fill=COLORS["gold"] + (255,))
+    draw_wrapped(draw, "O trecho convida a atravessar o impulso com confiança, presença e cuidado interior.", (x + 30, y + 568), font(ARIAL, 29), COLORS["soft_text"] + (255,), 900, 10)
 
-    y += 612
+    y += 740
     panel((x, y, 1092, y + 172))
-    draw.text((x + 34, y + 38), "Ajustar apps do limiar", font=font(GEORGIA, 43), fill=COLORS["ivory"] + (255,))
-    draw.text((x + 34, y + 96), "Escolha onde você quer criar um limiar", font=font(ARIAL, 30), fill=COLORS["soft_text"] + (255,))
-    draw.text((1046, y + 64), "", font=font(ARIAL_BOLD, 62), fill=COLORS["sage"] + (255,))
+    draw.text((x + 34, y + 38), "Ajustar APPs bloqueados", font=font(GEORGIA, 43), fill=COLORS["ivory"] + (255,))
+    draw.text((x + 34, y + 96), "Escolha quais APPs você quer bloquear", font=font(ARIAL, 30), fill=COLORS["soft_text"] + (255,))
+    draw.text((1046, y + 58), "›", font=font(ARIAL_BOLD, 64), fill=COLORS["sage"] + (255,))
 
     y += 230
     draw.rounded_rectangle((x, y, 1092, y + 204), radius=42, fill=COLORS["sage"] + (255,))
-    draw.text((x + 52, y + 42), "Começar leitura", font=font(GEORGIA, 52), fill=COLORS["deep_ink"] + (255,))
-    draw.text((x + 54, y + 108), "Atravesse com calma e retome em seguida", font=font(ARIAL, 30), fill=COLORS["deep_ink"] + (210,))
-    draw.text((1010, y + 58), "", font=font(ARIAL_BOLD, 54), fill=COLORS["deep_ink"] + (255,))
+    draw_lock_icon(draw, (x + 44, y + 58, x + 92, y + 106))
+    draw.text((x + 118, y + 42), "Li com calma, liberar acesso", font=font(GEORGIA, 46), fill=COLORS["deep_ink"] + (255,))
+    draw.text((x + 120, y + 108), "Libera por 30 minutos", font=font(ARIAL, 30), fill=COLORS["deep_ink"] + (210,))
+    draw.text((1010, y + 58), "›", font=font(ARIAL_BOLD, 58), fill=COLORS["deep_ink"] + (255,))
     img.convert("RGB").save(path, quality=95)
 
 
@@ -462,8 +482,8 @@ def make_card(
     else:
         panel_x1, panel_y1, panel_x2, panel_y2 = 118, 760, 1172, 2246
         draw.rounded_rectangle((panel_x1, panel_y1, panel_x2, panel_y2), radius=58, fill=(5, 10, 11, 184), outline=COLORS["sage"] + (88,), width=2)
-        draw.text((panel_x1 + 64, panel_y1 + 68), "Apps com limiar", font=font(GEORGIA_BOLD, 62), fill=COLORS["ivory"] + (255,))
-        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha onde você quer pausar antes de abrir.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
+        draw.text((panel_x1 + 64, panel_y1 + 68), "APPs bloqueados", font=font(GEORGIA_BOLD, 62), fill=COLORS["ivory"] + (255,))
+        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha quais APPs você quer bloquear.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
 
         app_y = panel_y1 + 260
         social_icons = [
@@ -480,13 +500,13 @@ def make_card(
             draw.rounded_rectangle((x1, y1, x1 + 412, y1 + 142), radius=34, fill=(255, 255, 255, 22), outline=COLORS["sage"] + (70,), width=2)
             icon_drawer(draw, (x1 + 28, y1 + 29, x1 + 112, y1 + 113))
             draw.text((x1 + 138, y1 + 36), label, font=font(ARIAL_BOLD, 35), fill=COLORS["deep_ink"] + (245,))
-            draw.text((x1 + 138, y1 + 82), "pausar antes", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
+            draw.text((x1 + 138, y1 + 82), "bloquear", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
 
         chip_y = panel_y1 + 716
         features = [
             ("Tempo de Uso", "Permissões nativas do iPhone.", draw_screen_time_icon),
-            ("Leitura guiada", "Trechos e reflexões breves.", draw_book_icon),
-            ("Retorno consciente", "Libere por um tempo e volte.", draw_return_icon),
+            ("Leitura na home", "Cinco trechos com explicação.", draw_book_icon),
+            ("Cadeado aberto", "Libere pelo tempo escolhido.", draw_return_icon),
         ]
         for label, detail, icon_drawer in features:
             draw.rounded_rectangle((panel_x1 + 64, chip_y, panel_x2 - 64, chip_y + 210), radius=40, fill=(5, 10, 11, 214), outline=accent + (108,), width=2)
@@ -509,23 +529,23 @@ def make_app_store_cards() -> None:
             "01-pausa-antes-do-impulso.png",
             "Foco com sentido",
             "Uma pausa antes de voltar para as distrações.",
-            "O Limiar cria um espaço breve entre o impulso e o aplicativo bloqueado.",
+            "APPs bloqueados aparecem só pelos ícones, sem nomes, horários ou descrições.",
             onboarding,
             COLORS["sage"],
         ),
         (
             "02-leitura-com-proposito.png",
             "Seu limiar",
-            "Leia alguns minutos e atravesse com calma.",
-            "Trechos, reflexões e aplicações práticas ajudam você a retomar a atenção.",
+            "Cinco trechos na tela inicial.",
+            "Cada trecho vem com texto, explicação espiritual e botão próprio para salvar.",
             dashboard,
             COLORS["gold"],
         ),
         (
             "03-protecao-nativa.png",
             "Tempo de Uso",
-            "Escolha os apps que precisam de um limiar.",
-            "O bloqueio usa recursos nativos do iPhone e fica sob seu controle.",
+            "Escolha os APPs que precisam de um limiar.",
+            "O bloqueio usa recursos nativos do iPhone e libera por 15, 30 ou 60 minutos.",
             None,
             COLORS["sage"],
         ),
@@ -533,15 +553,15 @@ def make_app_store_cards() -> None:
             "04-tradicao-espiritual.png",
             "Leitura pessoal",
             "Uma linguagem espiritual que respeita sua tradição.",
-            "Católica, evangélica, judaica ou espírita: você escolhe o tom da leitura.",
+            "Católica, evangélica, judaica ou espírita, com temas e livros que combinam com você.",
             onboarding,
             COLORS["gold"],
         ),
         (
             "05-retome-consciente.png",
             "Volte melhor",
-            "Depois da leitura, retome com mais presença.",
-            "O objetivo não é punir o uso do celular. É devolver a escolha para você.",
+            "Cadeado aberto, acesso liberado.",
+            "Ao concluir a leitura, o botão muda de estado e os APPs voltam pelo tempo escolhido.",
             dashboard,
             COLORS["sage"],
         ),
@@ -563,7 +583,7 @@ def make_hero_exports() -> None:
 def make_manifest(generated_visual: Path) -> None:
     manifest = {
         "brand": "Limiar",
-        "positioning": "Pausa espiritual antes de abrir apps que roubam atenção.",
+        "positioning": "Jornada espiritual na home antes de liberar APPs bloqueados.",
         "source_imagegen_asset": str(GENERATED_FALLBACK),
         "workspace_visual": str(generated_visual.relative_to(ROOT)),
         "assets": {

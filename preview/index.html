@@ -345,19 +345,38 @@
       padding-bottom: 4px;
     }
 
-    .instagram {
+    .app-icon {
       width: 54px;
       height: 54px;
       border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .instagram {
       background:
         radial-gradient(circle at 25% 90%, #ffcc36, transparent 38%),
         radial-gradient(circle at 75% 15%, #4b56ef, transparent 38%),
         linear-gradient(135deg, #f62258, #b226c9);
-      display: grid;
-      place-items: center;
-      color: #fff;
-      font-size: 26px;
-      flex: 0 0 auto;
+    }
+
+    .tiktok {
+      background: #050a0b;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+      text-shadow: -2px 0 #69c9d0, 2px 0 #ee1d52;
+    }
+
+    .youtube {
+      background: #ff0000;
+    }
+
+    .xapp {
+      background: #151a1c;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
     }
 
     .reference {
@@ -447,6 +466,16 @@
       color: var(--ivory);
       font-size: 13px;
       font-weight: 700;
+    }
+
+    .unlock-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 18px 46px rgba(179, 207, 184, 0.18);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 20px;
     }
 
     .notes h2 {
@@ -607,7 +636,12 @@
           </div>
           <div class="card" style="margin-top:22px;">
             <div class="gold">APPS BLOQUEADOS</div>
-            <div class="app-icons"><div class="instagram">◎</div><div class="instagram">◎</div><div class="instagram">◎</div><div class="instagram">◎</div></div>
+            <div class="app-icons">
+              <div class="app-icon instagram">◎</div>
+              <div class="app-icon tiktok">♪</div>
+              <div class="app-icon youtube">▶</div>
+              <div class="app-icon xapp">X</div>
+            </div>
           </div>
           <div class="gold" style="margin-top:20px;">SEU LIMIAR</div>
           <div class="title" style="font-size:43px;">Caminho de leitura</div>
@@ -644,7 +678,7 @@
             <div class="homily"><strong>Explicação espiritual</strong><br>A conclusão prática é voltar ao app com consciência, sem deixar que o impulso decida sozinho.</div>
           </div>
           <p class="lead" style="font-size:12px;margin-top:12px;">Após concluir a leitura, seus APPs serão liberados pelo tempo escolhido no onboarding.</p>
-          <button class="primary" style="margin-top:12px;">🔒 Li com calma, liberar acesso</button>
+          <button class="primary unlock-button" style="margin-top:12px;"><span>🔒</span>Li com calma, liberar acesso</button>
         `
       }
     };
