@@ -31,6 +31,7 @@ struct ContentView: View {
 
 private struct DashboardView: View {
     @Environment(LimiarAppModel.self) private var model
+    @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
 
@@ -95,6 +96,9 @@ private struct DashboardView: View {
         }
         .task {
             model.reapplyBlockIfNeeded()
+        }
+        .onDisappear {
+            narration.stop()
         }
     }
 
@@ -163,6 +167,25 @@ private struct DashboardView: View {
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 12) {
+                Button {
+                    narration.toggle(text: model.currentReadingNarrationText)
+                } label: {
+                    Label(narration.isSpeaking ? "Parar narração" : "Ouvir trecho", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
+                        .lineLimit(1)
+                }
+                .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
+
+                Button {
+                    model.toggleFavoriteCurrentPassage()
+                } label: {
+                    Label(model.isCurrentPassageFavorite ? "Salvo" : "Gostei", systemImage: model.isCurrentPassageFavorite ? "heart.fill" : "heart")
+                        .lineLimit(1)
+                }
+                .buttonStyle(ReadingActionButtonStyle(isHighlighted: model.isCurrentPassageFavorite))
+            }
+            .padding(.top, 2)
 
             Text("A reflexão ajuda a aplicar o trecho ao momento, sem alterar o texto-base.")
                 .font(.system(size: 14))
@@ -321,7 +344,7 @@ private struct ReadingView: View {
                         .padding(.vertical, 10)
 
                     reflectionSection
-                    progressControl
+                    readingGate
                     disclaimer
                     completionButton
                 }
@@ -331,7 +354,10 @@ private struct ReadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarTitleDisplayMode(.inline)
-        .onReceive(timer) { now = $0 }
+        .onReceive(timer) { date in
+            now = date
+            model.updateReadingProgress(at: date)
+        }
         .onAppear {
             model.startReadingSession()
         }
@@ -381,6 +407,11 @@ private struct ReadingView: View {
 
     private var reflectionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
+            Label("Reflexão breve", systemImage: "sparkle")
+                .font(.system(size: 13, weight: .bold))
+                .tracking(1.2)
+                .foregroundStyle(Color.warmGold)
+                .padding(.top, 4)
             ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
             ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
@@ -388,19 +419,16 @@ private struct ReadingView: View {
         }
     }
 
-    private var progressControl: some View {
+    private var readingGate: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Progresso da leitura")
+            Text(model.canCompleteReading ? "Leitura suficiente para liberar" : "Permaneça mais um pouco no trecho")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.ivory)
-            Slider(
-                value: Binding(
-                    get: { model.readingProgress },
-                    set: { model.readingProgress = $0 }
-                ),
-                in: 0...1
-            )
-                .tint(Color.aqua)
+
+            Text(model.canCompleteReading ? "Você já pode concluir e liberar o tempo de uso." : "A barra avança enquanto você lê ou escuta. O objetivo é atravessar com calma.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.softText)
+                .lineSpacing(4)
         }
         .padding(.top, 4)
     }

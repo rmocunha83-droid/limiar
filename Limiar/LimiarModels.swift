@@ -267,7 +267,15 @@ final class LimiarAppModel {
     }
 
     var canCompleteReading: Bool {
-        readingProgress >= 0.78 || Date().timeIntervalSince(readingStartedAt) >= 90
+        readingProgress >= 0.78 || readingElapsedSeconds >= minimumReadingSeconds
+    }
+
+    var readingElapsedSeconds: TimeInterval {
+        max(0, Date().timeIntervalSince(readingStartedAt))
+    }
+
+    var minimumReadingSeconds: TimeInterval {
+        min(120, max(75, TimeInterval(currentReadingEstimatedMinutes * 10)))
     }
 
     var isCurrentPassageFavorite: Bool {
@@ -343,6 +351,13 @@ final class LimiarAppModel {
         isReadingSessionActive = true
         readingProgress = 0
         readingStartedAt = Date()
+    }
+
+    func updateReadingProgress(at date: Date = Date()) {
+        guard isReadingSessionActive else { return }
+        let elapsed = max(0, date.timeIntervalSince(readingStartedAt))
+        let automaticProgress = min(1, elapsed / minimumReadingSeconds)
+        readingProgress = max(readingProgress, automaticProgress)
     }
 
     func endReadingSession() {
