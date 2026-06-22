@@ -45,8 +45,8 @@ a {
   position: fixed;
   inset: 0 0 auto;
   z-index: 20;
-  border-bottom: 1px solid var(--clinical-line);
-  background: rgba(245, 248, 246, 0.86);
+  border-bottom: 1px solid rgba(240, 233, 216, 0.08);
+  background: rgba(5, 10, 11, 0.72);
   backdrop-filter: blur(18px);
 }
 
@@ -64,7 +64,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: var(--clinical-ink);
+  color: var(--ivory);
   text-decoration: none;
   font-family: Georgia, serif;
   font-size: 28px;
@@ -80,7 +80,7 @@ a {
   display: flex;
   align-items: center;
   gap: 22px;
-  color: var(--clinical-muted);
+  color: var(--soft);
   font-size: 14px;
 }
 
@@ -104,8 +104,8 @@ a {
 
 .button.secondary {
   background: transparent;
-  color: var(--clinical-ink);
-  border-color: var(--clinical-line);
+  color: var(--ivory);
+  border-color: rgba(240, 233, 216, 0.32);
 }
 
 .hero {
@@ -113,8 +113,11 @@ a {
   display: grid;
   align-items: center;
   padding: 122px 0 64px;
-  background: var(--clinical-bg);
-  color: var(--clinical-ink);
+  background:
+    linear-gradient(90deg, rgba(5, 10, 11, 0.96) 0%, rgba(5, 10, 11, 0.78) 42%, rgba(5, 10, 11, 0.22) 100%),
+    linear-gradient(180deg, rgba(5, 10, 11, 0.2) 0%, rgba(5, 10, 11, 0.96) 100%),
+    url("assets/hero-wide.jpg") center / cover no-repeat;
+  color: var(--ivory);
 }
 
 .hero-inner {
@@ -153,7 +156,7 @@ h1 {
 .hero-copy {
   max-width: 650px;
   margin: 28px 0 0;
-  color: var(--clinical-muted);
+  color: var(--soft);
   font-size: clamp(19px, 2vw, 26px);
 }
 
@@ -168,10 +171,11 @@ h1 {
   display: grid;
   justify-items: center;
   padding: 28px;
-  border: 1px solid var(--clinical-line);
+  border: 1px solid rgba(240, 233, 216, 0.16);
   border-radius: 36px;
-  background: var(--clinical-panel);
-  box-shadow: 0 28px 90px rgba(16, 32, 29, 0.13);
+  background: rgba(5, 10, 11, 0.44);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 110px rgba(0, 0, 0, 0.42);
 }
 
 .device-frame {
