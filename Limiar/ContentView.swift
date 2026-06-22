@@ -106,19 +106,7 @@ private struct DashboardView: View {
                 .foregroundStyle(Color.warmGold)
 
             HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.pink, .purple, .orange],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
+                InstagramIcon()
                 .frame(width: 54, height: 54)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -258,6 +246,39 @@ private struct DashboardView: View {
         .foregroundStyle(Color.sageButton)
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
+    }
+}
+
+private struct InstagramIcon: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: Color(red: 0.99, green: 0.80, blue: 0.22), location: 0.00),
+                            .init(color: Color(red: 0.98, green: 0.22, blue: 0.32), location: 0.38),
+                            .init(color: Color(red: 0.75, green: 0.16, blue: 0.79), location: 0.72),
+                            .init(color: Color(red: 0.25, green: 0.32, blue: 0.92), location: 1.00)
+                        ],
+                        startPoint: .bottomLeading,
+                        endPoint: .topTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.white, lineWidth: 3)
+                .frame(width: 30, height: 30)
+
+            Circle()
+                .stroke(.white, lineWidth: 3)
+                .frame(width: 12, height: 12)
+
+            Circle()
+                .fill(.white)
+                .frame(width: 5, height: 5)
+                .offset(x: 10, y: -10)
+        }
     }
 }
 
@@ -412,6 +433,7 @@ private struct OnboardingView: View {
     @State private var step = 0
     @State private var status = ""
     @State private var showingPicker = false
+    @State private var showingAuthorizationAlert = false
 
     var body: some View {
         @Bindable var model = model
@@ -442,7 +464,19 @@ private struct OnboardingView: View {
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                     .animation(.easeInOut(duration: 0.22), value: step)
 
-                    HStack {
+                    HStack(spacing: 14) {
+                        if step > 0 {
+                            Button {
+                                withAnimation { step -= 1 }
+                            } label: {
+                                Image(systemName: "arrow.left")
+                                    .font(.system(size: 22, weight: .regular))
+                                    .frame(width: 48, height: 48)
+                                    .glassCircle()
+                            }
+                            .accessibilityLabel("Voltar")
+                        }
+
                         ForEach(0..<5, id: \.self) { index in
                             Capsule()
                                 .fill(index == step ? Color.sageButton : Color.white.opacity(0.18))
@@ -452,11 +486,7 @@ private struct OnboardingView: View {
                         Spacer()
 
                         Button {
-                            if step < 4 {
-                                withAnimation { step += 1 }
-                            } else {
-                                model.completeOnboarding()
-                            }
+                            advance()
                         } label: {
                             HStack(spacing: 14) {
                                 Text(step == 4 ? "Ativar" : "Continuar")
@@ -479,18 +509,25 @@ private struct OnboardingView: View {
             isPresented: $showingPicker,
             selection: $model.selection
         )
+        .alert("Autorize o Tempo de Uso", isPresented: $showingAuthorizationAlert) {
+            Button("Entendi", role: .cancel) {}
+        } message: {
+            Text("Para bloquear APPs, primeiro toque em Autorizar Tempo de Uso e confirme a permissão do iOS.")
+        }
     }
 
     private var tradition: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            OnboardingTitle(eyebrow: "TRADIÇÃO", title: "Qual linguagem espiritual guia sua leitura?")
-            ForEach(FaithTradition.allCases) { tradition in
-                SelectableRow(
-                    title: tradition.title,
-                    subtitle: tradition.subtitle,
-                    isSelected: model.faithProfile.tradition == tradition
-                ) {
-                    model.faithProfile.tradition = tradition
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingTitle(eyebrow: "TRADIÇÃO", title: "Qual linguagem espiritual guia sua leitura?")
+                ForEach(FaithTradition.allCases) { tradition in
+                    SelectableRow(
+                        title: tradition.title,
+                        subtitle: tradition.subtitle,
+                        isSelected: model.faithProfile.tradition == tradition
+                    ) {
+                        model.faithProfile.tradition = tradition
+                    }
                 }
             }
         }
@@ -539,7 +576,7 @@ private struct OnboardingView: View {
             Button {
                 Task { status = await model.requestAuthorization() }
             } label: {
-                Label("Autorizar Tempo de Uso", systemImage: "checkmark.shield")
+                Label(model.hasAuthorizedScreenTime ? "Tempo de Uso autorizado" : "Autorizar Tempo de Uso", systemImage: model.hasAuthorizedScreenTime ? "checkmark.shield.fill" : "checkmark.shield")
                     .font(.system(size: 18, weight: .medium))
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
@@ -591,6 +628,19 @@ private struct OnboardingView: View {
             model.faithProfile.favoriteThemes.removeAll { $0 == theme }
         } else {
             model.faithProfile.favoriteThemes.append(theme)
+        }
+    }
+
+    private func advance() {
+        if step == 3, !model.hasAuthorizedScreenTime {
+            showingAuthorizationAlert = true
+            return
+        }
+
+        if step < 4 {
+            withAnimation { step += 1 }
+        } else {
+            model.completeOnboarding()
         }
     }
 }
@@ -823,17 +873,15 @@ private struct WelcomeHeroScreen: View {
                     Spacer()
                         .frame(height: proxy.size.height * 0.24)
 
-                    Image(systemName: "door.left.hand.open")
-                        .font(.system(size: 54, weight: .regular))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.sageMist)
-                        .frame(width: 78, height: 78, alignment: .leading)
-                        .padding(.top, 14)
+                    Image("LimiarLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 84, height: 84, alignment: .leading)
 
                     Text("B E M - V I N D O")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.warmGold)
-                        .padding(.top, 24)
+                        .padding(.top, 14)
 
                     Text("Limiar")
                         .font(.system(size: 76, weight: .regular, design: .serif))
@@ -899,6 +947,7 @@ private struct OnboardingTitle: View {
                 .font(.system(size: 38, weight: .regular, design: .serif))
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -921,6 +970,9 @@ private struct SelectableRow: View {
                     Text(subtitle)
                         .font(.system(size: 14))
                         .foregroundStyle(Color.softText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.70)
+                        .multilineTextAlignment(.leading)
                 }
                 Spacer()
             }

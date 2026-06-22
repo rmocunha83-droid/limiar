@@ -13,6 +13,8 @@ struct ScreenTimePolicyStore {
         static let unlockedUntil = "unlockedUntil"
         static let history = "readingHistory"
         static let favorites = "favoritePassages"
+        static let screenTimeAuthorized = "screenTimeAuthorized"
+        static let recentPassageIDs = "recentPassageIDs"
     }
 
     private var defaults: UserDefaults {
@@ -82,6 +84,22 @@ struct ScreenTimePolicyStore {
 
     func saveFavorites(_ favorites: [FavoritePassageItem]) {
         save(favorites, key: Key.favorites)
+    }
+
+    func loadScreenTimeAuthorized() -> Bool {
+        defaults.object(forKey: Key.screenTimeAuthorized) as? Bool ?? false
+    }
+
+    func saveScreenTimeAuthorized(_ value: Bool) {
+        defaults.set(value, forKey: Key.screenTimeAuthorized)
+    }
+
+    func loadRecentPassageIDs() -> [String] {
+        load([String].self, key: Key.recentPassageIDs) ?? []
+    }
+
+    func saveRecentPassageIDs(_ ids: [String]) {
+        save(ids, key: Key.recentPassageIDs)
     }
 
     private func load<T: Decodable>(_ type: T.Type, key: String) -> T? {

@@ -225,6 +225,8 @@ final class LimiarAppModel {
     var favoritePassages: [FavoritePassageItem] = []
     var unlockedUntil: Date?
     var unlockNote = ""
+    var hasAuthorizedScreenTime = false
+    var recentPassageIDs: [String] = []
 
     private let recommender = PassageRecommendationService()
     private let reflectionService = AIReflectionService()
@@ -242,8 +244,17 @@ final class LimiarAppModel {
         unlockedUntil = policyStore.loadUnlockedUntil()
         history = policyStore.loadHistory()
         favoritePassages = policyStore.loadFavorites()
+        hasAuthorizedScreenTime = policyStore.loadScreenTimeAuthorized()
+        recentPassageIDs = policyStore.loadRecentPassageIDs()
 
-        setReadingPlan(recommender.readingPlan(for: savedProfile, history: history), profile: savedProfile)
+        setReadingPlan(
+            recommender.readingPlan(
+                for: savedProfile,
+                history: history,
+                recentlyShownPassageIDs: recentPassageIDs
+            ),
+            profile: savedProfile
+        )
         reapplyBlockIfNeeded()
     }
 
@@ -313,7 +324,8 @@ final class LimiarAppModel {
         setReadingPlan(recommender.readingPlan(
             for: faithProfile,
             history: history,
-            avoiding: avoidingCurrent ? currentPassage.id : nil
+            avoiding: avoidingCurrent ? currentPassage.id : nil,
+            recentlyShownPassageIDs: recentPassageIDs
         ), profile: faithProfile)
     }
 
@@ -405,8 +417,12 @@ final class LimiarAppModel {
     func requestAuthorization() async -> String {
         do {
             try await screenTimeController.requestAuthorization()
+            hasAuthorizedScreenTime = true
+            policyStore.saveScreenTimeAuthorized(true)
             return "Permissão concedida."
         } catch {
+            hasAuthorizedScreenTime = false
+            policyStore.saveScreenTimeAuthorized(false)
             return "Não foi possível ativar agora: \(error.localizedDescription)"
         }
     }
@@ -422,5 +438,14 @@ final class LimiarAppModel {
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
         currentReflection = reflectionService.reflection(for: resolvedPlan, profile: profile)
+        rememberShownPassages(resolvedPlan)
+    }
+
+    private func rememberShownPassages(_ passages: [ScripturePassage]) {
+        let ids = passages.map(\.id)
+        recentPassageIDs.removeAll { ids.contains($0) }
+        recentPassageIDs.insert(contentsOf: ids, at: 0)
+        recentPassageIDs = Array(recentPassageIDs.prefix(40))
+        policyStore.saveRecentPassageIDs(recentPassageIDs)
     }
 }

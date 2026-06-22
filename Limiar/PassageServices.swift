@@ -25,6 +25,72 @@ struct PassageRecommendationService {
             book: .john
         ),
         ScripturePassage(
+            id: "luke-10-catholic",
+            tradition: .catholic,
+            title: "Uma só coisa necessária",
+            reference: "Lucas 10, 41-42",
+            text: "Marta, Marta, tu te inquietas e te agitas por muitas coisas. No entanto, uma só coisa é necessária.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "matthew-11-catholic",
+            tradition: .catholic,
+            title: "Descanso para a alma",
+            reference: "Mateus 11, 28-30",
+            text: "Vinde a mim, todos vós que estais cansados, e eu vos darei descanso. Aprendei de mim, porque sou manso e humilde de coração.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "psalm-121-catholic",
+            tradition: .catholic,
+            title: "Ele guarda teus passos",
+            reference: "Salmo 121",
+            text: "Ele não permitirá que teus pés vacilem. O Senhor te guarda; ele guarda tua saída e tua entrada.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-3-catholic",
+            tradition: .catholic,
+            title: "Confia de todo coração",
+            reference: "Provérbios 3, 5-6",
+            text: "Confia no Senhor de todo o teu coração e não te apoies apenas em teu próprio entendimento. Reconhece-o em teus caminhos.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "romans-8-catholic",
+            tradition: .catholic,
+            title: "Nada pode separar",
+            reference: "Romanos 8, 38-39",
+            text: "Nem a morte, nem a vida, nem o presente, nem o futuro poderão nos separar do amor de Deus.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "isaiah-40-catholic",
+            tradition: .catholic,
+            title: "Forças renovadas",
+            reference: "Isaías 40, 31",
+            text: "Os que esperam no Senhor renovam suas forças. Caminham sem se cansar e seguem sem desfalecer.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
             id: "matthew-6",
             tradition: .protestant,
             title: "Buscar primeiro",
@@ -45,6 +111,72 @@ struct PassageRecommendationService {
             theme: .discipline,
             section: .paulineLetters,
             book: .romans
+        ),
+        ScripturePassage(
+            id: "john-8-protestant",
+            tradition: .protestant,
+            title: "A verdade liberta",
+            reference: "João 8:31-32",
+            text: "Se vocês permanecerem na minha palavra, verdadeiramente serão meus discípulos. Então conhecerão a verdade, e a verdade os libertará.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "psalm-1-protestant",
+            tradition: .protestant,
+            title: "Como árvore junto às águas",
+            reference: "Salmo 1:1-3",
+            text: "Bem-aventurado aquele que tem prazer na lei do Senhor. Ele é como árvore plantada junto a correntes de águas.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-16-protestant",
+            tradition: .protestant,
+            title: "Entregar os planos",
+            reference: "Provérbios 16:3",
+            text: "Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos.",
+            estimatedMinutes: 5,
+            theme: .work,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "matthew-11-protestant",
+            tradition: .protestant,
+            title: "Alívio para o cansaço",
+            reference: "Mateus 11:28-30",
+            text: "Venham a mim todos os que estão cansados e sobrecarregados, e eu lhes darei descanso.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "isaiah-41-protestant",
+            tradition: .protestant,
+            title: "Não temas",
+            reference: "Isaías 41:10",
+            text: "Não temas, porque eu sou contigo. Não te assombres, porque eu sou o teu Deus. Eu te fortaleço e te ajudo.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "corinthians-13-protestant",
+            tradition: .protestant,
+            title: "O amor permanece",
+            reference: "1 Coríntios 13:4-7",
+            text: "O amor é paciente, o amor é bondoso. Não se irrita facilmente, não guarda rancor e tudo sofre, tudo crê, tudo espera.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .paulineLetters,
+            book: .corinthians
         ),
         ScripturePassage(
             id: "proverbs-4",
@@ -69,6 +201,72 @@ struct PassageRecommendationService {
             book: .isaiah
         ),
         ScripturePassage(
+            id: "genesis-12-jewish",
+            tradition: .jewish,
+            title: "Caminhar com confiança",
+            reference: "Bereshit / Gênesis 12:1-2",
+            text: "Vai para a terra que eu te mostrarei. Farei de ti uma grande nação e tu serás uma bênção.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .genesis
+        ),
+        ScripturePassage(
+            id: "exodus-14-jewish",
+            tradition: .jewish,
+            title: "Ficar firme",
+            reference: "Shemot / Êxodo 14:13-14",
+            text: "Não temais. Permanecei firmes e vede o livramento que o Eterno realizará. O Eterno lutará por vós.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .torah,
+            book: .exodus
+        ),
+        ScripturePassage(
+            id: "psalm-121-jewish",
+            tradition: .jewish,
+            title: "O guardião de Israel",
+            reference: "Tehillim / Salmo 121",
+            text: "Elevo os meus olhos para os montes: de onde virá o meu socorro? O meu socorro vem do Eterno, que fez céus e terra.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-3-jewish",
+            tradition: .jewish,
+            title: "Caminhos endireitados",
+            reference: "Mishlei / Provérbios 3:5-6",
+            text: "Confia no Eterno de todo o teu coração. Reconhece-o em todos os teus caminhos, e ele endireitará tuas veredas.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "isaiah-40-jewish",
+            tradition: .jewish,
+            title: "Esperança que renova",
+            reference: "Yeshayahu / Isaías 40:31",
+            text: "Os que esperam no Eterno renovarão as forças. Subirão com asas como águias, correrão e não se cansarão.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "psalm-27-jewish",
+            tradition: .jewish,
+            title: "Luz e salvação",
+            reference: "Tehillim / Salmo 27:1",
+            text: "O Eterno é minha luz e minha salvação; a quem temerei? O Eterno é a força da minha vida.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
             id: "matthew-5-spiritist",
             tradition: .spiritist,
             title: "Bem-aventurados os mansos",
@@ -89,6 +287,72 @@ struct PassageRecommendationService {
             theme: .hope,
             section: .gospels,
             book: .john
+        ),
+        ScripturePassage(
+            id: "matthew-7-spiritist",
+            tradition: .spiritist,
+            title: "Olhar com caridade",
+            reference: "Mateus 7:12",
+            text: "Tudo o que quereis que os homens vos façam, fazei-o também a eles. A regra simples começa na escolha de agora.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "luke-6-spiritist",
+            tradition: .spiritist,
+            title: "Misericórdia nas escolhas",
+            reference: "Lucas 6:36",
+            text: "Sede misericordiosos, como também vosso Pai é misericordioso. A pausa ajuda a responder com mais bondade.",
+            estimatedMinutes: 5,
+            theme: .forgiveness,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "john-8-spiritist",
+            tradition: .spiritist,
+            title: "Verdade que educa",
+            reference: "João 8:32",
+            text: "Conhecereis a verdade, e a verdade vos libertará. A liberdade começa quando a consciência volta a dirigir o impulso.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "matthew-11-spiritist",
+            tradition: .spiritist,
+            title: "Mansidão e alívio",
+            reference: "Mateus 11:29",
+            text: "Aprendei de mim, que sou manso e humilde de coração. A mansidão transforma a pressa em escolha lúcida.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "romans-12-spiritist",
+            tradition: .spiritist,
+            title: "Renovar a mente",
+            reference: "Romanos 12:2",
+            text: "Transformai-vos pela renovação da vossa mente. Cada pausa consciente educa a vontade e fortalece o bem.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "corinthians-13-spiritist",
+            tradition: .spiritist,
+            title: "Caridade que permanece",
+            reference: "1 Coríntios 13:4-7",
+            text: "A caridade é paciente e benigna. Antes de reagir, escolha o gesto que mais se aproxima do amor.",
+            estimatedMinutes: 5,
+            theme: .forgiveness,
+            section: .paulineLetters,
+            book: .corinthians
         )
     ]
 
@@ -105,9 +369,15 @@ struct PassageRecommendationService {
         for profile: UserFaithProfile,
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil,
+        recentlyShownPassageIDs: [String] = [],
         targetMinutes: Int = 10
     ) -> [ScripturePassage] {
-        let ranked = rankedPassages(for: profile, history: history, avoiding: currentPassageID)
+        let ranked = rankedPassages(
+            for: profile,
+            history: history,
+            avoiding: currentPassageID,
+            recentlyShownPassageIDs: recentlyShownPassageIDs
+        )
         var plan: [ScripturePassage] = []
         var totalMinutes = 0
 
@@ -124,10 +394,14 @@ struct PassageRecommendationService {
     private func rankedPassages(
         for profile: UserFaithProfile,
         history: [ReadingHistoryItem],
-        avoiding currentPassageID: String? = nil
+        avoiding currentPassageID: String? = nil,
+        recentlyShownPassageIDs: [String] = []
     ) -> [ScripturePassage] {
         let lastID = history.first?.passageID
-        let recentIDs = Set(history.prefix(5).map(\.passageID))
+        let completedIDs = history.prefix(8).flatMap { item in
+            item.passageID.split(separator: "+").map(String.init)
+        }
+        let recentIDs = Set(completedIDs + recentlyShownPassageIDs.prefix(18))
         let traditionMatches = passages.filter { $0.tradition == profile.tradition }
         let scored: [(passage: ScripturePassage, score: Int)] = traditionMatches.map { passage in
             var score = 0
@@ -135,7 +409,7 @@ struct PassageRecommendationService {
             if profile.favoriteBibleSections.contains(passage.section) { score += 3 }
             if profile.favoriteThemes.contains(passage.theme) { score += 2 }
             if lastID?.contains(passage.id) == true { score -= 10 }
-            if recentIDs.contains(where: { $0.contains(passage.id) }) { score -= 4 }
+            if recentIDs.contains(passage.id) { score -= 12 }
             if passage.id == currentPassageID { score -= 8 }
             return (passage, score)
         }
