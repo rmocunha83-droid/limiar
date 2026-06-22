@@ -62,7 +62,7 @@ struct PassageRecommendationService {
             tradition: .jewish,
             title: "Luz que nasce",
             reference: "Yeshayahu / Isaías 58:8",
-            text: "Entao a tua luz rompera como a aurora, e a tua cura brotara sem demora.",
+            text: "Então a tua luz romperá como a aurora, e a tua cura brotará sem demora.",
             estimatedMinutes: 5,
             theme: .hope,
             section: .prophets,
@@ -169,7 +169,7 @@ struct AIReflectionRequest: Codable, Hashable {
         let compactText = String(passageText.prefix(1200))
         return """
         Explique este trecho para um usuário \(tradition.title). Seja claro, breve e pastoral. Não invente conteúdo bíblico. Retorne: resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
-        Referencia: \(passageReference)
+        Referência: \(passageReference)
         Temas: \(themes)
         Profundidade: \(explanationDepth.title)
         Texto: \(compactText)

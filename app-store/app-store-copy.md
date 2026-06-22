@@ -24,7 +24,7 @@ Recursos:
 - Histórico de leituras e passagens favoritas.
 - Controle de tempo de desbloqueio depois da leitura.
 
-Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciencia.
+Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
 
 ## Palavras-chave sugeridas
 foco,tempo de uso,bloqueio,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos

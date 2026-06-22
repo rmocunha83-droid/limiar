@@ -30,13 +30,13 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             ),
             subtitle: ShieldConfiguration.Label(
                 text: "Abra o Limiar, leia o trecho de agora e volte com mais presença. Depois disso, seu acesso fica liberado por um tempo.",
-                color: UIColor(red: 0.55, green: 0.77, blue: 0.78, alpha: 1)
+                color: UIColor(red: 0.74, green: 0.75, blue: 0.75, alpha: 1)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: "Abrir o Limiar",
                 color: .black
             ),
-            primaryButtonBackgroundColor: UIColor(red: 0.34, green: 0.84, blue: 0.80, alpha: 1),
+            primaryButtonBackgroundColor: UIColor(red: 0.70, green: 0.81, blue: 0.72, alpha: 1),
             secondaryButtonLabel: ShieldConfiguration.Label(
                 text: "Ficar aqui",
                 color: UIColor(red: 0.64, green: 0.66, blue: 0.67, alpha: 1)

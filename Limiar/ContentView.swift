@@ -325,7 +325,7 @@ private struct ReadingView: View {
             Button {
                 narration.toggle(text: model.currentReadingNarrationText)
             } label: {
-                Label(narration.isSpeaking ? "Parar narracao" : "Ouvir trecho", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
+                Label(narration.isSpeaking ? "Parar narração" : "Ouvir trecho", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
                     .lineLimit(1)
             }
             .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
@@ -483,7 +483,7 @@ private struct OnboardingView: View {
 
     private var tradition: some View {
         VStack(alignment: .leading, spacing: 18) {
-            OnboardingTitle(eyebrow: "TRADICAO", title: "Qual linguagem espiritual guia sua leitura?")
+            OnboardingTitle(eyebrow: "TRADIÇÃO", title: "Qual linguagem espiritual guia sua leitura?")
             ForEach(FaithTradition.allCases) { tradition in
                 SelectableRow(
                     title: tradition.title,
@@ -566,7 +566,7 @@ private struct OnboardingView: View {
             ForEach([15, 30, 60], id: \.self) { minutes in
                 SelectableRow(
                     title: "\(minutes) minutos",
-                    subtitle: minutes == 30 ? "Equilibrio recomendado para comecar." : "Pode ser alterado depois.",
+                    subtitle: minutes == 30 ? "Equilíbrio recomendado para começar." : "Pode ser alterado depois.",
                     isSelected: model.unlockDurationMinutes == minutes
                 ) {
                     model.unlockDurationMinutes = minutes
@@ -720,7 +720,7 @@ private struct HistoryView: View {
     var body: some View {
         List {
             if model.history.isEmpty {
-                Text("Nenhuma leitura concluida ainda.")
+                Text("Nenhuma leitura concluída ainda.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(model.history) { item in

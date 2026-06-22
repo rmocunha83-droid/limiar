@@ -23,7 +23,7 @@ enum FaithTradition: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .catholic: "Bíblia católica e tom pastoral."
         case .protestant: "Canon protestante e estudo devocional."
-        case .jewish: "Tanakh, sem referencias ao Novo Testamento."
+        case .jewish: "Tanakh, sem referências ao Novo Testamento."
         case .spiritist: "Evangelho, reforma íntima e aplicação moral."
         }
     }
@@ -81,7 +81,7 @@ enum BibleBook: String, Codable, CaseIterable, Identifiable {
         case .luke: "Lucas"
         case .john: "João"
         case .romans: "Romanos"
-        case .corinthians: "Corintios"
+        case .corinthians: "Coríntios"
         case .revelation: "Apocalipse"
         }
     }
@@ -111,7 +111,7 @@ enum SpiritualTheme: String, Codable, CaseIterable, Identifiable {
         case .family: "Família"
         case .work: "Trabalho"
         case .anxiety: "Ansiedade"
-        case .presence: "Presenca"
+        case .presence: "Presença"
         case .purpose: "Propósito"
         }
     }
@@ -214,7 +214,7 @@ final class LimiarAppModel {
     var currentReflection = AIReflection(
         summary: "Uma pausa breve para lembrar que a atenção pode ganhar direção.",
         spiritualMeaning: "Voltar ao essencial e uma escolha espiritual pequena, mas concreta.",
-        practicalApplication: "Respire, leia e escolha atravessar com consciencia.",
+        practicalApplication: "Respire, leia e escolha atravessar com consciência.",
         conclusion: "O limiar transforma impulso em decisão.",
         meditationQuestion: "O que merece minha atenção agora?"
     )
@@ -372,6 +372,7 @@ final class LimiarAppModel {
         policyStore.saveHistory(history)
         policyStore.saveUnlockedUntil(until)
         screenTimeController.clearShield()
+        screenTimeController.scheduleUnlockExpiration(at: until)
         unlockNote = "Liberado até \(until.formatted(date: .omitted, time: .shortened))."
         beginNewReading()
     }
@@ -381,6 +382,11 @@ final class LimiarAppModel {
             screenTimeController.clearShield()
             return
         }
+        if let unlockedUntil, unlockedUntil > Date() {
+            screenTimeController.clearShield()
+            screenTimeController.scheduleUnlockExpiration(at: unlockedUntil)
+            return
+        }
         screenTimeController.applyShield(selection: selection)
     }
 
@@ -388,6 +394,7 @@ final class LimiarAppModel {
         guard blockingEnabled else { return }
         if let unlockedUntil, unlockedUntil > Date() {
             screenTimeController.clearShield()
+            screenTimeController.scheduleUnlockExpiration(at: unlockedUntil)
         } else {
             self.unlockedUntil = nil
             policyStore.saveUnlockedUntil(nil)

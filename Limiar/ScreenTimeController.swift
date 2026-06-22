@@ -15,6 +15,7 @@ struct ScreenTimeController {
         store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
         store.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
         store.shield.webDomains = selection.webDomainTokens.isEmpty ? nil : selection.webDomainTokens
+        scheduleDailyMonitoring()
     }
 
     func clearShield() {
@@ -31,8 +32,32 @@ struct ScreenTimeController {
 
         try? center.startMonitoring(.limiarDaily, during: schedule)
     }
+
+    func scheduleUnlockExpiration(at date: Date) {
+        let center = DeviceActivityCenter()
+        let calendar = Calendar.current
+        let now = Date()
+        guard date > now else {
+            try? center.stopMonitoring([.limiarUnlockWindow])
+            applyShield(selection: ScreenTimePolicyStore().loadSelection())
+            return
+        }
+
+        try? center.stopMonitoring([.limiarUnlockWindow])
+
+        let start = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now)
+        let end = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        let schedule = DeviceActivitySchedule(
+            intervalStart: start,
+            intervalEnd: end,
+            repeats: false
+        )
+
+        try? center.startMonitoring(.limiarUnlockWindow, during: schedule)
+    }
 }
 
 extension DeviceActivityName {
     static var limiarDaily: Self { Self("limiar.daily") }
+    static var limiarUnlockWindow: Self { Self("limiar.unlockWindow") }
 }
