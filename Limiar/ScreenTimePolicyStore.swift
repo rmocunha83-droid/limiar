@@ -15,6 +15,7 @@ struct ScreenTimePolicyStore {
         static let favorites = "favoritePassages"
         static let screenTimeAuthorized = "screenTimeAuthorized"
         static let recentPassageIDs = "recentPassageIDs"
+        static let recentAIReflections = "recentAIReflections"
     }
 
     private var defaults: UserDefaults {
@@ -100,6 +101,14 @@ struct ScreenTimePolicyStore {
 
     func saveRecentPassageIDs(_ ids: [String]) {
         save(ids, key: Key.recentPassageIDs)
+    }
+
+    func loadRecentAIReflections() -> [RecentAIReflectionDigest] {
+        load([RecentAIReflectionDigest].self, key: Key.recentAIReflections) ?? []
+    }
+
+    func saveRecentAIReflections(_ reflections: [RecentAIReflectionDigest]) {
+        save(reflections, key: Key.recentAIReflections)
     }
 
     private func load<T: Decodable>(_ type: T.Type, key: String) -> T? {

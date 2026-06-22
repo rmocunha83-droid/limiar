@@ -169,6 +169,13 @@ struct AIReflection: Codable, Equatable {
     let meditationQuestion: String
 }
 
+struct RecentAIReflectionDigest: Codable, Hashable {
+    let reference: String
+    let summary: String
+    let meditationQuestion: String
+    let createdAt: Date
+}
+
 struct SpiritualReadingItem: Identifiable, Codable, Equatable {
     let id: String
     let reference: String
@@ -197,6 +204,39 @@ enum LockState: Equatable {
     case locked
     case readingPause
     case unlockedUntil(Date)
+}
+
+enum AIContentState: Equatable {
+    case localReady
+    case generating
+    case remoteReady
+    case fallback
+
+    var title: String {
+        switch self {
+        case .localReady:
+            "Reflexão local pronta"
+        case .generating:
+            "Gerando reflexão com IA"
+        case .remoteReady:
+            "Reflexão gerada por IA"
+        case .fallback:
+            "Reflexão local disponível"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .localReady:
+            "Preparando uma versão personalizada."
+        case .generating:
+            "A leitura já pode começar enquanto a IA trabalha."
+        case .remoteReady:
+            "Texto atualizado com uma reflexão nova."
+        case .fallback:
+            "A conexão falhou, então mantivemos a versão local."
+        }
+    }
 }
 
 @MainActor
@@ -236,6 +276,8 @@ final class LimiarAppModel {
     var unlockNote = ""
     var hasAuthorizedScreenTime = false
     var recentPassageIDs: [String] = []
+    var recentAIReflections: [RecentAIReflectionDigest] = []
+    var aiContentState = AIContentState.localReady
 
     private let recommender = PassageRecommendationService()
     private let reflectionService = AIReflectionService()
@@ -243,6 +285,8 @@ final class LimiarAppModel {
     private let policyStore = ScreenTimePolicyStore()
     private let screenTimeController = ScreenTimeController()
     private var lastForegroundRefreshAt = Date.distantPast
+    private var aiGenerationTask: Task<Void, Never>?
+    private var aiGenerationID = UUID()
 
     init() {
         let savedProfile = policyStore.loadFaithProfile() ?? .starter
@@ -256,6 +300,7 @@ final class LimiarAppModel {
         favoritePassages = policyStore.loadFavorites()
         hasAuthorizedScreenTime = policyStore.loadScreenTimeAuthorized()
         recentPassageIDs = policyStore.loadRecentPassageIDs()
+        recentAIReflections = policyStore.loadRecentAIReflections()
 
         setReadingPlan(
             recommender.readingPlan(
@@ -490,15 +535,26 @@ final class LimiarAppModel {
 
     private func setReadingPlan(_ plan: [ScripturePassage], profile: UserFaithProfile) {
         let resolvedPlan = plan.isEmpty ? [currentPassage] : plan
+        aiGenerationTask?.cancel()
+        let generationID = UUID()
+        aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
         currentSpiritualReadingItems = spiritualReadingService.readingItems(
             for: resolvedPlan,
             profile: profile,
-            recentPassageIDs: recentPassageIDs
+            recentPassageIDs: recentPassageIDs,
+            recentReflections: recentAIReflections
         )
-        currentReflection = reflectionService.reflection(for: resolvedPlan, profile: profile)
+        currentReflection = reflectionService.reflection(
+            for: resolvedPlan,
+            profile: profile,
+            recentReflections: recentAIReflections
+        )
         rememberShownPassages(resolvedPlan)
+        rememberReflection(reference: currentReadingReference, reflection: currentReflection)
+        aiContentState = .generating
+        refreshRemoteAIContent(for: resolvedPlan, profile: profile, generationID: generationID)
     }
 
     private func rememberShownPassages(_ passages: [ScripturePassage]) {
@@ -507,5 +563,61 @@ final class LimiarAppModel {
         recentPassageIDs.insert(contentsOf: ids, at: 0)
         recentPassageIDs = Array(recentPassageIDs.prefix(40))
         policyStore.saveRecentPassageIDs(recentPassageIDs)
+    }
+
+    private func refreshRemoteAIContent(
+        for passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        generationID: UUID
+    ) {
+        let recentPassageIDs = recentPassageIDs
+        let recentReflections = recentAIReflections
+        aiGenerationTask = Task { [passages, profile, recentPassageIDs, recentReflections] in
+            let spiritualReadingService = AISpiritualReadingService()
+            let reflectionService = AIReflectionService()
+            async let remoteItems = spiritualReadingService.remoteReadingItems(
+                for: passages,
+                profile: profile,
+                recentPassageIDs: recentPassageIDs,
+                recentReflections: recentReflections
+            )
+            async let remoteReflection = reflectionService.remoteReflection(
+                for: passages,
+                profile: profile,
+                recentReflections: recentReflections
+            )
+
+            let result = await (remoteItems, remoteReflection)
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                guard aiGenerationID == generationID else { return }
+                if let items = result.0, let reflection = result.1 {
+                    currentSpiritualReadingItems = items
+                    currentReflection = reflection
+                    aiContentState = .remoteReady
+                    rememberReflection(reference: currentReadingReference, reflection: reflection)
+                } else {
+                    aiContentState = .fallback
+                }
+            }
+        }
+    }
+
+    private func rememberReflection(reference: String, reflection: AIReflection) {
+        let digest = RecentAIReflectionDigest(
+            reference: reference,
+            summary: reflection.summary,
+            meditationQuestion: reflection.meditationQuestion,
+            createdAt: Date()
+        )
+        recentAIReflections.removeAll {
+            $0.reference == digest.reference
+                && $0.summary == digest.summary
+                && $0.meditationQuestion == digest.meditationQuestion
+        }
+        recentAIReflections.insert(digest, at: 0)
+        recentAIReflections = Array(recentAIReflections.prefix(16))
+        policyStore.saveRecentAIReflections(recentAIReflections)
     }
 }

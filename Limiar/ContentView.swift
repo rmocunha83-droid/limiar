@@ -501,6 +501,7 @@ private struct ReadingView: View {
                         .lineSpacing(8)
                         .padding(.vertical, 10)
 
+                    aiStatusBanner
                     reflectionSection
                     readingGate
                     disclaimer
@@ -557,6 +558,39 @@ private struct ReadingView: View {
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
             ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
         }
+    }
+
+    private var aiStatusBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            if model.aiContentState == .generating {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(Color.warmGold)
+                    .padding(.top, 2)
+            } else {
+                Image(systemName: model.aiContentState == .remoteReady ? "sparkles" : "sparkle.magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.warmGold)
+                    .padding(.top, 2)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(model.aiContentState.title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.ivory)
+
+                Text(model.aiContentState.subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(3)
+            }
+        }
+        .padding(14)
+        .background(Color.black.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.ivory.opacity(0.1), lineWidth: 1)
+        )
     }
 
     private var readingGate: some View {

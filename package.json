@@ -5,6 +5,7 @@
   "description": "Landing page e assets de marketing do aplicativo Limiar.",
   "scripts": {
     "start": "python3 -m http.server 4173",
-    "preview": "python3 -m http.server 4173"
+    "preview": "python3 -m http.server 4173",
+    "test:ai-backend": "node --test tests/ai-backend.test.js"
   }
 }

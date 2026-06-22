@@ -705,6 +705,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
     let explanationDepth: ExplanationDepth
     let candidateReferences: [String]
     let recentPassageIDs: [String]
+    let recentReflections: [RecentAIReflectionDigest]
 
     var cacheKey: String {
         let rawKey = [
@@ -714,7 +715,8 @@ struct AISpiritualReadingRequest: Codable, Hashable {
             favoriteThemes.map(\.rawValue).sorted().joined(separator: ","),
             explanationDepth.rawValue,
             candidateReferences.joined(separator: "+"),
-            recentPassageIDs.prefix(20).joined(separator: "+")
+            recentPassageIDs.prefix(20).joined(separator: "+"),
+            recentReflections.prefix(8).map { "\($0.reference):\($0.summary):\($0.meditationQuestion)" }.joined(separator: "+")
         ].joined(separator: "|")
         return Data(rawKey.utf8).base64EncodedString()
     }
@@ -725,6 +727,9 @@ struct AISpiritualReadingRequest: Codable, Hashable {
         let themes = favoriteThemes.map(\.title).joined(separator: ", ")
         let references = candidateReferences.joined(separator: "; ")
         let recent = recentPassageIDs.prefix(20).joined(separator: ", ")
+        let reflectionHistory = recentReflections.prefix(8)
+            .map { "\($0.reference): \($0.summary) Pergunta: \($0.meditationQuestion)" }
+            .joined(separator: "\n")
         return """
         Gere uma leitura espiritual para um usuário \(tradition.title). Use pelo menos 5 trechos. Seja acolhedor, simples e pastoral, em tom de homilia. Retorne itens com referência, texto religioso, explicação e conclusão prática. Não invente conteúdo bíblico.
         Seções: \(sections)
@@ -733,6 +738,8 @@ struct AISpiritualReadingRequest: Codable, Hashable {
         Profundidade: \(explanationDepth.title)
         Referências sugeridas: \(references)
         Evite repetir estes trechos recentes: \(recent)
+        Evite repetir estas reflexões recentes:
+        \(reflectionHistory)
         """
     }
 }
@@ -845,19 +852,23 @@ struct AISpiritualReadingCache {
 struct AISpiritualReadingService {
     private let cache: AISpiritualReadingCache
     private let generator: any AISpiritualReadingGenerating
+    private let remoteService: RemoteAISpiritualReadingService
 
     init(
         cache: AISpiritualReadingCache = AISpiritualReadingCache(),
-        generator: any AISpiritualReadingGenerating = LocalSpiritualReadingGenerator()
+        generator: any AISpiritualReadingGenerating = LocalSpiritualReadingGenerator(),
+        remoteService: RemoteAISpiritualReadingService = RemoteAISpiritualReadingService()
     ) {
         self.cache = cache
         self.generator = generator
+        self.remoteService = remoteService
     }
 
     func readingItems(
         for passages: [ScripturePassage],
         profile: UserFaithProfile,
-        recentPassageIDs: [String]
+        recentPassageIDs: [String],
+        recentReflections: [RecentAIReflectionDigest]
     ) -> [SpiritualReadingItem] {
         let request = AISpiritualReadingRequest(
             tradition: profile.tradition,
@@ -866,7 +877,8 @@ struct AISpiritualReadingService {
             favoriteThemes: profile.favoriteThemes,
             explanationDepth: profile.explanationDepth,
             candidateReferences: passages.map(\.reference),
-            recentPassageIDs: recentPassageIDs
+            recentPassageIDs: recentPassageIDs,
+            recentReflections: recentReflections
         )
 
         if let cached = cache.readingItems(for: request), cached.count >= 5 {
@@ -877,35 +889,79 @@ struct AISpiritualReadingService {
         cache.save(items, for: request)
         return items
     }
+
+    func remoteReadingItems(
+        for passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        recentPassageIDs: [String],
+        recentReflections: [RecentAIReflectionDigest]
+    ) async -> [SpiritualReadingItem]? {
+        let request = AISpiritualReadingRequest(
+            tradition: profile.tradition,
+            favoriteSections: profile.favoriteBibleSections,
+            favoriteBooks: profile.favoriteBooks,
+            favoriteThemes: profile.favoriteThemes,
+            explanationDepth: profile.explanationDepth,
+            candidateReferences: passages.map(\.reference),
+            recentPassageIDs: recentPassageIDs,
+            recentReflections: recentReflections
+        )
+
+        do {
+            let items = try await remoteService.readingItems(for: request, passages: passages)
+            guard items.count >= min(5, max(1, passages.count)) else { return nil }
+            cache.save(items, for: request)
+            return items
+        } catch {
+            return nil
+        }
+    }
 }
 
 struct AIReflectionRequest: Codable, Hashable {
     let tradition: FaithTradition
     let passageReference: String
     let passageText: String
+    let favoriteSections: [BibleSection]
+    let favoriteBooks: [BibleBook]
     let favoriteThemes: [SpiritualTheme]
     let explanationDepth: ExplanationDepth
+    let recentReflections: [RecentAIReflectionDigest]
 
     var cacheKey: String {
+        let sections = favoriteSections.map(\.rawValue).sorted().joined(separator: ",")
+        let books = favoriteBooks.map(\.rawValue).sorted().joined(separator: ",")
         let themes = favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
         let rawKey = [
             tradition.rawValue,
             passageReference,
             explanationDepth.rawValue,
-            themes
+            sections,
+            books,
+            themes,
+            recentReflections.prefix(8).map { "\($0.reference):\($0.summary):\($0.meditationQuestion)" }.joined(separator: "+")
         ].joined(separator: "|")
         return Data(rawKey.utf8).base64EncodedString()
     }
 
     var compactPrompt: String {
+        let sections = favoriteSections.map(\.title).joined(separator: ", ")
+        let books = favoriteBooks.map(\.title).joined(separator: ", ")
         let themes = favoriteThemes.map(\.title).joined(separator: ", ")
         let compactText = String(passageText.prefix(1200))
+        let reflectionHistory = recentReflections.prefix(8)
+            .map { "\($0.reference): \($0.summary) Pergunta: \($0.meditationQuestion)" }
+            .joined(separator: "\n")
         return """
         Explique este trecho para um usuário \(tradition.title). Seja claro, breve e pastoral. Não invente conteúdo bíblico. Retorne: resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
         Referência: \(passageReference)
+        Seções preferidas: \(sections)
+        Livros preferidos: \(books)
         Temas: \(themes)
         Profundidade: \(explanationDepth.title)
         Texto: \(compactText)
+        Evite repetir estas reflexões recentes:
+        \(reflectionHistory)
         """
     }
 }
@@ -960,28 +1016,42 @@ struct AIReflectionCache {
 struct AIReflectionService {
     private let cache: AIReflectionCache
     private let generator: any AIReflectionGenerating
+    private let remoteService: RemoteAIReflectionService
 
     init(
         cache: AIReflectionCache = AIReflectionCache(),
-        generator: any AIReflectionGenerating = LocalLightweightReflectionGenerator()
+        generator: any AIReflectionGenerating = LocalLightweightReflectionGenerator(),
+        remoteService: RemoteAIReflectionService = RemoteAIReflectionService()
     ) {
         self.cache = cache
         self.generator = generator
+        self.remoteService = remoteService
     }
 
-    func reflection(for passage: ScripturePassage, profile: UserFaithProfile) -> AIReflection {
-        reflection(for: [passage], profile: profile)
+    func reflection(
+        for passage: ScripturePassage,
+        profile: UserFaithProfile,
+        recentReflections: [RecentAIReflectionDigest]
+    ) -> AIReflection {
+        reflection(for: [passage], profile: profile, recentReflections: recentReflections)
     }
 
-    func reflection(for passages: [ScripturePassage], profile: UserFaithProfile) -> AIReflection {
+    func reflection(
+        for passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        recentReflections: [RecentAIReflectionDigest]
+    ) -> AIReflection {
         let passageReference = passages.map(\.reference).joined(separator: " + ")
         let passageText = passages.map { "\($0.reference): \($0.text)" }.joined(separator: "\n\n")
         let request = AIReflectionRequest(
             tradition: profile.tradition,
             passageReference: passageReference,
             passageText: passageText,
+            favoriteSections: profile.favoriteBibleSections,
+            favoriteBooks: profile.favoriteBooks,
             favoriteThemes: profile.favoriteThemes,
-            explanationDepth: profile.explanationDepth
+            explanationDepth: profile.explanationDepth,
+            recentReflections: recentReflections
         )
         if let cached = cache.reflection(for: request) {
             return cached
@@ -990,5 +1060,299 @@ struct AIReflectionService {
         let reflection = generator.generateReflection(for: request)
         cache.save(reflection, for: request)
         return reflection
+    }
+
+    func remoteReflection(
+        for passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        recentReflections: [RecentAIReflectionDigest]
+    ) async -> AIReflection? {
+        let passageReference = passages.map(\.reference).joined(separator: " + ")
+        let passageText = passages.map { "\($0.reference): \($0.text)" }.joined(separator: "\n\n")
+        let request = AIReflectionRequest(
+            tradition: profile.tradition,
+            passageReference: passageReference,
+            passageText: passageText,
+            favoriteSections: profile.favoriteBibleSections,
+            favoriteBooks: profile.favoriteBooks,
+            favoriteThemes: profile.favoriteThemes,
+            explanationDepth: profile.explanationDepth,
+            recentReflections: recentReflections
+        )
+
+        do {
+            let reflection = try await remoteService.reflection(for: request, passages: passages)
+            cache.save(reflection, for: request)
+            return reflection
+        } catch {
+            return nil
+        }
+    }
+}
+
+enum RemoteAIError: Error {
+    case invalidURL
+    case invalidResponse
+    case invalidPayload
+    case emptyContent
+}
+
+struct RemoteAIBackendClient {
+    var baseURL = URL(string: "https://limiar-five.vercel.app")!
+    var timeout: TimeInterval = 14
+    var session: URLSession = .shared
+
+    func post<Request: Encodable, Response: Decodable>(
+        _ path: String,
+        body: Request,
+        responseType: Response.Type = Response.self
+    ) async throws -> Response {
+        guard let url = URL(string: path, relativeTo: baseURL) else {
+            throw RemoteAIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = timeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw RemoteAIError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(Response.self, from: data)
+    }
+}
+
+struct RemotePassagePayload: Codable {
+    let id: String
+    let title: String
+    let reference: String
+    let text: String
+    let theme: String
+    let section: String
+    let book: String
+
+    init(_ passage: ScripturePassage) {
+        id = passage.id
+        title = passage.title
+        reference = passage.reference
+        text = passage.text
+        theme = passage.theme.title
+        section = passage.section.title
+        book = passage.book.title
+    }
+}
+
+struct RemoteAIProfilePayload: Codable {
+    let tradition: String
+    let favoriteSections: [String]
+    let favoriteBooks: [String]
+    let favoriteThemes: [String]
+    let explanationDepth: String
+
+    init(profile: UserFaithProfile) {
+        tradition = profile.tradition.title
+        favoriteSections = profile.favoriteBibleSections.map(\.title)
+        favoriteBooks = profile.favoriteBooks.map(\.title)
+        favoriteThemes = profile.favoriteThemes.map(\.title)
+        explanationDepth = profile.explanationDepth.remoteValue
+    }
+}
+
+struct RemoteAIReflectionDigestPayload: Codable {
+    let reference: String
+    let summary: String
+    let meditationQuestion: String
+
+    init(_ digest: RecentAIReflectionDigest) {
+        reference = digest.reference
+        summary = digest.summary
+        meditationQuestion = digest.meditationQuestion
+    }
+}
+
+struct RemoteSpiritualReadingRequestPayload: Codable {
+    let profile: RemoteAIProfilePayload
+    let passages: [RemotePassagePayload]
+    let recentPassageIDs: [String]
+    let recentReflections: [RemoteAIReflectionDigestPayload]
+}
+
+struct RemoteReflectionRequestPayload: Codable {
+    let profile: RemoteAIProfilePayload
+    let reference: String
+    let passageText: String
+    let passages: [RemotePassagePayload]
+    let recentReflections: [RemoteAIReflectionDigestPayload]
+}
+
+struct RemoteSpiritualReadingResponse: Codable {
+    let items: [RemoteSpiritualReadingItemResponse]
+}
+
+struct RemoteSpiritualReadingItemResponse: Codable {
+    let reference: String
+    let passageText: String
+    let homily: String
+    let spiritualMeaning: String?
+    let practicalApplication: String?
+    let conclusion: String
+    let meditationQuestion: String?
+
+    func validatedItem(cacheKey: String, index: Int) throws -> SpiritualReadingItem {
+        let cleanReference = reference.trimmedForAI
+        let cleanText = passageText.trimmedForAI
+        let cleanHomily = homily.trimmedForAI
+        let cleanConclusion = conclusion.trimmedForAI
+
+        guard !cleanReference.isEmpty,
+              !cleanText.isEmpty,
+              !cleanHomily.isEmpty,
+              !cleanConclusion.isEmpty else {
+            throw RemoteAIError.emptyContent
+        }
+
+        return SpiritualReadingItem(
+            id: "\(cacheKey).remote.\(index).\(cleanReference)",
+            reference: cleanReference,
+            text: cleanText,
+            homily: cleanHomily,
+            practicalConclusion: cleanConclusion
+        )
+    }
+}
+
+struct RemoteReflectionResponse: Codable {
+    let reference: String
+    let passageText: String
+    let homily: String
+    let spiritualMeaning: String
+    let practicalApplication: String
+    let conclusion: String
+    let meditationQuestion: String
+
+    func validatedReflection() throws -> AIReflection {
+        let cleanHomily = homily.trimmedForAI
+        let cleanMeaning = spiritualMeaning.trimmedForAI
+        let cleanApplication = practicalApplication.trimmedForAI
+        let cleanConclusion = conclusion.trimmedForAI
+        let cleanQuestion = meditationQuestion.trimmedForAI
+
+        guard !reference.trimmedForAI.isEmpty,
+              !passageText.trimmedForAI.isEmpty,
+              !cleanHomily.isEmpty,
+              !cleanMeaning.isEmpty,
+              !cleanApplication.isEmpty,
+              !cleanConclusion.isEmpty,
+              !cleanQuestion.isEmpty else {
+            throw RemoteAIError.emptyContent
+        }
+
+        return AIReflection(
+            summary: cleanHomily,
+            spiritualMeaning: cleanMeaning,
+            practicalApplication: cleanApplication,
+            conclusion: cleanConclusion,
+            meditationQuestion: cleanQuestion
+        )
+    }
+}
+
+struct RemoteAISpiritualReadingService {
+    private let client: RemoteAIBackendClient
+
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient()) {
+        self.client = client
+    }
+
+    func readingItems(
+        for request: AISpiritualReadingRequest,
+        passages: [ScripturePassage]
+    ) async throws -> [SpiritualReadingItem] {
+        let payload = RemoteSpiritualReadingRequestPayload(
+            profile: RemoteAIProfilePayload(
+                profile: UserFaithProfile(
+                    tradition: request.tradition,
+                    favoriteBibleSections: request.favoriteSections,
+                    favoriteBooks: request.favoriteBooks,
+                    favoriteThemes: request.favoriteThemes,
+                    explanationDepth: request.explanationDepth
+                )
+            ),
+            passages: passages.map(RemotePassagePayload.init),
+            recentPassageIDs: Array(request.recentPassageIDs.prefix(20)),
+            recentReflections: request.recentReflections.prefix(8).map(RemoteAIReflectionDigestPayload.init)
+        )
+
+        let response = try await client.post(
+            "/api/spiritual-reading",
+            body: payload,
+            responseType: RemoteSpiritualReadingResponse.self
+        )
+        let items = try response.items.enumerated().map { index, item in
+            try item.validatedItem(cacheKey: request.cacheKey, index: index)
+        }
+        guard !items.isEmpty else { throw RemoteAIError.emptyContent }
+        return items
+    }
+}
+
+struct RemoteAIReflectionService {
+    private let client: RemoteAIBackendClient
+
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient()) {
+        self.client = client
+    }
+
+    func reflection(
+        for request: AIReflectionRequest,
+        passages: [ScripturePassage]
+    ) async throws -> AIReflection {
+        let payload = RemoteReflectionRequestPayload(
+            profile: RemoteAIProfilePayload(
+                profile: UserFaithProfile(
+                    tradition: request.tradition,
+                    favoriteBibleSections: request.favoriteSections,
+                    favoriteBooks: request.favoriteBooks,
+                    favoriteThemes: request.favoriteThemes,
+                    explanationDepth: request.explanationDepth
+                )
+            ),
+            reference: request.passageReference,
+            passageText: request.passageText,
+            passages: passages.map(RemotePassagePayload.init),
+            recentReflections: request.recentReflections.prefix(8).map(RemoteAIReflectionDigestPayload.init)
+        )
+
+        let response = try await client.post(
+            "/api/reflection",
+            body: payload,
+            responseType: RemoteReflectionResponse.self
+        )
+        return try response.validatedReflection()
+    }
+}
+
+private extension ExplanationDepth {
+    var remoteValue: String {
+        switch self {
+        case .short:
+            "curta"
+        case .medium:
+            "média"
+        case .deep:
+            "grande"
+        }
+    }
+}
+
+private extension String {
+    var trimmedForAI: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
