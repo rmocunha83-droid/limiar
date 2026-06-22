@@ -91,6 +91,72 @@ struct PassageRecommendationService {
             book: .isaiah
         ),
         ScripturePassage(
+            id: "john-14-catholic",
+            tradition: .catholic,
+            title: "Paz para o coração",
+            reference: "João 14, 27",
+            text: "Deixo-vos a paz, dou-vos a minha paz. Não se perturbe o vosso coração, nem se atemorize.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "matthew-6-catholic",
+            tradition: .catholic,
+            title: "Buscar primeiro",
+            reference: "Mateus 6, 33",
+            text: "Buscai primeiro o Reino de Deus e a sua justiça, e todas essas coisas vos serão dadas por acréscimo.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "psalm-46-catholic",
+            tradition: .catholic,
+            title: "Aquietar e confiar",
+            reference: "Salmo 46",
+            text: "Aquietai-vos e reconhecei que eu sou Deus. Ele é refúgio e força, auxílio sempre presente na tribulação.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "luke-6-catholic",
+            tradition: .catholic,
+            title: "Misericórdia concreta",
+            reference: "Lucas 6, 36",
+            text: "Sede misericordiosos, como também vosso Pai é misericordioso. A misericórdia começa na próxima escolha.",
+            estimatedMinutes: 5,
+            theme: .forgiveness,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "proverbs-4-catholic",
+            tradition: .catholic,
+            title: "Guardar o coração",
+            reference: "Provérbios 4, 23",
+            text: "Com todo cuidado guarda o teu coração, porque dele brotam as fontes da vida.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "romans-12-catholic",
+            tradition: .catholic,
+            title: "Mente renovada",
+            reference: "Romanos 12, 2",
+            text: "Transformai-vos pela renovação da mente, para discernir o que é bom, agradável e perfeito diante de Deus.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
             id: "matthew-6",
             tradition: .protestant,
             title: "Buscar primeiro",
@@ -177,6 +243,72 @@ struct PassageRecommendationService {
             theme: .family,
             section: .paulineLetters,
             book: .corinthians
+        ),
+        ScripturePassage(
+            id: "philippians-4-protestant",
+            tradition: .protestant,
+            title: "Paz que guarda",
+            reference: "Filipenses 4:6-7",
+            text: "Não andem ansiosos por coisa alguma. Apresentem seus pedidos a Deus, e a paz de Deus guardará o coração e a mente.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .paulineLetters,
+            book: .corinthians
+        ),
+        ScripturePassage(
+            id: "psalm-46-protestant",
+            tradition: .protestant,
+            title: "Aquietem-se",
+            reference: "Salmo 46:10",
+            text: "Aquietem-se e saibam que eu sou Deus. Ele é refúgio e fortaleza, socorro bem presente na angústia.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "john-14-protestant",
+            tradition: .protestant,
+            title: "Paz deixada por Cristo",
+            reference: "João 14:27",
+            text: "Deixo-lhes a paz; a minha paz lhes dou. Não se perturbe o coração de vocês, nem tenham medo.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "proverbs-4-protestant",
+            tradition: .protestant,
+            title: "Guardar o coração",
+            reference: "Provérbios 4:23",
+            text: "Acima de tudo, guarde o seu coração, pois dele depende toda a sua vida.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "luke-10-protestant",
+            tradition: .protestant,
+            title: "Uma coisa necessária",
+            reference: "Lucas 10:41-42",
+            text: "Você está preocupada e inquieta com muitas coisas; todavia, apenas uma é necessária.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "isaiah-40-protestant",
+            tradition: .protestant,
+            title: "Forças renovadas",
+            reference: "Isaías 40:31",
+            text: "Aqueles que esperam no Senhor renovam as suas forças; caminham e não se fatigam.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .prophets,
+            book: .isaiah
         ),
         ScripturePassage(
             id: "proverbs-4",
@@ -267,6 +399,72 @@ struct PassageRecommendationService {
             book: .psalms
         ),
         ScripturePassage(
+            id: "deuteronomy-6-jewish",
+            tradition: .jewish,
+            title: "Coração inteiro",
+            reference: "Devarim / Deuteronômio 6:5",
+            text: "Amarás o Eterno teu Deus com todo o teu coração, com toda a tua alma e com toda a tua força.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .exodus
+        ),
+        ScripturePassage(
+            id: "psalm-46-jewish",
+            tradition: .jewish,
+            title: "Refúgio e força",
+            reference: "Tehillim / Salmo 46:10",
+            text: "Aquietai-vos e sabei que eu sou Deus. O Eterno é refúgio e força em tempos de aperto.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "micah-6-jewish",
+            tradition: .jewish,
+            title: "Justiça e humildade",
+            reference: "Miquéias 6:8",
+            text: "Foi-te declarado o que é bom: praticar a justiça, amar a bondade e caminhar humildemente com o Eterno.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "joshua-1-jewish",
+            tradition: .jewish,
+            title: "Coragem no caminho",
+            reference: "Yehoshua / Josué 1:9",
+            text: "Sê forte e corajoso. Não temas, pois o Eterno teu Deus estará contigo por onde quer que andares.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .historicalBooks,
+            book: .genesis
+        ),
+        ScripturePassage(
+            id: "psalm-34-jewish",
+            tradition: .jewish,
+            title: "Paz procurada",
+            reference: "Tehillim / Salmo 34:14",
+            text: "Afasta-te do mal e faze o bem; procura a paz e segue-a com firmeza.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-16-jewish",
+            tradition: .jewish,
+            title: "Planos confiados",
+            reference: "Mishlei / Provérbios 16:3",
+            text: "Entrega tuas obras ao Eterno, e teus planos serão estabelecidos.",
+            estimatedMinutes: 5,
+            theme: .work,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
             id: "matthew-5-spiritist",
             tradition: .spiritist,
             title: "Bem-aventurados os mansos",
@@ -353,6 +551,72 @@ struct PassageRecommendationService {
             theme: .forgiveness,
             section: .paulineLetters,
             book: .corinthians
+        ),
+        ScripturePassage(
+            id: "matthew-6-spiritist",
+            tradition: .spiritist,
+            title: "Tesouro do coração",
+            reference: "Mateus 6:21",
+            text: "Onde está o teu tesouro, aí estará também o teu coração. A atenção revela aquilo que estamos alimentando.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "proverbs-4-spiritist",
+            tradition: .spiritist,
+            title: "Vigiar o coração",
+            reference: "Provérbios 4:23",
+            text: "Guarda o teu coração, porque dele procedem as fontes da vida. Vigiar a atenção também é educar a alma.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "luke-10-spiritist",
+            tradition: .spiritist,
+            title: "Uma só coisa necessária",
+            reference: "Lucas 10:41-42",
+            text: "Tu te inquietas por muitas coisas; uma só é necessária. A pausa ajuda a escolher o essencial.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "matthew-5-peace-spiritist",
+            tradition: .spiritist,
+            title: "Pacificadores",
+            reference: "Mateus 5:9",
+            text: "Bem-aventurados os pacificadores. A paz começa quando a resposta deixa de ser automática.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "galatians-6-spiritist",
+            tradition: .spiritist,
+            title: "Semear o bem",
+            reference: "Gálatas 6:9",
+            text: "Não nos cansemos de fazer o bem. Pequenas escolhas repetidas educam a vontade no caminho da caridade.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .paulineLetters,
+            book: .corinthians
+        ),
+        ScripturePassage(
+            id: "john-15-spiritist",
+            tradition: .spiritist,
+            title: "Permanecer no bem",
+            reference: "João 15:5",
+            text: "Quem permanece em mim produz fruto. A permanência no bem transforma intenção em atitude concreta.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .gospels,
+            book: .john
         )
     ]
 
@@ -418,7 +682,15 @@ struct PassageRecommendationService {
             if passage.id == currentPassageID { score -= 8 }
             return (passage, score)
         }
-        return scored.sorted(by: { $0.score > $1.score }).map(\.passage)
+        let rankedMatches = scored.sorted(by: { $0.score > $1.score }).map(\.passage)
+        let freshMatches = rankedMatches.filter { passage in
+            !recentIDs.contains(passage.id) && passage.id != currentPassageID
+        }
+        let olderMatches = rankedMatches.filter { passage in
+            recentIDs.contains(passage.id) || passage.id == currentPassageID
+        }
+
+        return freshMatches + olderMatches
             + passages.filter { passage in
                 !traditionMatches.contains(where: { $0.id == passage.id })
             }
@@ -432,6 +704,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
     let favoriteThemes: [SpiritualTheme]
     let explanationDepth: ExplanationDepth
     let candidateReferences: [String]
+    let recentPassageIDs: [String]
 
     var cacheKey: String {
         let rawKey = [
@@ -440,7 +713,8 @@ struct AISpiritualReadingRequest: Codable, Hashable {
             favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
             favoriteThemes.map(\.rawValue).sorted().joined(separator: ","),
             explanationDepth.rawValue,
-            candidateReferences.joined(separator: "+")
+            candidateReferences.joined(separator: "+"),
+            recentPassageIDs.prefix(20).joined(separator: "+")
         ].joined(separator: "|")
         return Data(rawKey.utf8).base64EncodedString()
     }
@@ -450,6 +724,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
         let books = favoriteBooks.map(\.title).joined(separator: ", ")
         let themes = favoriteThemes.map(\.title).joined(separator: ", ")
         let references = candidateReferences.joined(separator: "; ")
+        let recent = recentPassageIDs.prefix(20).joined(separator: ", ")
         return """
         Gere uma leitura espiritual para um usuário \(tradition.title). Use pelo menos 5 trechos. Seja acolhedor, simples e pastoral, em tom de homilia. Retorne itens com referência, texto religioso, explicação e conclusão prática. Não invente conteúdo bíblico.
         Seções: \(sections)
@@ -457,6 +732,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
         Temas: \(themes)
         Profundidade: \(explanationDepth.title)
         Referências sugeridas: \(references)
+        Evite repetir estes trechos recentes: \(recent)
         """
     }
 }
@@ -485,15 +761,32 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
     }
 
     private func homily(for passage: ScripturePassage, request: AISpiritualReadingRequest) -> String {
-        let traditionOpening = switch request.tradition {
-        case .catholic:
+        let variation = abs((request.cacheKey + passage.id).hashValue) % 3
+        let traditionOpening = switch (request.tradition, variation) {
+        case (.catholic, 0):
             "Este trecho pode ser acolhido como uma pequena homilia para o coração."
-        case .protestant:
+        case (.catholic, 1):
+            "Nesta passagem, a fé aparece como uma luz tranquila para reorganizar o interior."
+        case (.catholic, _):
+            "A leitura conduz a uma pausa orante, simples, mas capaz de devolver direção."
+        case (.protestant, 0):
             "Este trecho pode ser acolhido como uma meditação devocional simples e fiel."
-        case .jewish:
+        case (.protestant, 1):
+            "A Palavra aqui chama a atenção de volta para Deus antes da próxima decisão."
+        case (.protestant, _):
+            "Esta meditação ajuda a transformar impulso em discernimento diante do Senhor."
+        case (.jewish, 0):
             "Este trecho pode ser acolhido como sabedoria do Tanakh para orientar a escolha presente."
-        case .spiritist:
+        case (.jewish, 1):
+            "A passagem oferece uma direção de sabedoria para caminhar com mais inteireza."
+        case (.jewish, _):
+            "A leitura recorda que cada escolha pode ser feita com memória, reverência e propósito."
+        case (.spiritist, 0):
             "Este trecho pode ser acolhido como convite à reforma íntima e à caridade concreta."
+        case (.spiritist, 1):
+            "A mensagem favorece uma pausa de consciência, ajudando a educar desejo e vontade."
+        case (.spiritist, _):
+            "A reflexão aponta para uma decisão mais lúcida, fraterna e responsável."
         }
 
         let themeLine = switch passage.theme {
@@ -561,14 +854,19 @@ struct AISpiritualReadingService {
         self.generator = generator
     }
 
-    func readingItems(for passages: [ScripturePassage], profile: UserFaithProfile) -> [SpiritualReadingItem] {
+    func readingItems(
+        for passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        recentPassageIDs: [String]
+    ) -> [SpiritualReadingItem] {
         let request = AISpiritualReadingRequest(
             tradition: profile.tradition,
             favoriteSections: profile.favoriteBibleSections,
             favoriteBooks: profile.favoriteBooks,
             favoriteThemes: profile.favoriteThemes,
             explanationDepth: profile.explanationDepth,
-            candidateReferences: passages.map(\.reference)
+            candidateReferences: passages.map(\.reference),
+            recentPassageIDs: recentPassageIDs
         )
 
         if let cached = cache.readingItems(for: request), cached.count >= 5 {

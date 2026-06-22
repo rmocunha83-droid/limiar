@@ -35,6 +35,8 @@ private struct DashboardView: View {
     @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
+    @State private var unlockPhase = UnlockButtonPhase.locked
+    @State private var unlockAnimationTick = 0
 
     var body: some View {
         @Bindable var model = model
@@ -221,34 +223,43 @@ private struct DashboardView: View {
 
     private var unlockButton: some View {
         Button {
-            model.finishReading()
+            completeReadingWithUnlockAnimation()
         } label: {
             HStack(spacing: 18) {
-                Image(systemName: "lock.open.fill")
+                Image(systemName: unlockPhase.iconName)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.deepInk.opacity(0.70))
+                    .scaleEffect(unlockPhase == .opening ? 1.18 : 1)
+                    .rotationEffect(.degrees(unlockPhase == .opening ? -8 : 0))
+                    .symbolEffect(.bounce, value: unlockAnimationTick)
+                    .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Li com calma, liberar acesso")
+                    Text(unlockPhase.title)
                         .font(.system(size: 22, weight: .regular, design: .serif))
                         .foregroundStyle(Color.deepInk)
-                    Text("Libera por \(model.unlockDurationDescription)")
+                    Text(unlockPhase.subtitle(duration: model.unlockDurationDescription))
                         .font(.system(size: 15))
                         .foregroundStyle(Color.deepInk.opacity(0.70))
                 }
                 Spacer()
-                Image(systemName: "arrow.right")
+                Image(systemName: unlockPhase.trailingIconName)
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.deepInk)
+                    .opacity(unlockPhase == .unlocked ? 0.9 : 1)
             }
             .padding(.horizontal, 34)
             .frame(height: 104)
-            .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 24))
+            .background(unlockPhase.backgroundColor, in: RoundedRectangle(cornerRadius: 24))
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.ivory.opacity(0.26), lineWidth: 1)
+                    .stroke(unlockPhase.strokeColor, lineWidth: 1)
             )
+            .shadow(color: unlockPhase.shadowColor, radius: unlockPhase == .unlocked ? 18 : 8, x: 0, y: 10)
+            .animation(.spring(response: 0.38, dampingFraction: 0.78), value: unlockPhase)
         }
+        .disabled(unlockPhase == .opening)
+        .accessibilityLabel(unlockPhase.title)
     }
 
     private var footer: some View {
@@ -260,6 +271,84 @@ private struct DashboardView: View {
         .foregroundStyle(Color.sageButton)
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
+    }
+
+    private func completeReadingWithUnlockAnimation() {
+        guard unlockPhase != .opening else { return }
+
+        unlockPhase = .opening
+        unlockAnimationTick += 1
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+            model.finishReading()
+            unlockPhase = .unlocked
+            unlockAnimationTick += 1
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+            unlockPhase = .locked
+        }
+    }
+}
+
+private enum UnlockButtonPhase: Equatable {
+    case locked
+    case opening
+    case unlocked
+
+    var iconName: String {
+        switch self {
+        case .locked: "lock.fill"
+        case .opening, .unlocked: "lock.open.fill"
+        }
+    }
+
+    var trailingIconName: String {
+        switch self {
+        case .locked: "arrow.right"
+        case .opening: "sparkles"
+        case .unlocked: "checkmark"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .locked: "Li com calma, liberar acesso"
+        case .opening: "Liberando acesso"
+        case .unlocked: "Acesso liberado"
+        }
+    }
+
+    func subtitle(duration: String) -> String {
+        switch self {
+        case .locked: "Libera por \(duration)"
+        case .opening: "Abrindo seus APPs bloqueados"
+        case .unlocked: "APPs liberados por \(duration)"
+        }
+    }
+
+    var backgroundColor: Color {
+        switch self {
+        case .locked: Color.sageButton
+        case .opening: Color.warmGold
+        case .unlocked: Color(red: 0.78, green: 0.89, blue: 0.80)
+        }
+    }
+
+    var strokeColor: Color {
+        switch self {
+        case .locked: Color.ivory.opacity(0.26)
+        case .opening: Color.ivory.opacity(0.34)
+        case .unlocked: Color.ivory.opacity(0.42)
+        }
+    }
+
+    var shadowColor: Color {
+        switch self {
+        case .locked: Color.black.opacity(0.20)
+        case .opening: Color.warmGold.opacity(0.22)
+        case .unlocked: Color.sageButton.opacity(0.28)
+        }
     }
 }
 

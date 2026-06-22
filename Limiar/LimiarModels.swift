@@ -492,7 +492,11 @@ final class LimiarAppModel {
         let resolvedPlan = plan.isEmpty ? [currentPassage] : plan
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
-        currentSpiritualReadingItems = spiritualReadingService.readingItems(for: resolvedPlan, profile: profile)
+        currentSpiritualReadingItems = spiritualReadingService.readingItems(
+            for: resolvedPlan,
+            profile: profile,
+            recentPassageIDs: recentPassageIDs
+        )
         currentReflection = reflectionService.reflection(for: resolvedPlan, profile: profile)
         rememberShownPassages(resolvedPlan)
     }
