@@ -5,17 +5,37 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.scenePhase) private var scenePhase
+    @State private var dismissedTrialConversion = false
+
+    private static var forcePaywallForReviewScreenshot: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForcePaywall")
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         @Bindable var model = model
 
         NavigationStack {
             Group {
-                if model.hasCompletedOnboarding {
+                if Self.forcePaywallForReviewScreenshot {
+                    PaywallView()
+                } else if !model.hasCompletedOnboarding {
+                    OnboardingView()
+                } else if subscription.accessState == .trialNotStarted {
+                    FreeTrialStartView()
+                } else if subscription.shouldShowTrialConversion && !dismissedTrialConversion {
+                    TrialConversionView {
+                        dismissedTrialConversion = true
+                    }
+                } else if subscription.hasPremiumAccess {
                     DashboardView()
                 } else {
-                    OnboardingView()
+                    PaywallView()
                 }
             }
             .preferredColorScheme(.dark)
@@ -24,14 +44,236 @@ struct ContentView: View {
         .statusBarHidden(true)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                subscription.refreshAccessState()
+                model.updatePremiumAccess(subscription.hasPremiumAccess)
                 model.prepareFreshPassageForForeground()
             }
+        }
+        .task {
+            subscription.start()
+            model.updatePremiumAccess(subscription.hasPremiumAccess)
+        }
+        .onChange(of: subscription.accessState) { _, _ in
+            model.updatePremiumAccess(subscription.hasPremiumAccess)
+        }
+    }
+}
+
+private struct FreeTrialStartView: View {
+    @Environment(SubscriptionManager.self) private var subscription
+
+    var body: some View {
+        ZStack {
+            LimiarBackground()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    Image("LimiarLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 58, height: 58)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("TESTE GRATUITO")
+                            .font(.system(size: 13, weight: .bold))
+                            .tracking(1.3)
+                            .foregroundStyle(Color.warmGold)
+
+                        Text("Comece com 7 dias grátis")
+                            .font(.system(size: 44, weight: .regular, design: .serif))
+                            .foregroundStyle(Color.ivory)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura de R$ 9,99/mês para continuar usando os bloqueios, leituras e reflexões personalizadas.")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.softText)
+                            .lineSpacing(5)
+                    }
+
+                    VStack(alignment: .leading, spacing: 13) {
+                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias grátis")
+                        TrialDisclosureRow(icon: "creditcard", text: "Depois R$ 9,99/mês")
+                        TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
+                        TrialDisclosureRow(icon: "checkmark.shield", text: "Sem cobrança antes do fim do teste")
+                        TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária após o teste para continuar usando")
+                    }
+                    .padding(16)
+                    .limiarPanel()
+
+                    Button {
+                        subscription.startFreeTrial()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text("Começar 7 dias grátis")
+                            Image(systemName: "arrow.right")
+                        }
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(Color.deepInk)
+                    }
+
+                    Text("Você não está assinando agora. O teste é liberado localmente e o app pedirá assinatura somente após os 7 dias.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(4)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 58)
+                .padding(.bottom, 30)
+            }
+        }
+    }
+}
+
+private struct TrialConversionView: View {
+    @Environment(SubscriptionManager.self) private var subscription
+    let continueTrial: () -> Void
+
+    var body: some View {
+        ZStack {
+            LimiarBackground()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(subscription.trialRemainingText.uppercased())
+                            .font(.system(size: 13, weight: .bold))
+                            .tracking(1.3)
+                            .foregroundStyle(Color.warmGold)
+
+                        Text("Continue sua jornada com o Limiar")
+                            .font(.system(size: 42, weight: .regular, design: .serif))
+                            .foregroundStyle(Color.ivory)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Você já começou a recuperar seu foco e criar uma rotina espiritual. Para continuar usando os bloqueios, leituras e reflexões personalizadas após o teste gratuito, assine o Limiar Premium.")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.softText)
+                            .lineSpacing(5)
+                    }
+
+                    TrialMetricsPanel()
+
+                    Button {
+                        Task {
+                            await subscription.purchase(.monthly)
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text("Assinar por R$ 9,99/mês")
+                            Image(systemName: "arrow.right")
+                        }
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(Color.deepInk)
+                    }
+                    .disabled(subscription.isBusy)
+
+                    Button("Continuar usando o teste") {
+                        continueTrial()
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sageButton)
+                    .frame(maxWidth: .infinity)
+
+                    if !subscription.statusText.isEmpty {
+                        Text(subscription.statusText)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.softText)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 58)
+                .padding(.bottom, 30)
+            }
+        }
+    }
+}
+
+private struct TrialDisclosureRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.warmGold)
+                .frame(width: 24)
+
+            Text(text)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.ivory)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+struct TrialMetricsPanel: View {
+    @Environment(LimiarAppModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Seu progresso até aqui")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+
+            TrialMetricRow(
+                icon: "book.closed",
+                value: "\(model.history.count)",
+                label: model.history.count == 1 ? "leitura concluída" : "leituras concluídas"
+            )
+            TrialMetricRow(
+                icon: "clock",
+                value: model.estimatedFocusTimeText,
+                label: "longe dos APPs bloqueados"
+            )
+            TrialMetricRow(
+                icon: "lock.open",
+                value: "\(model.history.count)",
+                label: model.history.count == 1 ? "desbloqueio consciente" : "desbloqueios conscientes"
+            )
+        }
+        .padding(16)
+        .limiarPanel()
+    }
+}
+
+private struct TrialMetricRow: View {
+    let icon: String
+    let value: String
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.warmGold)
+                .frame(width: 24)
+
+            Text(value)
+                .font(.system(size: 20, weight: .semibold, design: .serif))
+                .foregroundStyle(Color.ivory)
+                .frame(minWidth: 46, alignment: .leading)
+
+            Text(label)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.softText)
         }
     }
 }
 
 private struct DashboardView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
     @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
@@ -72,6 +314,7 @@ private struct DashboardView: View {
                     }
 
                     blockedAppsStrip
+                    trialStatusBadge
                     readingRequirementHeader
                     readingItemsList
                     chooseAppsButton
@@ -103,6 +346,28 @@ private struct DashboardView: View {
         }
         .onDisappear {
             narration.stop()
+        }
+    }
+
+    private var trialStatusBadge: some View {
+        Group {
+            if subscription.accessState == .trialActive {
+                HStack(spacing: 10) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.warmGold)
+
+                    Text("Teste gratuito: \(subscription.trialRemainingText)")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.ivory)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.10), lineWidth: 1))
+            }
         }
     }
 
@@ -632,10 +897,23 @@ private struct ReadingView: View {
 
 private struct OnboardingView: View {
     @Environment(LimiarAppModel.self) private var model
-    @State private var step = 0
+    @State private var step: Int
     @State private var status = ""
     @State private var showingPicker = false
-    @State private var showingAuthorizationAlert = false
+
+    init() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let stepFlagIndex = arguments.firstIndex(of: "-LimiarOnboardingStep"),
+           arguments.indices.contains(stepFlagIndex + 1),
+           let debugStep = Int(arguments[stepFlagIndex + 1]) {
+            _step = State(initialValue: min(max(debugStep, 0), 6))
+            return
+        }
+        #endif
+
+        _step = State(initialValue: 0)
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -656,8 +934,12 @@ private struct OnboardingView: View {
                         case 1:
                             tradition
                         case 2:
-                            biblicalPreferences
+                            booksAndSections
                         case 3:
+                            spiritualThemes
+                        case 4:
+                            reflectionDepth
+                        case 5:
                             screenTime
                         default:
                             unlockTime
@@ -665,41 +947,46 @@ private struct OnboardingView: View {
                     }
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                     .animation(.easeInOut(duration: 0.22), value: step)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                    HStack(spacing: 14) {
-                        if step > 0 {
-                            Button {
-                                withAnimation { step -= 1 }
-                            } label: {
-                                Image(systemName: "arrow.left")
-                                    .font(.system(size: 22, weight: .regular))
-                                    .frame(width: 48, height: 48)
-                                    .glassCircle()
+                    HStack(spacing: 12) {
+                        Button {
+                            withAnimation { step -= 1 }
+                        } label: {
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 21, weight: .regular))
+                                .frame(width: 46, height: 46)
+                                .glassCircle()
+                        }
+                        .accessibilityLabel("Voltar")
+
+                        HStack(spacing: 6) {
+                            ForEach(0..<7, id: \.self) { index in
+                                Capsule()
+                                    .fill(index == step ? Color.sageButton : Color.white.opacity(0.18))
+                                    .frame(width: index == step ? 26 : 7, height: 7)
                             }
-                            .accessibilityLabel("Voltar")
                         }
+                        .frame(width: 106, alignment: .leading)
 
-                        ForEach(0..<5, id: \.self) { index in
-                            Capsule()
-                                .fill(index == step ? Color.sageButton : Color.white.opacity(0.18))
-                                .frame(width: index == step ? 34 : 8, height: 8)
-                        }
-
-                        Spacer()
+                        Spacer(minLength: 8)
 
                         Button {
                             advance()
                         } label: {
-                            HStack(spacing: 14) {
-                                Text(step == 4 ? "Ativar" : "Continuar")
-                                if step != 4 {
+                            HStack(spacing: 10) {
+                                Text(step == 6 ? "Ver teste grátis" : "Continuar")
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.72)
+                                if step != 6 {
                                     Image(systemName: "arrow.right")
+                                        .font(.system(size: 18, weight: .regular))
                                 }
                             }
                         }
                         .buttonStyle(LimiarPrimaryButtonStyle())
                     }
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, 20)
                     .padding(.bottom, 24)
                 }
             }
@@ -711,11 +998,6 @@ private struct OnboardingView: View {
             isPresented: $showingPicker,
             selection: $model.selection
         )
-        .alert("Autorize o Tempo de Uso", isPresented: $showingAuthorizationAlert) {
-            Button("Entendi", role: .cancel) {}
-        } message: {
-            Text("Para bloquear APPs, primeiro toque em Autorizar Tempo de Uso e confirme a permissão do iOS.")
-        }
     }
 
     private var tradition: some View {
@@ -732,23 +1014,15 @@ private struct OnboardingView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(22)
     }
 
-    private var biblicalPreferences: some View {
+    private var spiritualThemes: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
-                OnboardingTitle(eyebrow: "PREFERÊNCIAS", title: "Quais partes da Bíblia mais falam com você?")
-                ChipGrid(
-                    items: BibleSection.allCases.map(\.title),
-                    selected: model.faithProfile.favoriteBibleSections.map(\.title)
-                ) { title in
-                    toggleSection(title)
-                }
-                Text("Temas espirituais")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.ivory)
+                OnboardingTitle(eyebrow: "TEMAS", title: "Quais temas você quer cultivar nas pausas?")
                 ChipGrid(
                     items: SpiritualTheme.allCases.map(\.title),
                     selected: model.faithProfile.favoriteThemes.map(\.title)
@@ -756,63 +1030,127 @@ private struct OnboardingView: View {
                     toggleTheme(title)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(22)
+        }
+    }
+
+    private var booksAndSections: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                OnboardingTitle(eyebrow: "LIVROS E SEÇÕES", title: "Quais livros ou partes você prefere?")
+                ChipGrid(
+                    items: BibleSection.allCases.map(\.title),
+                    selected: model.faithProfile.favoriteBibleSections.map(\.title)
+                ) { title in
+                    toggleSection(title)
+                }
+                Text("Livros preferidos")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+                ChipGrid(
+                    items: BibleBook.allCases.map(\.title),
+                    selected: model.faithProfile.favoriteBooks.map(\.title)
+                ) { title in
+                    toggleBook(title)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(22)
+        }
+    }
+
+    private var reflectionDepth: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingTitle(eyebrow: "REFLEXÕES", title: "Qual tamanho de reflexão combina com sua rotina?")
+                ForEach(ExplanationDepth.allCases) { depth in
+                    SelectableRow(
+                        title: depth.title,
+                        subtitle: reflectionDepthSubtitle(for: depth),
+                        isSelected: model.faithProfile.explanationDepth == depth
+                    ) {
+                        model.faithProfile.explanationDepth = depth
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(22)
         }
     }
 
     private var screenTime: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            OnboardingTitle(eyebrow: "TEMPO DE USO", title: "Escolha quais APPs você quer bloquear.")
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 22) {
+                OnboardingTitle(eyebrow: "TEMPO DE USO", title: "Ative o bloqueio")
 
-            Button {
-                showingPicker = true
-            } label: {
-                Label("Selecionar APPs e categorias", systemImage: "square.grid.2x2")
-                    .font(.system(size: 18, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.sageButton.opacity(0.28), lineWidth: 1))
+                Text("Siga estas 2 etapas para começar.")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.sageButton)
+                    .lineSpacing(5)
+
+                ScreenTimeSetupPanel(
+                    isAuthorized: model.hasAuthorizedScreenTime,
+                    hasSelection: model.hasBlockedAppsSelection,
+                    authorizeAction: {
+                        Task { status = await model.requestAuthorization() }
+                    },
+                    selectAppsAction: {
+                        showingPicker = true
+                    }
+                )
+
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(Color.sageButton)
+                        .padding(.top, 1)
+
+                    Text(status.isEmpty ? "O iOS pedirá permissão antes de aplicar bloqueios." : status)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(4)
+                }
+
+                Button {
+                    status = "Você poderá autorizar o Tempo de Uso depois em Configurações."
+                    withAnimation { step = 6 }
+                } label: {
+                    Text("Fazer isso depois")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.sageButton)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
             }
-
-            Button {
-                Task { status = await model.requestAuthorization() }
-            } label: {
-                Label(model.hasAuthorizedScreenTime ? "Tempo de Uso autorizado" : "Autorizar Tempo de Uso", systemImage: model.hasAuthorizedScreenTime ? "checkmark.shield.fill" : "checkmark.shield")
-                    .font(.system(size: 18, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(Color.sageButton.opacity(0.95), in: RoundedRectangle(cornerRadius: 16))
-                    .foregroundStyle(Color.deepInk)
-            }
-
-            Text(status.isEmpty ? "O iOS pedirá permissão antes de aplicar bloqueios." : status)
-                .font(.system(size: 15))
-                .foregroundStyle(Color.softText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(22)
         }
-        .padding(22)
     }
 
     private var unlockTime: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            OnboardingTitle(eyebrow: "LIBERAÇÃO", title: "Defina o tempo de liberação do app após a leitura religiosa.")
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                OnboardingTitle(eyebrow: "LIBERAÇÃO", title: "Defina o tempo de liberação do app após a leitura religiosa.")
 
-            Text("Depois desse tempo, será necessário fazer uma nova leitura para liberar mais tempo de uso do APP.")
-                .font(.system(size: 16))
-                .foregroundStyle(Color.softText)
-                .lineSpacing(5)
+                Text("Depois desse tempo, será necessário fazer uma nova leitura para liberar mais tempo de uso do APP.")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(5)
 
-            ForEach([15, 30, 60], id: \.self) { minutes in
-                SelectableRow(
-                    title: "\(minutes) minutos",
-                    subtitle: minutes == 30 ? "Equilíbrio recomendado para começar." : "Pode ser alterado depois.",
-                    isSelected: model.unlockDurationMinutes == minutes
-                ) {
-                    model.unlockDurationMinutes = minutes
+                ForEach([15, 30, 60], id: \.self) { minutes in
+                    SelectableRow(
+                        title: "\(minutes) minutos",
+                        subtitle: minutes == 30 ? "Equilíbrio recomendado para começar." : "Pode ser alterado depois.",
+                        isSelected: model.unlockDurationMinutes == minutes
+                    ) {
+                        model.unlockDurationMinutes = minutes
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(22)
         }
-        .padding(22)
     }
 
     private func toggleSection(_ title: String) {
@@ -833,23 +1171,203 @@ private struct OnboardingView: View {
         }
     }
 
+    private func toggleBook(_ title: String) {
+        guard let book = BibleBook.allCases.first(where: { $0.title == title }) else { return }
+        if model.faithProfile.favoriteBooks.contains(book) {
+            model.faithProfile.favoriteBooks.removeAll { $0 == book }
+        } else {
+            model.faithProfile.favoriteBooks.append(book)
+        }
+    }
+
+    private func reflectionDepthSubtitle(for depth: ExplanationDepth) -> String {
+        switch depth {
+        case .short:
+            return "Uma pausa breve, direta e fácil de concluir."
+        case .medium:
+            return "Equilíbrio recomendado para começar."
+        case .deep:
+            return "Mais contexto, aplicação e pergunta de meditação."
+        }
+    }
+
     private func advance() {
-        if step == 3, !model.hasAuthorizedScreenTime {
-            showingAuthorizationAlert = true
+        if step == 5 {
+            advanceFromScreenTime()
             return
         }
 
-        if step < 4 {
+        if step < 6 {
             withAnimation { step += 1 }
         } else {
             model.completeOnboarding()
         }
     }
+
+    private func advanceFromScreenTime() {
+        if !model.hasAuthorizedScreenTime {
+            Task { status = await model.requestAuthorization() }
+            return
+        }
+
+        if !model.hasBlockedAppsSelection {
+            status = "Agora escolha os APPs ou categorias que deseja limitar."
+            showingPicker = true
+            return
+        }
+
+        withAnimation { step = 6 }
+    }
 }
 
-private struct SettingsView: View {
+private struct ScreenTimeSetupPanel: View {
+    let isAuthorized: Bool
+    let hasSelection: Bool
+    let authorizeAction: () -> Void
+    let selectAppsAction: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 18) {
+            VStack(spacing: 0) {
+                ScreenTimeStepBadge(
+                    label: "1",
+                    isComplete: isAuthorized,
+                    isEnabled: true
+                )
+
+                Rectangle()
+                    .fill(Color.sageButton.opacity(0.45))
+                    .frame(width: 1, height: 62)
+                    .overlay {
+                        VStack(spacing: 7) {
+                            ForEach(0..<5, id: \.self) { _ in
+                                Circle()
+                                    .fill(Color.deepInk.opacity(0.78))
+                                    .frame(width: 3, height: 3)
+                            }
+                        }
+                    }
+
+                ScreenTimeStepBadge(
+                    label: "2",
+                    isComplete: hasSelection,
+                    isEnabled: isAuthorized
+                )
+            }
+            .padding(.top, 2)
+
+            VStack(spacing: 22) {
+                ScreenTimeSetupStep(
+                    title: "1. Autorizar Tempo de Uso",
+                    subtitle: "Permite que o app aplique os bloqueios.",
+                    buttonTitle: isAuthorized ? "Autorizado" : "Autorizar",
+                    systemImage: isAuthorized ? "checkmark.shield.fill" : "checkmark.shield",
+                    isEnabled: !isAuthorized,
+                    isPrimary: true,
+                    action: authorizeAction
+                )
+
+                Divider()
+                    .overlay(Color.white.opacity(0.10))
+
+                ScreenTimeSetupStep(
+                    title: "2. Escolher apps bloqueados",
+                    subtitle: "Selecione apps ou categorias para limitar.",
+                    buttonTitle: !isAuthorized ? "Disponível após a autorização" : (hasSelection ? "Alterar seleção" : "Escolher apps"),
+                    systemImage: !isAuthorized ? "lock" : (hasSelection ? "checkmark.circle" : "square.grid.2x2"),
+                    isEnabled: isAuthorized,
+                    isPrimary: false,
+                    action: selectAppsAction
+                )
+            }
+        }
+        .padding(18)
+        .limiarPanel()
+    }
+}
+
+private struct ScreenTimeStepBadge: View {
+    let label: String
+    let isComplete: Bool
+    let isEnabled: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(isEnabled ? Color.sageButton.opacity(0.82) : Color.softText.opacity(0.34), lineWidth: 2)
+                .frame(width: 54, height: 54)
+
+            if isComplete {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 25, weight: .medium))
+                    .foregroundStyle(Color.sageButton)
+            } else {
+                Text(label)
+                    .font(.system(size: 22, weight: .semibold, design: .serif))
+                    .foregroundStyle(isEnabled ? Color.sageButton : Color.softText.opacity(0.70))
+            }
+        }
+    }
+}
+
+private struct ScreenTimeSetupStep: View {
+    let title: String
+    let subtitle: String
+    let buttonTitle: String
+    let systemImage: String
+    let isEnabled: Bool
+    let isPrimary: Bool
+    let action: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(subtitle)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.softText)
+                .lineSpacing(4)
+
+            Button(action: action) {
+                Label(buttonTitle, systemImage: systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.76)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(buttonBackground, in: RoundedRectangle(cornerRadius: 8))
+                    .foregroundStyle(buttonForeground)
+            }
+            .disabled(!isEnabled)
+            .accessibilityLabel(buttonTitle)
+        }
+    }
+
+    private var buttonBackground: Color {
+        if !isEnabled { return Color.white.opacity(0.10) }
+        return isPrimary ? Color.sageButton : Color.white.opacity(0.13)
+    }
+
+    private var buttonForeground: Color {
+        if !isEnabled { return Color.softText.opacity(0.72) }
+        return isPrimary ? Color.deepInk : Color.ivory
+    }
+}
+
+struct SettingsView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
+    @Environment(\.openURL) private var openURL
     @State private var showingPicker = false
+    @State private var showingPaywall = false
+
+    private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
+    private let termsURL = URL(string: "https://limiar-five.vercel.app/terms.html")!
+    private let privacyURL = URL(string: "https://limiar-five.vercel.app/privacy.html")!
+    private let supportURL = URL(string: "https://limiar-five.vercel.app/support.html")!
 
     var body: some View {
         @Bindable var model = model
@@ -860,14 +1378,17 @@ private struct SettingsView: View {
             Form {
                 Section("Bloqueio") {
                     Toggle("Bloqueio ativo", isOn: $model.blockingEnabled)
+                        .disabled(!subscription.hasPremiumAccess)
                     Picker("Tempo liberado", selection: $model.unlockDurationMinutes) {
                         Text("15 min").tag(15)
                         Text("30 min").tag(30)
                         Text("1 hora").tag(60)
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                     Button("Ajustar APPs bloqueados") {
                         showingPicker = true
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                 }
 
                 Section("Preferências bíblicas") {
@@ -876,31 +1397,77 @@ private struct SettingsView: View {
                             Text(tradition.title).tag(tradition)
                         }
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                     Picker("Explicação", selection: $model.faithProfile.explanationDepth) {
                         ForEach(ExplanationDepth.allCases) { depth in
                             Text(depth.title).tag(depth)
                         }
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                     NavigationLink("Livros, temas e seções") {
                         BiblicalPreferencesView()
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                 }
 
                 Section("Histórico") {
                     NavigationLink("Ver leituras") {
                         HistoryView()
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                     NavigationLink("Ver trechos salvos") {
                         FavoritePassagesView()
                     }
+                    .disabled(!subscription.hasPremiumAccess)
                     Button("Resetar histórico") {
                         model.resetHistory()
                     }
                     .foregroundStyle(.red)
                 }
 
+                Section("Limiar Premium") {
+                    HStack {
+                        Text("Status")
+                        Spacer()
+                        Text(subscriptionStatusLabel)
+                            .foregroundStyle(subscription.hasPremiumAccess ? Color.sageButton : .secondary)
+                    }
+
+                    if !subscription.hasActiveSubscription {
+                        Button("Assinar Premium") {
+                            showingPaywall = true
+                        }
+                    }
+
+                    Button("Restaurar compra") {
+                        Task {
+                            await subscription.restorePurchases()
+                        }
+                    }
+                    .disabled(subscription.isBusy)
+
+                    Button("Gerenciar assinatura na Apple") {
+                        openURL(subscriptionsURL)
+                    }
+
+                    if !subscription.statusText.isEmpty {
+                        Text(subscription.statusText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Sobre") {
                     Text("Limiar ajuda você a escolher uma pausa antes de atravessar para apps de distração.")
+                    Button("Termos de Uso") {
+                        openURL(termsURL)
+                    }
+                    Button("Política de Privacidade") {
+                        openURL(privacyURL)
+                    }
+                    Button("Suporte") {
+                        openURL(supportURL)
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -915,6 +1482,23 @@ private struct SettingsView: View {
         .onChange(of: model.unlockDurationMinutes) { _, _ in model.saveProfile() }
         .onChange(of: model.faithProfile) { _, _ in model.saveProfile() }
         .familyActivityPicker(isPresented: $showingPicker, selection: $model.selection)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+                .environment(subscription)
+        }
+    }
+
+    private var subscriptionStatusLabel: String {
+        switch subscription.accessState {
+        case .trialNotStarted:
+            return "Teste não iniciado"
+        case .trialActive:
+            return "Teste ativo"
+        case .trialExpired:
+            return "Teste encerrado"
+        case .subscribed:
+            return "Assinatura ativa"
+        }
     }
 }
 
@@ -1022,7 +1606,7 @@ private struct FavoritePassagesView: View {
     }
 }
 
-private struct LimiarBackground: View {
+struct LimiarBackground: View {
     var body: some View {
         ZStack {
             Color.deepInk
@@ -1092,7 +1676,7 @@ private struct WelcomeHeroScreen: View {
                         .minimumScaleFactor(0.82)
                         .padding(.top, 16)
 
-                    Text("Antes de voltar para as\ndistrações, reserve alguns\nminutos para iluminar\nsua mente.")
+                    Text("Antes de voltar às distrações,\nreserve alguns minutos para uma\nleitura que fortaleça sua fé.")
                         .font(.system(size: 27, weight: .regular))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(14)
@@ -1146,11 +1730,14 @@ private struct OnboardingTitle: View {
                 .tracking(1.3)
                 .foregroundStyle(Color.warmGold)
             Text(title)
-                .font(.system(size: 38, weight: .regular, design: .serif))
+                .font(.system(size: 34, weight: .regular, design: .serif))
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
+                .lineLimit(3)
+                .minimumScaleFactor(0.86)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -1169,16 +1756,19 @@ private struct SelectableRow: View {
                     Text(title)
                         .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(Color.ivory)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                     Text(subtitle)
                         .font(.system(size: 14))
                         .foregroundStyle(Color.softText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.70)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.78)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
             }
             .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(.white.opacity(isSelected ? 0.15 : 0.07), in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -1201,6 +1791,8 @@ private struct ChipGrid: View {
                 } label: {
                     Text(item)
                         .font(.system(size: 15, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(selected.contains(item) ? Color.sageButton.opacity(0.22) : Color.white.opacity(0.08), in: Capsule())
@@ -1350,10 +1942,9 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
 private struct LimiarPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 24, weight: .regular, design: .serif))
-            .padding(.horizontal, 18)
-            .frame(minWidth: 156)
-            .frame(height: 62)
+            .font(.system(size: 22, weight: .regular, design: .serif))
+            .padding(.horizontal, 12)
+            .frame(width: 148, height: 58)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
     }
@@ -1369,7 +1960,7 @@ private struct LimiarHeroButtonStyle: ButtonStyle {
     }
 }
 
-private extension View {
+extension View {
     func glassCircle() -> some View {
         self
             .foregroundStyle(Color.aquaMist)
@@ -1387,7 +1978,7 @@ private extension View {
     }
 }
 
-private extension Color {
+extension Color {
     static let deepInk = Color(red: 0.02, green: 0.04, blue: 0.045)
     static let ivory = Color(red: 0.94, green: 0.91, blue: 0.84)
     static let softText = Color(red: 0.74, green: 0.75, blue: 0.75)

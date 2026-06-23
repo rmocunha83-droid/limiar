@@ -243,6 +243,8 @@ enum AIContentState: Equatable {
 @Observable
 final class LimiarAppModel {
     var hasCompletedOnboarding = false
+    var hasSeenValueDemo = false
+    var hasActiveSubscription = false
     var faithProfile = UserFaithProfile.starter
     var unlockDurationMinutes = 30
     var blockingEnabled = true
@@ -292,6 +294,7 @@ final class LimiarAppModel {
         let savedProfile = policyStore.loadFaithProfile() ?? .starter
         faithProfile = savedProfile
         hasCompletedOnboarding = policyStore.loadOnboardingState()
+        hasSeenValueDemo = policyStore.loadValueDemoSeen()
         unlockDurationMinutes = policyStore.loadUnlockDuration()
         blockingEnabled = policyStore.loadBlockingEnabled()
         selection = policyStore.loadSelection()
@@ -375,11 +378,49 @@ final class LimiarAppModel {
         "\(unlockDurationMinutes) minutos"
     }
 
+    var hasBlockedAppsSelection: Bool {
+        !selection.applicationTokens.isEmpty
+            || !selection.categoryTokens.isEmpty
+            || !selection.webDomainTokens.isEmpty
+    }
+
+    var estimatedFocusTimeText: String {
+        let totalMinutes = max(0, history.count * unlockDurationMinutes)
+        guard totalMinutes >= 60 else {
+            return "\(totalMinutes) min"
+        }
+
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return minutes == 0 ? "\(hours) h" : "\(hours) h \(minutes) min"
+    }
+
     func completeOnboarding() {
         hasCompletedOnboarding = true
         policyStore.saveOnboardingState(true)
         saveProfile()
-        applyBlocking()
+        beginNewReading(avoidingCurrent: true)
+        if hasActiveSubscription {
+            applyBlocking()
+        }
+    }
+
+    func markValueDemoSeen() {
+        hasSeenValueDemo = true
+        policyStore.saveValueDemoSeen(true)
+    }
+
+    func updatePremiumAccess(_ isActive: Bool) {
+        guard hasActiveSubscription != isActive else { return }
+        hasActiveSubscription = isActive
+
+        if isActive {
+            beginNewReading(avoidingCurrent: true)
+            applyBlocking()
+        } else {
+            aiContentState = .localReady
+            screenTimeController.clearShield()
+        }
     }
 
     func saveProfile() {
@@ -468,6 +509,13 @@ final class LimiarAppModel {
     }
 
     func finishReading() {
+        guard hasActiveSubscription else {
+            isReadingSessionActive = false
+            unlockNote = "O desbloqueio completo exige o Limiar Premium."
+            screenTimeController.clearShield()
+            return
+        }
+
         isReadingSessionActive = false
         let until = Date().addingTimeInterval(TimeInterval(unlockDurationMinutes * 60))
         unlockedUntil = until
@@ -490,6 +538,11 @@ final class LimiarAppModel {
     }
 
     func applyBlocking() {
+        guard hasActiveSubscription else {
+            screenTimeController.clearShield()
+            return
+        }
+
         guard blockingEnabled else {
             screenTimeController.clearShield()
             return
@@ -503,6 +556,11 @@ final class LimiarAppModel {
     }
 
     func reapplyBlockIfNeeded() {
+        guard hasActiveSubscription else {
+            screenTimeController.clearShield()
+            return
+        }
+
         guard blockingEnabled else { return }
         if let unlockedUntil, unlockedUntil > Date() {
             screenTimeController.clearShield()
@@ -553,6 +611,11 @@ final class LimiarAppModel {
         )
         rememberShownPassages(resolvedPlan)
         rememberReflection(reference: currentReadingReference, reflection: currentReflection)
+        guard hasActiveSubscription else {
+            aiContentState = .localReady
+            return
+        }
+
         aiContentState = .generating
         refreshRemoteAIContent(for: resolvedPlan, profile: profile, generationID: generationID)
     }
