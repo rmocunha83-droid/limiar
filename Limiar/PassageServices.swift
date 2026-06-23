@@ -4,6 +4,24 @@ enum LimiarReadingConstants {
     static let targetItemCount = 4
 }
 
+enum LimiarAIDiagnostics {
+    static func log(_ event: String, values: [String: String]) {
+        var payload = values
+        payload["event"] = event
+        debugPrint("limiar_ai_diagnostic", payload)
+    }
+
+    static func profileSnapshot(_ profile: UserFaithProfile) -> [String: String] {
+        [
+            "tradition": profile.tradition.rawValue,
+            "depth": profile.explanationDepth.rawValue,
+            "sections": profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
+            "books": profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
+            "themes": profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
+        ]
+    }
+}
+
 struct PassageRecommendationService {
     private let passages: [ScripturePassage] = [
         ScripturePassage(
@@ -713,7 +731,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
 
     var cacheKey: String {
         let rawKey = [
-            "reading-content-v3-four-items",
+            "reading-content-v4-depth-aware",
             tradition.rawValue,
             favoriteSections.map(\.rawValue).sorted().joined(separator: ","),
             favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
@@ -744,6 +762,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
         Gere uma leitura espiritual para um usuário \(tradition.title) [id: \(tradition.rawValue)]. Use exatamente \(LimiarReadingConstants.targetItemCount) trechos. Seja acolhedor, simples e pastoral, em tom de homilia. Retorne itens com referência, texto religioso, explicação e conclusão prática. Não invente conteúdo bíblico.
         Para cada item, a explicação deve ser o parágrafo principal: explique o sentido espiritual do trecho e conecte com o tema escolhido.
         A conclusão prática deve ser curta, concreta e diferente em cada trecho. Ela precisa nascer do versículo e do tema, sem repetir fórmulas fixas como "Leve este trecho como uma pequena decisão".
+        A profundidade precisa mudar visivelmente o tamanho e a densidade da explicação. \(explanationDepth.aiGenerationGuidance)
         Diretriz de tradição: \(tradition.aiToneGuidance)
         Seções preferidas: \(sections.isEmpty ? "Nenhuma" : sections)
         IDs das seções preferidas: \(sectionIDs.isEmpty ? "Nenhum" : sectionIDs)
@@ -859,7 +878,24 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
             "Ele ajuda a olhar a vida financeira com equilíbrio, responsabilidade e confiança."
         }
 
-        return "\(traditionOpening) \(themeLine)"
+        switch request.explanationDepth {
+        case .short:
+            return "\(traditionOpening) \(themeLine)"
+        case .medium:
+            return """
+            \(traditionOpening) \(themeLine)
+
+            A referência \(passage.reference) foi priorizada dentro das preferências escolhidas para que a pausa tenha ligação real com a sua tradição e com o tema de \(passage.theme.title.lowercased()).
+            """
+        case .deep:
+            return """
+            \(traditionOpening) \(themeLine)
+
+            Em \(passage.reference), a leitura não aparece apenas como uma frase bonita para acalmar o momento. Ela funciona como um convite a reconhecer o que está conduzindo a atenção antes de voltar aos apps bloqueados.
+
+            Como você escolheu uma reflexão mais profunda, vale permanecer mais um pouco com esta pergunta interior: que parte da sua rotina precisa ser educada por este trecho hoje? A resposta pode começar em uma atitude pequena, mas mais fiel ao que você deseja cultivar.
+            """
+        }
     }
 
     private func practicalConclusion(for passage: ScripturePassage, request: AISpiritualReadingRequest) -> String {
@@ -984,11 +1020,21 @@ struct AISpiritualReadingService {
         )
 
         if let cached = cache.readingItems(for: request), cached.count >= LimiarReadingConstants.targetItemCount {
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "cache"
+            values["endpoint"] = "spiritual-reading"
+            values["items"] = "\(cached.count)"
+            LimiarAIDiagnostics.log("ai_reading_items_loaded", values: values)
             return cached
         }
 
         let items = generator.generateReadingItems(for: request, passages: passages)
         cache.save(items, for: request)
+        var values = LimiarAIDiagnostics.profileSnapshot(profile)
+        values["source"] = "local"
+        values["endpoint"] = "spiritual-reading"
+        values["items"] = "\(items.count)"
+        LimiarAIDiagnostics.log("ai_reading_items_loaded", values: values)
         return items
     }
 
@@ -1020,6 +1066,11 @@ struct AISpiritualReadingService {
                 return nil
             }
             cache.save(items, for: request)
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "remote"
+            values["endpoint"] = "spiritual-reading"
+            values["items"] = "\(items.count)"
+            LimiarAIDiagnostics.log("ai_reading_items_loaded", values: values)
             return items
         } catch {
             debugPrint("limiar_ai_fallback_local", [
@@ -1046,6 +1097,7 @@ struct AIReflectionRequest: Codable, Hashable {
         let books = favoriteBooks.map(\.rawValue).sorted().joined(separator: ",")
         let themes = favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
         let rawKey = [
+            "reflection-content-v2-depth-aware",
             tradition.rawValue,
             passageReference,
             explanationDepth.rawValue,
@@ -1071,7 +1123,8 @@ struct AIReflectionRequest: Codable, Hashable {
             .map { "\($0.reference): \($0.summary) Pergunta: \($0.meditationQuestion)" }
             .joined(separator: "\n")
         return """
-        Explique este trecho para um usuário \(tradition.title) [id: \(tradition.rawValue)]. Seja claro, breve e pastoral. Não invente conteúdo bíblico. Retorne: resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
+        Explique este trecho para um usuário \(tradition.title) [id: \(tradition.rawValue)]. Seja claro, pastoral e respeite a profundidade selecionada. Não invente conteúdo bíblico. Retorne: resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
+        A profundidade precisa mudar visivelmente o tamanho e a densidade da explicação. \(explanationDepth.aiGenerationGuidance)
         A aplicação prática deve ser curta, concreta, conectada ao trecho e ao tema do usuário, sem repetir fórmulas fixas entre respostas.
         Diretriz de tradição: \(tradition.aiToneGuidance)
         Referência: \(passageReference)
@@ -1097,29 +1150,71 @@ protocol AIReflectionGenerating {
 
 struct LocalLightweightReflectionGenerator: AIReflectionGenerating {
     func generateReflection(for request: AIReflectionRequest) -> AIReflection {
-        let tone = switch request.tradition {
-        case .catholic: "O trecho pode ser acolhido como uma pequena homilia para voltar ao essencial com serenidade."
-        case .protestant: "O trecho funciona como devocional breve para reorganizar prioridades diante de Deus."
-        case .jewish: "O trecho pode ser lido como sabedoria prática do Tanakh para orientar a próxima escolha."
-        case .spiritist: "O trecho convida à reforma íntima, responsabilidade e caridade nas escolhas concretas."
-        }
+        let tone = traditionTone(for: request.tradition)
+        let themeTitle = request.favoriteThemes.first?.title ?? "presença"
+        let bookTitle = request.favoriteBooks.first?.title ?? "o trecho escolhido"
+        let practical = practicalApplication(for: request, themeTitle: themeTitle)
 
-        let practical = switch request.explanationDepth {
+        switch request.explanationDepth {
         case .short:
-            "Antes de seguir, escolha uma atitude simples que proteja sua atenção."
+            return AIReflection(
+                summary: "Este trecho abre um espaço breve entre o impulso e a escolha.",
+                spiritualMeaning: "\(tone) O foco de hoje é \(themeTitle.lowercased()), vivido em uma decisão simples.",
+                practicalApplication: practical,
+                conclusion: "Atravesse este momento com presença.",
+                meditationQuestion: "Que escolha protege sua atenção agora?"
+            )
         case .medium:
-            "Antes de seguir, respire, observe o impulso e escolha uma atitude simples que proteja sua atenção nos próximos minutos."
-        case .deep:
-            "Antes de seguir, observe o impulso sem brigar com ele, nomeie o que está buscando e escolha uma atitude concreta que aproxime sua atenção do que você considera mais importante."
-        }
+            return AIReflection(
+                summary: "Este trecho ajuda a transformar a pausa em discernimento.",
+                spiritualMeaning: """
+                \(tone) A leitura convida você a olhar para \(themeTitle.lowercased()) sem pressa, deixando que a mensagem reorganize a próxima atitude.
 
-        return AIReflection(
-            summary: "Este trecho abre um pequeno espaço entre o impulso e a escolha.",
-            spiritualMeaning: tone,
-            practicalApplication: practical,
-            conclusion: "O limiar não interrompe a vida; ele ajuda você a atravessar com mais presença.",
-            meditationQuestion: "Que escolha pequena deixa este próximo momento mais consciente?"
-        )
+                Como \(bookTitle) está entre suas preferências ou no caminho sugerido, a reflexão procura aproximar o texto da sua rotina real, especialmente antes de voltar aos apps bloqueados.
+                """,
+                practicalApplication: practical,
+                conclusion: "O Limiar ajuda a transformar o retorno ao celular em uma escolha mais consciente.",
+                meditationQuestion: "Qual atitude pequena pode tornar este próximo período mais fiel ao que você quer cultivar?"
+            )
+        case .deep:
+            return AIReflection(
+                summary: "Este trecho propõe uma pausa mais longa para reconhecer o que dirige sua atenção.",
+                spiritualMeaning: """
+                \(tone) Em uma reflexão mais profunda, a leitura não serve apenas para interromper o hábito; ela ajuda a perceber que cada retorno ao celular também revela desejos, inquietações e prioridades.
+
+                O tema de \(themeTitle.lowercased()) pode ser acolhido como uma chave de interpretação: ele mostra onde sua vida pede mais cuidado espiritual, mais ordem interior e mais liberdade diante dos impulsos.
+
+                Ao relacionar este caminho com \(bookTitle), a leitura procura respeitar a tradição escolhida e transformar o texto em uma meditação prática para o cotidiano, sem separar fé, atenção e decisão.
+                """,
+                practicalApplication: practical,
+                conclusion: "Antes de liberar mais tempo de uso, deixe este trecho tocar uma escolha concreta: voltar com mais intenção, menos automatismo e mais fidelidade ao que você quer formar em si.",
+                meditationQuestion: "Que impulso costuma decidir por você, e que resposta mais livre este trecho convida você a praticar hoje?"
+            )
+        }
+    }
+
+    private func traditionTone(for tradition: FaithTradition) -> String {
+        switch tradition {
+        case .catholic:
+            "O trecho pode ser acolhido como uma pequena homilia para voltar ao essencial com serenidade."
+        case .protestant:
+            "O trecho funciona como devocional para reorganizar prioridades diante de Deus."
+        case .jewish:
+            "O trecho pode ser lido como sabedoria prática do Tanakh para orientar a próxima escolha."
+        case .spiritist:
+            "O trecho convida à reforma íntima, responsabilidade e caridade nas escolhas concretas."
+        }
+    }
+
+    private func practicalApplication(for request: AIReflectionRequest, themeTitle: String) -> String {
+        switch request.explanationDepth {
+        case .short:
+            return "Antes de seguir, escolha uma atitude simples ligada a \(themeTitle.lowercased()) para proteger sua atenção."
+        case .medium:
+            return "Antes de seguir, respire, observe o impulso e escolha uma atitude ligada a \(themeTitle.lowercased()) para orientar os próximos minutos."
+        case .deep:
+            return "Antes de seguir, observe o impulso sem brigar com ele, nomeie o que está buscando e escolha uma atitude concreta de \(themeTitle.lowercased()) que aproxime sua atenção do que você considera mais importante."
+        }
     }
 }
 
@@ -1179,11 +1274,21 @@ struct AIReflectionService {
             recentReflections: recentReflections
         )
         if let cached = cache.reflection(for: request) {
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "cache"
+            values["endpoint"] = "reflection"
+            values["reference"] = passageReference
+            LimiarAIDiagnostics.log("ai_reflection_loaded", values: values)
             return cached
         }
 
         let reflection = generator.generateReflection(for: request)
         cache.save(reflection, for: request)
+        var values = LimiarAIDiagnostics.profileSnapshot(profile)
+        values["source"] = "local"
+        values["endpoint"] = "reflection"
+        values["reference"] = passageReference
+        LimiarAIDiagnostics.log("ai_reflection_loaded", values: values)
         return reflection
     }
 
@@ -1208,6 +1313,11 @@ struct AIReflectionService {
         do {
             let reflection = try await remoteService.reflection(for: request, passages: passages)
             cache.save(reflection, for: request)
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "remote"
+            values["endpoint"] = "reflection"
+            values["reference"] = passageReference
+            LimiarAIDiagnostics.log("ai_reflection_loaded", values: values)
             return reflection
         } catch {
             debugPrint("limiar_ai_fallback_local", [
@@ -1504,7 +1614,18 @@ private extension ExplanationDepth {
         case .medium:
             "média"
         case .deep:
-            "grande"
+            "profunda"
+        }
+    }
+
+    var aiGenerationGuidance: String {
+        switch self {
+        case .short:
+            "Curta: 1 parágrafo breve, linguagem direta e aplicação de uma frase."
+        case .medium:
+            "Média: 2 parágrafos equilibrados, com sentido espiritual e aplicação prática."
+        case .deep:
+            "Mais profunda: 3 ou mais parágrafos, com contexto do trecho, ligação com a vida do usuário e aplicação mais elaborada."
         }
     }
 }

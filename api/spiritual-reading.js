@@ -2,8 +2,10 @@ const {
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  depthOutputTokenLimit,
   enforceAIDailyLimit,
   enforceAIRateLimit,
+  logAIDiagnostic,
   logAIError,
   normalizePassages,
   normalizeProfile,
@@ -40,14 +42,40 @@ module.exports = async function handler(req, res) {
       "",
       "Gere exatamente 4 itens de leitura, um para cada um dos 4 trechos enviados.",
       "Cada item deve usar os campos reference, passageText, homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion.",
-      "Use passageText exatamente baseado no trecho enviado; não invente versículos."
+      "Use passageText exatamente baseado no trecho enviado; não invente versículos.",
+      "A homily deve variar de tamanho conforme a profundidade escolhida.",
+      "O spiritualMeaning deve explicar o sentido espiritual do trecho e se conectar aos temas preferidos.",
+      "A practicalApplication e a conclusion devem ser concretas, específicas e diferentes entre os 4 itens."
     ].join("\n");
+
+    logAIDiagnostic("spiritual_reading_preferences_loaded", {
+      endpoint: "spiritual-reading",
+      requestID: dailyLimit.context.requestID,
+      clientID: dailyLimit.context.clientID,
+      tradition: profile.tradition,
+      depth: profile.explanationDepth,
+      favoriteThemes: profile.favoriteThemes.join(", "),
+      favoriteBooks: profile.favoriteBooks.join(", "),
+      favoriteSections: profile.favoriteSections.join(", "),
+      passagesCount: passages.length
+    });
 
     const result = await callOpenAI({
       schema: spiritualReadingSchema,
       schemaName: "limiar_spiritual_reading",
       prompt,
-      maxOutputTokens: profile.explanationDepth === "grande" ? 3200 : 2200
+      maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "spiritual-reading"),
+      debugContext: {
+        endpoint: "spiritual-reading",
+        requestID: dailyLimit.context.requestID,
+        clientID: dailyLimit.context.clientID,
+        depth: profile.explanationDepth,
+        tradition: profile.tradition,
+        favoriteThemesCount: profile.favoriteThemes.length,
+        favoriteBooksCount: profile.favoriteBooks.length,
+        favoriteSectionsCount: profile.favoriteSections.length,
+        passagesCount: passages.length
+      }
     });
 
     res.statusCode = 200;

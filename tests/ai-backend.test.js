@@ -5,6 +5,8 @@ const {
   DEFAULT_DAILY_GENERATION_LIMIT,
   DEFAULT_MODEL,
   buildContextPrompt,
+  depthGuidance,
+  depthOutputTokenLimit,
   enforceAIDailyLimit,
   enforceAIRateLimit,
   normalizePassages,
@@ -144,10 +146,17 @@ test("can enforce a daily remote AI generation limit", () => {
 test("normalizes request context without personal identifiers", () => {
   const profile = normalizeProfile({
     tradition: "Católica",
+    traditionID: "catholic",
     favoriteSections: ["Salmos"],
+    favoriteSectionIDs: ["psalms"],
     favoriteBooks: ["João"],
+    favoriteBookIDs: ["john"],
     favoriteThemes: ["Presença"],
-    explanationDepth: "grande"
+    favoriteThemeIDs: ["presence"],
+    explanationDepth: "Mais profunda",
+    avoidedSections: ["Cartas de Paulo"],
+    avoidedBooks: ["Romanos"],
+    toneGuidance: "Tom pastoral."
   });
   const passages = normalizePassages([
     {
@@ -171,6 +180,29 @@ test("normalizes request context without personal identifiers", () => {
 
   assert.match(prompt, /Tradição: Católica/);
   assert.match(prompt, /Profundidade: grande/);
+  assert.match(prompt, /Profundidade mais profunda/);
+  assert.match(prompt, /2 a 3 parágrafos/);
+  assert.match(prompt, /IDs dos temas preferidos: presence/);
+  assert.match(prompt, /Evitar livros incompatíveis: Romanos/);
+  assert.match(prompt, /Regras obrigatórias de personalização/);
   assert.match(prompt, /Resumo anterior/);
   assert.doesNotMatch(prompt, /email|userId|deviceToken/i);
+});
+
+test("normalizes depth synonyms and changes guidance clearly", () => {
+  assert.equal(normalizeProfile({ explanationDepth: "curta" }).explanationDepth, "curta");
+  assert.equal(normalizeProfile({ explanationDepth: "média" }).explanationDepth, "média");
+  assert.equal(normalizeProfile({ explanationDepth: "Mais profunda" }).explanationDepth, "grande");
+  assert.match(depthGuidance("curta"), /1 parágrafo breve/);
+  assert.match(depthGuidance("média"), /1 a 2 parágrafos/);
+  assert.match(depthGuidance("grande"), /2 a 3 parágrafos/);
+});
+
+test("uses different output budgets by depth and endpoint", () => {
+  assert.equal(depthOutputTokenLimit("curta", "reflection") < depthOutputTokenLimit("média", "reflection"), true);
+  assert.equal(depthOutputTokenLimit("média", "reflection") < depthOutputTokenLimit("grande", "reflection"), true);
+  assert.equal(
+    depthOutputTokenLimit("grande", "spiritual-reading") > depthOutputTokenLimit("grande", "reflection"),
+    true
+  );
 });

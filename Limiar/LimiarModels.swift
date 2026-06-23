@@ -855,6 +855,11 @@ final class LimiarAppModel {
         policyStore.saveUnlockDuration(unlockDurationMinutes)
         policyStore.saveBlockingEnabled(blockingEnabled)
         policyStore.saveSelection(selection)
+        var values = LimiarAIDiagnostics.profileSnapshot(faithProfile)
+        values["unlockDurationMinutes"] = "\(unlockDurationMinutes)"
+        values["blockingEnabled"] = "\(blockingEnabled)"
+        values["hasBlockedAppsSelection"] = "\(hasBlockedAppsSelection)"
+        LimiarAIDiagnostics.log("preferences_saved", values: values)
     }
 
     func selectTradition(_ tradition: FaithTradition) {
@@ -1072,10 +1077,19 @@ final class LimiarAppModel {
             profile: profile,
             recentReflections: recentAIReflections
         )
+        var planValues = LimiarAIDiagnostics.profileSnapshot(profile)
+        planValues["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
+        planValues["passages"] = resolvedPlan.map(\.id).joined(separator: ",")
+        planValues["recentReflections"] = "\(recentAIReflections.count)"
+        LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
         rememberShownPassages(resolvedPlan)
         rememberReflection(reference: currentReadingReference, reflection: currentReflection)
         guard hasActiveSubscription else {
             aiContentState = .localReady
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "local"
+            values["reason"] = "no_active_subscription"
+            LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
             return
         }
 
@@ -1083,17 +1097,29 @@ final class LimiarAppModel {
         let isDuplicateRemoteRequest = remoteRequestKey == lastRemoteAIRequestKey
             && Date().timeIntervalSince(lastRemoteAIRequestAt) < 90
         guard !isDuplicateRemoteRequest else {
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "cache_or_current_cycle"
+            values["reason"] = "duplicate_remote_request"
+            LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
             return
         }
 
         guard registerRemoteAIGenerationIfAllowed() else {
             aiContentState = .dailyLimitReached
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "local"
+            values["reason"] = "daily_limit_reached"
+            LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
             return
         }
 
         lastRemoteAIRequestKey = remoteRequestKey
         lastRemoteAIRequestAt = Date()
         aiContentState = .generating
+        var values = LimiarAIDiagnostics.profileSnapshot(profile)
+        values["source"] = "remote"
+        values["requestKey"] = remoteRequestKey
+        LimiarAIDiagnostics.log("remote_ai_started", values: values)
         refreshRemoteAIContent(for: resolvedPlan, profile: profile, generationID: generationID)
     }
 

@@ -159,28 +159,89 @@ function compactList(values, max = 12) {
 function normalizeProfile(profile = {}) {
   return {
     tradition: trimText(profile.tradition, 80) || "Católica",
+    traditionID: trimText(profile.traditionID, 80),
     favoriteSections: compactList(profile.favoriteSections, 8),
+    favoriteSectionIDs: compactList(profile.favoriteSectionIDs, 8),
     favoriteBooks: compactList(profile.favoriteBooks, 12),
+    favoriteBookIDs: compactList(profile.favoriteBookIDs, 12),
     favoriteThemes: compactList(profile.favoriteThemes, 12),
-    explanationDepth: normalizeDepth(profile.explanationDepth)
+    favoriteThemeIDs: compactList(profile.favoriteThemeIDs, 12),
+    explanationDepth: normalizeDepth(profile.explanationDepth),
+    avoidedSections: compactList(profile.avoidedSections, 8),
+    avoidedBooks: compactList(profile.avoidedBooks, 12),
+    toneGuidance: trimText(profile.toneGuidance, 500)
   };
 }
 
 function normalizeDepth(value) {
-  const normalized = trimText(value, 20).toLowerCase();
-  if (["curta", "short"].includes(normalized)) return "curta";
-  if (["grande", "profunda", "deep", "long"].includes(normalized)) return "grande";
+  const normalized = trimText(value, 40)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (["curta", "short", "breve"].includes(normalized)) return "curta";
+  if (["media", "medium", "moderada", "equilibrada"].includes(normalized)) return "média";
+  if (["grande", "profunda", "mais profunda", "deep", "long", "detalhada"].includes(normalized)) {
+    return "grande";
+  }
   return "média";
 }
 
 function depthGuidance(depth) {
   if (depth === "curta") {
-    return "Textos curtos: 1-2 frases por campo; pergunta final direta.";
+    return [
+      "Profundidade curta:",
+      "- homily: 1 parágrafo breve com 2 frases no máximo;",
+      "- spiritualMeaning: 1 parágrafo objetivo, direto ao sentido espiritual central;",
+      "- practicalApplication e conclusion: 1 frase cada, concreta e sem rodeio;",
+      "- meditationQuestion: pergunta curta."
+    ].join("\n");
   }
   if (depth === "grande") {
-    return "Textos mais desenvolvidos: 4-6 frases na homilia e 3-4 frases nos demais campos, mantendo clareza.";
+    return [
+      "Profundidade mais profunda:",
+      "- homily: 2 a 3 parágrafos desenvolvidos, com contexto do trecho e ligação com a tradição;",
+      "- spiritualMeaning: explique com mais densidade espiritual, conectando trecho, tema preferido e vida concreta;",
+      "- practicalApplication: aplicação prática mais elaborada, sem moralismo, com uma decisão clara para o próximo período;",
+      "- conclusion: frase final pastoral e específica, diferente das respostas anteriores;",
+      "- meditationQuestion: pergunta mais reflexiva, capaz de sustentar meditação."
+    ].join("\n");
   }
-  return "Textos médios: 2-4 frases na homilia e 1-3 frases nos demais campos.";
+  return [
+    "Profundidade média:",
+    "- homily: 1 a 2 parágrafos equilibrados;",
+    "- spiritualMeaning: explique o sentido espiritual e conecte com a rotina do usuário;",
+    "- practicalApplication: orientação concreta para a próxima pausa;",
+    "- conclusion: curta, acolhedora e específica;",
+    "- meditationQuestion: pergunta simples e aberta."
+  ].join("\n");
+}
+
+function depthOutputTokenLimit(depth, endpoint) {
+  const isReading = endpoint === "spiritual-reading";
+  if (depth === "curta") return isReading ? 1800 : 700;
+  if (depth === "grande") return isReading ? 4200 : 1800;
+  return isReading ? 2800 : 1100;
+}
+
+function diagnosticEnabled() {
+  return process.env.LIMIAR_AI_DEBUG === "1" || process.env.NODE_ENV !== "production";
+}
+
+function logAIDiagnostic(event, details = {}) {
+  if (!diagnosticEnabled()) return;
+  console.info("limiar_ai_diagnostic", {
+    event,
+    ...details,
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL
+  });
+}
+
+function promptDebugDetails(prompt) {
+  if (process.env.LIMIAR_AI_DEBUG_PROMPT !== "1") return {};
+  return {
+    promptPreview: prompt.slice(0, 2400),
+    promptTruncated: prompt.length > 2400
+  };
 }
 
 function normalizePassages(passages = []) {
@@ -242,12 +303,26 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
     : "- sem histórico recente";
 
   return [
-    `Tradição: ${profile.tradition}`,
+    "Preferências atuais do usuário. Use estas escolhas como regras de personalização, não como contexto opcional:",
+    `Tradição: ${profile.tradition}${profile.traditionID ? ` [${profile.traditionID}]` : ""}`,
     `Profundidade: ${profile.explanationDepth}`,
     depthGuidance(profile.explanationDepth),
     `Seções preferidas: ${profile.favoriteSections.join(", ") || "não informado"}`,
+    `IDs das seções preferidas: ${profile.favoriteSectionIDs.join(", ") || "não informado"}`,
     `Livros preferidos: ${profile.favoriteBooks.join(", ") || "não informado"}`,
+    `IDs dos livros preferidos: ${profile.favoriteBookIDs.join(", ") || "não informado"}`,
     `Temas preferidos: ${profile.favoriteThemes.join(", ") || "não informado"}`,
+    `IDs dos temas preferidos: ${profile.favoriteThemeIDs.join(", ") || "não informado"}`,
+    `Evitar seções incompatíveis: ${profile.avoidedSections.join(", ") || "não informado"}`,
+    `Evitar livros incompatíveis: ${profile.avoidedBooks.join(", ") || "não informado"}`,
+    `Diretriz de tom da tradição: ${profile.toneGuidance || "não informado"}`,
+    "",
+    "Regras obrigatórias de personalização:",
+    "- Priorize o sentido espiritual dos trechos enviados que combinem com os livros, seções e temas preferidos.",
+    "- Integre pelo menos um tema preferido quando houver temas informados, de forma natural e coerente.",
+    "- A profundidade escolhida deve mudar visivelmente o tamanho, a densidade e a aplicação prática.",
+    "- Nunca use livros ou seções marcados como incompatíveis para a tradição.",
+    "- Evite respostas genéricas que funcionariam igualmente para qualquer tradição, tema ou profundidade.",
     `Trechos recentes a evitar: ${compactList(recentPassageIDs, 20).join(", ") || "não informado"}`,
     "Reflexões recentes a não repetir:",
     historyBlock,
@@ -257,7 +332,7 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
   ].join("\n");
 }
 
-async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens }) {
+async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugContext = {} }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     const error = new Error("OPENAI_API_KEY is not configured");
@@ -273,6 +348,20 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens }) {
   );
 
   try {
+    logAIDiagnostic("openai_request_start", {
+      endpoint: debugContext.endpoint,
+      requestID: debugContext.requestID,
+      clientID: debugContext.clientID,
+      depth: debugContext.depth,
+      tradition: debugContext.tradition,
+      favoriteThemesCount: debugContext.favoriteThemesCount,
+      favoriteBooksCount: debugContext.favoriteBooksCount,
+      favoriteSectionsCount: debugContext.favoriteSectionsCount,
+      passagesCount: debugContext.passagesCount,
+      promptLength: prompt.length,
+      maxOutputTokens,
+      ...promptDebugDetails(prompt)
+    });
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -329,7 +418,14 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens }) {
     }
 
     try {
-      return JSON.parse(outputText);
+      const parsed = JSON.parse(outputText);
+      logAIDiagnostic("openai_request_success", {
+        endpoint: debugContext.endpoint,
+        requestID: debugContext.requestID,
+        depth: debugContext.depth,
+        outputLength: outputText.length
+      });
+      return parsed;
     } catch (error) {
       error.code = "openai_json_parse_error";
       error.statusCode = 502;
@@ -405,8 +501,11 @@ module.exports = {
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  depthGuidance,
+  depthOutputTokenLimit,
   enforceAIDailyLimit,
   enforceAIRateLimit,
+  logAIDiagnostic,
   logAIError,
   normalizePassages,
   normalizeProfile,
