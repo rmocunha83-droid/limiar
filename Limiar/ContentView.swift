@@ -1504,15 +1504,15 @@ private struct BlockedSelectionHierarchySummary: View {
     let selection: FamilyActivitySelection
 
     private var categoryTokens: [ActivityCategoryToken] {
-        Array(selection.categoryTokens)
+        Array(selection.categoryTokens).sorted { "\($0)" < "\($1)" }
     }
 
     private var applicationTokens: [ApplicationToken] {
-        Array(selection.applicationTokens)
+        Array(selection.applicationTokens).sorted { "\($0)" < "\($1)" }
     }
 
     private var webDomainTokens: [WebDomainToken] {
-        Array(selection.webDomainTokens)
+        Array(selection.webDomainTokens).sorted { "\($0)" < "\($1)" }
     }
 
     private var totalCount: Int {
@@ -1536,10 +1536,12 @@ private struct BlockedSelectionHierarchySummary: View {
                 if !categoryTokens.isEmpty {
                     BlockedSelectionGroup(
                         title: categoryTokens.count == 1 ? "Categoria selecionada" : "Categorias selecionadas",
-                        subtitle: "Todos os apps dessas categorias ficam protegidos."
+                        subtitle: categoryTokens.count == 1 ? "Todos os apps desta categoria ficam protegidos." : "Todos os apps dessas categorias ficam protegidos.",
+                        itemCount: categoryTokens.count,
+                        systemImage: "square.stack.3d.up.fill"
                     ) {
-                        ForEach(categoryTokens, id: \.self) { token in
-                            TokenChildRow {
+                        ForEach(Array(categoryTokens.enumerated()), id: \.element) { index, token in
+                            TokenChildRow(isLast: index == categoryTokens.count - 1) {
                                 Label(token)
                             }
                         }
@@ -1548,11 +1550,13 @@ private struct BlockedSelectionHierarchySummary: View {
 
                 if !applicationTokens.isEmpty {
                     BlockedSelectionGroup(
-                        title: applicationTokens.count == 1 ? "App individual" : "Apps individuais",
-                        subtitle: "Selecionados fora de uma categoria completa."
+                        title: applicationTokens.count == 1 ? "App escolhido" : "Apps escolhidos",
+                        subtitle: "Selecionados individualmente no Tempo de Uso.",
+                        itemCount: applicationTokens.count,
+                        systemImage: "app.badge.fill"
                     ) {
-                        ForEach(applicationTokens, id: \.self) { token in
-                            TokenChildRow {
+                        ForEach(Array(applicationTokens.enumerated()), id: \.element) { index, token in
+                            TokenChildRow(isLast: index == applicationTokens.count - 1) {
                                 Label(token)
                             }
                         }
@@ -1562,10 +1566,12 @@ private struct BlockedSelectionHierarchySummary: View {
                 if !webDomainTokens.isEmpty {
                     BlockedSelectionGroup(
                         title: webDomainTokens.count == 1 ? "Site selecionado" : "Sites selecionados",
-                        subtitle: "Domínios protegidos pelo Tempo de Uso."
+                        subtitle: "Domínios protegidos pelo Tempo de Uso.",
+                        itemCount: webDomainTokens.count,
+                        systemImage: "globe"
                     ) {
-                        ForEach(webDomainTokens, id: \.self) { token in
-                            TokenChildRow {
+                        ForEach(Array(webDomainTokens.enumerated()), id: \.element) { index, token in
+                            TokenChildRow(isLast: index == webDomainTokens.count - 1) {
                                 Label(token)
                             }
                         }
@@ -1574,10 +1580,10 @@ private struct BlockedSelectionHierarchySummary: View {
             }
         }
         .padding(16)
-        .background(Color.deepInk.opacity(0.34), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.deepInk.opacity(0.40), in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
         )
     }
 
@@ -1589,63 +1595,115 @@ private struct BlockedSelectionHierarchySummary: View {
 private struct BlockedSelectionGroup<Content: View>: View {
     let title: String
     let subtitle: String
+    let itemCount: Int
+    let systemImage: String
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "folder")
-                    .font(.system(size: 14, weight: .semibold))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sageButton)
-                    .frame(width: 24, height: 24)
-                    .background(Color.sageButton.opacity(0.12), in: Circle())
+                    .frame(width: 30, height: 30)
+                    .background(Color.sageButton.opacity(0.13), in: Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.ivory)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(title)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.ivory)
+
+                        Text(countText)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.softText.opacity(0.68))
+                    }
 
                     Text(subtitle)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.softText.opacity(0.74))
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.sageButton.opacity(0.80))
             }
-
-            HStack(alignment: .top, spacing: 12) {
-                Rectangle()
-                    .fill(Color.sageButton.opacity(0.24))
-                    .frame(width: 1)
-                    .padding(.vertical, 5)
-                    .padding(.leading, 11)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    content
-                }
-            }
-            .padding(.leading, 10)
-        }
-    }
-}
-
-private struct TokenChildRow<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
-            .font(.system(size: 14, weight: .semibold))
-            .labelStyle(.titleAndIcon)
-            .foregroundStyle(Color.ivory.opacity(0.92))
-            .lineLimit(1)
-            .minimumScaleFactor(0.78)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            .padding(12)
+            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
+
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Color.sageButton.opacity(0.28))
+                        .frame(width: 1.2)
+                }
+                .frame(width: 16)
+                .padding(.leading, 4)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    content
+                }
+                .padding(10)
+                .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                )
+            }
+            .padding(.leading, 22)
+        }
+    }
+
+    private var countText: String {
+        itemCount == 1 ? "· 1 item" : "· \(itemCount) itens"
+    }
+}
+
+private struct TokenChildRow<Content: View>: View {
+    let isLast: Bool
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 8) {
+            BranchConnector(isLast: isLast)
+                .frame(width: 18, height: 38)
+
+            content
+                .font(.system(size: 14, weight: .semibold))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(Color.ivory.opacity(0.92))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.deepInk.opacity(0.24), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+private struct BranchConnector: View {
+    let isLast: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let midY = proxy.size.height / 2
+
+            Path { path in
+                path.move(to: CGPoint(x: 8, y: 0))
+                path.addLine(to: CGPoint(x: 8, y: isLast ? midY : proxy.size.height))
+                path.move(to: CGPoint(x: 8, y: midY))
+                path.addLine(to: CGPoint(x: proxy.size.width, y: midY))
+            }
+            .stroke(Color.sageButton.opacity(0.26), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+        }
     }
 }
 
