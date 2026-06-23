@@ -12,6 +12,7 @@ struct ScreenTimeController {
     }
 
     func applyShield(selection: FamilyActivitySelection) {
+        clearHiddenAppRestrictions()
         store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
         store.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
         store.shield.webDomains = selection.webDomainTokens.isEmpty ? nil : selection.webDomainTokens
@@ -20,6 +21,12 @@ struct ScreenTimeController {
 
     func clearShield() {
         store.clearAllSettings()
+    }
+
+    func clearHiddenAppRestrictions() {
+        store.application.blockedApplications = nil
+        store.application.denyAppInstallation = nil
+        store.application.denyAppRemoval = nil
     }
 
     func scheduleDailyMonitoring() {

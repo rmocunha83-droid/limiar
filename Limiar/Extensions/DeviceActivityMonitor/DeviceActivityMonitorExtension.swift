@@ -27,9 +27,16 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
 
         let selection = policyStore.loadSelection()
+        clearHiddenAppRestrictions()
         settingsStore.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
         settingsStore.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
         settingsStore.shield.webDomains = selection.webDomainTokens.isEmpty ? nil : selection.webDomainTokens
+    }
+
+    private func clearHiddenAppRestrictions() {
+        settingsStore.application.blockedApplications = nil
+        settingsStore.application.denyAppInstallation = nil
+        settingsStore.application.denyAppRemoval = nil
     }
 }
 
