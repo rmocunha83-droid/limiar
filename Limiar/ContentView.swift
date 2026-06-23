@@ -1874,9 +1874,15 @@ private struct BiblicalPreferencesView: View {
             }
 
             ForEach(model.faithProfile.tradition.readingPreferenceSections) { section in
-                Section(section.title) {
+                Section {
                     ForEach(section.options) { option in
                         Toggle(option.title, isOn: binding(for: option))
+                    }
+                } header: {
+                    Text(section.title)
+                } footer: {
+                    if let subtitle = section.subtitle {
+                        Text(subtitle)
                     }
                 }
             }
@@ -2168,9 +2174,18 @@ private struct ReadingPreferenceChipSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(section.title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.ivory)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(section.title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+
+                if let subtitle = section.subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
 
             FlowLayout(spacing: 9) {
                 ForEach(section.options) { option in

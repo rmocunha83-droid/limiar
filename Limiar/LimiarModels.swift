@@ -239,9 +239,16 @@ struct ReadingPreferenceOption: Identifiable, Hashable {
 
 struct ReadingPreferenceSection: Identifiable, Hashable {
     let title: String
+    let subtitle: String?
     let options: [ReadingPreferenceOption]
 
     var id: String { title }
+
+    init(title: String, subtitle: String? = nil, options: [ReadingPreferenceOption]) {
+        self.title = title
+        self.subtitle = subtitle
+        self.options = options
+    }
 }
 
 extension FaithTradition {
@@ -250,21 +257,23 @@ extension FaithTradition {
         case .catholic:
             [
                 ReadingPreferenceSection(
-                    title: "Partes principais",
+                    title: "Tipos de leitura",
+                    subtitle: "Categorias de conteúdo para orientar o estilo da leitura.",
                     options: [
                         .section(.gospels, tradition: self),
-                        .section(.psalms, tradition: self),
-                        .section(.proverbs, tradition: self),
+                        .section(.psalms, title: "Salmos e Orações", tradition: self),
+                        .section(.proverbs, title: "Sabedoria", tradition: self),
                         .section(.paulineLetters, tradition: self),
                         .section(.prophets, tradition: self),
-                        .section(.torah, title: "Pentateuco", tradition: self),
-                        .section(.historicalBooks, tradition: self),
-                        .section(.wisdomBooks, tradition: self),
-                        .section(.deuterocanonical, tradition: self)
+                        .section(.historicalBooks, title: "Histórias Bíblicas", tradition: self),
+                        .section(.torah, title: "Leis e Origens", tradition: self),
+                        .section(.wisdomBooks, title: "Reflexões e Sabedoria", tradition: self),
+                        .section(.deuterocanonical, title: "Livros Católicos", tradition: self)
                     ]
                 ),
                 ReadingPreferenceSection(
-                    title: "Livros favoritos",
+                    title: "Livros que mais inspiram você",
+                    subtitle: "Livros específicos que você quer ver com mais frequência.",
                     options: [
                         .book(.genesis, tradition: self),
                         .book(.exodus, tradition: self),
@@ -286,20 +295,22 @@ extension FaithTradition {
         case .protestant:
             [
                 ReadingPreferenceSection(
-                    title: "Partes principais",
+                    title: "Tipos de leitura",
+                    subtitle: "Categorias de conteúdo para orientar o estilo da leitura.",
                     options: [
                         .section(.gospels, tradition: self),
-                        .section(.psalms, tradition: self),
-                        .section(.proverbs, tradition: self),
+                        .section(.psalms, title: "Salmos e Orações", tradition: self),
+                        .section(.proverbs, title: "Sabedoria", tradition: self),
                         .section(.paulineLetters, tradition: self),
                         .section(.prophets, tradition: self),
-                        .section(.torah, title: "Pentateuco", tradition: self),
-                        .section(.historicalBooks, tradition: self),
-                        .section(.wisdomBooks, tradition: self)
+                        .section(.historicalBooks, title: "Histórias Bíblicas", tradition: self),
+                        .section(.torah, title: "Leis e Origens", tradition: self),
+                        .section(.wisdomBooks, title: "Reflexões e Sabedoria", tradition: self)
                     ]
                 ),
                 ReadingPreferenceSection(
-                    title: "Livros favoritos",
+                    title: "Livros que mais inspiram você",
+                    subtitle: "Livros específicos que você quer ver com mais frequência.",
                     options: [
                         .book(.genesis, tradition: self),
                         .book(.exodus, tradition: self),
@@ -318,18 +329,20 @@ extension FaithTradition {
         case .jewish:
             [
                 ReadingPreferenceSection(
-                    title: "Partes principais",
+                    title: "Tipos de leitura",
+                    subtitle: "Categorias do Tanakh para orientar o tipo de leitura.",
                     options: [
-                        .section(.torah, title: "Torá", tradition: self),
+                        .section(.torah, title: "Torá — Leis e origens", tradition: self),
                         .section(.prophets, title: "Profetas — Nevi’im", tradition: self),
                         .section(.ketuvim, title: "Escritos — Ketuvim", tradition: self),
-                        .section(.psalms, title: "Salmos — Tehilim", tradition: self),
-                        .section(.proverbs, title: "Provérbios — Mishlei", tradition: self),
-                        .section(.ethicalWisdom, title: "Sabedoria e ética", tradition: self)
+                        .section(.psalms, title: "Salmos e Orações — Tehilim", tradition: self),
+                        .section(.proverbs, title: "Sabedoria — Mishlei", tradition: self),
+                        .section(.ethicalWisdom, title: "Ética e vida prática", tradition: self)
                     ]
                 ),
                 ReadingPreferenceSection(
-                    title: "Livros favoritos",
+                    title: "Livros que mais inspiram você",
+                    subtitle: "Livros específicos do Tanakh que você quer priorizar.",
                     options: [
                         .book(.genesis, title: "Gênesis / Bereshit", tradition: self),
                         .book(.exodus, title: "Êxodo / Shemot", tradition: self),
@@ -345,7 +358,8 @@ extension FaithTradition {
         case .spiritist:
             [
                 ReadingPreferenceSection(
-                    title: "Temas principais",
+                    title: "Temas de reflexão",
+                    subtitle: "Assuntos espirituais e morais para orientar as leituras.",
                     options: [
                         .theme(.gospelOfJesus, tradition: self),
                         .theme(.innerReform, tradition: self),
@@ -356,15 +370,16 @@ extension FaithTradition {
                         .theme(.patience, tradition: self),
                         .theme(.spiritualEvolution, tradition: self),
                         .theme(.consolationHope, tradition: self),
-                        .theme(.moralApplication, tradition: self)
+                        .theme(.moralApplication, title: "Vida prática e moral", tradition: self)
                     ]
                 ),
                 ReadingPreferenceSection(
                     title: "Textos de apoio",
+                    subtitle: "Fontes que podem apoiar as reflexões espíritas.",
                     options: [
                         .section(.gospels, tradition: self),
-                        .section(.psalms, tradition: self),
-                        .section(.proverbs, tradition: self),
+                        .section(.psalms, title: "Salmos e Orações", tradition: self),
+                        .section(.proverbs, title: "Sabedoria", tradition: self),
                         .section(.sermonOnMount, tradition: self),
                         .section(.parablesOfJesus, tradition: self)
                     ]
