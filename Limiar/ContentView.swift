@@ -707,13 +707,13 @@ private struct SpiritualReadingCard: View {
                     .foregroundStyle(Color.warmGold)
 
                 Text(item.homily)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.softText)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.ivory.opacity(0.92))
                     .lineSpacing(5)
 
                 Text(item.practicalConclusion)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.ivory.opacity(0.9))
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(Color.softText.opacity(0.92))
                     .lineSpacing(5)
             }
             .padding(14)
@@ -899,7 +899,9 @@ private struct OnboardingView: View {
     @Environment(LimiarAppModel.self) private var model
     @State private var step: Int
     @State private var status = ""
+    @State private var readingPreferenceMessage = ""
     @State private var showingPicker = false
+    @State private var didApplyDebugTradition = false
 
     init() {
         #if DEBUG
@@ -930,7 +932,7 @@ private struct OnboardingView: View {
                     Spacer(minLength: 18)
 
                     Group {
-                        switch step {
+                        switch displayedStep {
                         case 1:
                             tradition
                         case 2:
@@ -951,7 +953,7 @@ private struct OnboardingView: View {
 
                     HStack(spacing: 12) {
                         Button {
-                            withAnimation { step -= 1 }
+                            moveToPreviousStep()
                         } label: {
                             Image(systemName: "arrow.left")
                                 .font(.system(size: 21, weight: .regular))
@@ -961,10 +963,10 @@ private struct OnboardingView: View {
                         .accessibilityLabel("Voltar")
 
                         HStack(spacing: 6) {
-                            ForEach(0..<7, id: \.self) { index in
+                            ForEach(Array(visibleSteps.enumerated()), id: \.offset) { index, _ in
                                 Capsule()
-                                    .fill(index == step ? Color.sageButton : Color.white.opacity(0.18))
-                                    .frame(width: index == step ? 26 : 7, height: 7)
+                                    .fill(index == progressIndex ? Color.sageButton : Color.white.opacity(0.18))
+                                    .frame(width: index == progressIndex ? 26 : 7, height: 7)
                             }
                         }
                         .frame(width: 106, alignment: .leading)
@@ -998,6 +1000,46 @@ private struct OnboardingView: View {
             isPresented: $showingPicker,
             selection: $model.selection
         )
+        .onAppear {
+            applyDebugTraditionIfNeeded()
+            normalizeCurrentStepForTradition()
+        }
+        .onChange(of: model.selection) { _, _ in
+            model.saveProfile()
+        }
+        .onChange(of: model.faithProfile.tradition) { _, _ in
+            normalizeCurrentStepForTradition()
+        }
+    }
+
+    private var shouldSkipStandaloneThemes: Bool {
+        model.faithProfile.tradition == .spiritist
+    }
+
+    private var visibleSteps: [Int] {
+        shouldSkipStandaloneThemes ? [0, 1, 2, 4, 5, 6] : [0, 1, 2, 3, 4, 5, 6]
+    }
+
+    private var displayedStep: Int {
+        shouldSkipStandaloneThemes && step == 3 ? 4 : step
+    }
+
+    private var progressIndex: Int {
+        visibleSteps.firstIndex(of: displayedStep) ?? 0
+    }
+
+    private var screenTimeIsAuthorizedForDisplay: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarScreenTimeAuthorized") { return true }
+        #endif
+        return model.hasAuthorizedScreenTime
+    }
+
+    private var screenTimeHasSelectionForDisplay: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarBlockedAppsSelected") { return true }
+        #endif
+        return model.hasBlockedAppsSelection
     }
 
     private var tradition: some View {
@@ -1010,7 +1052,7 @@ private struct OnboardingView: View {
                         subtitle: tradition.subtitle,
                         isSelected: model.faithProfile.tradition == tradition
                     ) {
-                        model.faithProfile.tradition = tradition
+                        selectTradition(tradition)
                     }
                 }
             }
@@ -1024,8 +1066,10 @@ private struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 20) {
                 OnboardingTitle(eyebrow: "TEMAS", title: "Quais temas você quer cultivar nas pausas?")
                 ChipGrid(
-                    items: SpiritualTheme.allCases.map(\.title),
-                    selected: model.faithProfile.favoriteThemes.map(\.title)
+                    items: SpiritualTheme.standaloneOptions.map(\.title),
+                    selected: model.faithProfile.favoriteThemes
+                        .filter { SpiritualTheme.standaloneOptions.contains($0) }
+                        .map(\.title)
                 ) { title in
                     toggleTheme(title)
                 }
@@ -1038,21 +1082,31 @@ private struct OnboardingView: View {
     private var booksAndSections: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
-                OnboardingTitle(eyebrow: "LIVROS E SEÇÕES", title: "Quais livros ou partes você prefere?")
-                ChipGrid(
-                    items: BibleSection.allCases.map(\.title),
-                    selected: model.faithProfile.favoriteBibleSections.map(\.title)
-                ) { title in
-                    toggleSection(title)
+                OnboardingTitle(
+                    eyebrow: "LIVROS E TEMAS",
+                    title: "Quais textos você quer priorizar nas suas leituras?"
+                )
+
+                Text("Vamos usar isso para criar leituras mais próximas da sua tradição. Você pode mudar depois.")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ForEach(model.faithProfile.tradition.readingPreferenceSections) { section in
+                    ReadingPreferenceChipSection(
+                        section: section,
+                        profile: model.faithProfile
+                    ) { option in
+                        toggleReadingPreference(option)
+                    }
                 }
-                Text("Livros preferidos")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.ivory)
-                ChipGrid(
-                    items: BibleBook.allCases.map(\.title),
-                    selected: model.faithProfile.favoriteBooks.map(\.title)
-                ) { title in
-                    toggleBook(title)
+
+                if !readingPreferenceMessage.isEmpty {
+                    Label(readingPreferenceMessage, systemImage: "info.circle")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.sageButton)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1070,7 +1124,7 @@ private struct OnboardingView: View {
                         subtitle: reflectionDepthSubtitle(for: depth),
                         isSelected: model.faithProfile.explanationDepth == depth
                     ) {
-                        model.faithProfile.explanationDepth = depth
+                        model.selectExplanationDepth(depth)
                     }
                 }
             }
@@ -1090,8 +1144,8 @@ private struct OnboardingView: View {
                     .lineSpacing(5)
 
                 ScreenTimeSetupPanel(
-                    isAuthorized: model.hasAuthorizedScreenTime,
-                    hasSelection: model.hasBlockedAppsSelection,
+                    isAuthorized: screenTimeIsAuthorizedForDisplay,
+                    hasSelection: screenTimeHasSelectionForDisplay,
                     authorizeAction: {
                         Task { status = await model.requestAuthorization() }
                     },
@@ -1099,6 +1153,10 @@ private struct OnboardingView: View {
                         showingPicker = true
                     }
                 )
+
+                if model.hasBlockedAppsSelection {
+                    BlockedSelectionHierarchySummary(selection: model.selection)
+                }
 
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "info.circle")
@@ -1133,7 +1191,7 @@ private struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 20) {
                 OnboardingTitle(eyebrow: "LIBERAÇÃO", title: "Defina o tempo de liberação do app após a leitura religiosa.")
 
-                Text("Depois desse tempo, será necessário fazer uma nova leitura para liberar mais tempo de uso do APP.")
+                Text("Depois desse período, será necessário fazer uma nova leitura para liberar mais tempo de uso dos apps bloqueados.")
                     .font(.system(size: 16))
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
@@ -1144,7 +1202,7 @@ private struct OnboardingView: View {
                         subtitle: minutes == 30 ? "Equilíbrio recomendado para começar." : "Pode ser alterado depois.",
                         isSelected: model.unlockDurationMinutes == minutes
                     ) {
-                        model.unlockDurationMinutes = minutes
+                        model.selectUnlockDuration(minutes: minutes)
                     }
                 }
             }
@@ -1153,31 +1211,35 @@ private struct OnboardingView: View {
         }
     }
 
-    private func toggleSection(_ title: String) {
-        guard let section = BibleSection.allCases.first(where: { $0.title == title }) else { return }
-        if model.faithProfile.favoriteBibleSections.contains(section) {
-            model.faithProfile.favoriteBibleSections.removeAll { $0 == section }
-        } else {
-            model.faithProfile.favoriteBibleSections.append(section)
+    private func selectTradition(_ tradition: FaithTradition) {
+        model.selectTradition(tradition)
+        readingPreferenceMessage = ""
+    }
+
+    private func applyDebugTraditionIfNeeded() {
+        #if DEBUG
+        guard !didApplyDebugTradition else { return }
+        didApplyDebugTradition = true
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let traditionFlagIndex = arguments.firstIndex(of: "-LimiarTradition"),
+              arguments.indices.contains(traditionFlagIndex + 1),
+              let tradition = FaithTradition(rawValue: arguments[traditionFlagIndex + 1])
+        else {
+            return
         }
+        model.selectTradition(tradition)
+        #endif
+    }
+
+    private func toggleReadingPreference(_ option: ReadingPreferenceOption) {
+        model.toggleReadingPreference(option)
+        readingPreferenceMessage = ""
     }
 
     private func toggleTheme(_ title: String) {
-        guard let theme = SpiritualTheme.allCases.first(where: { $0.title == title }) else { return }
-        if model.faithProfile.favoriteThemes.contains(theme) {
-            model.faithProfile.favoriteThemes.removeAll { $0 == theme }
-        } else {
-            model.faithProfile.favoriteThemes.append(theme)
-        }
-    }
-
-    private func toggleBook(_ title: String) {
-        guard let book = BibleBook.allCases.first(where: { $0.title == title }) else { return }
-        if model.faithProfile.favoriteBooks.contains(book) {
-            model.faithProfile.favoriteBooks.removeAll { $0 == book }
-        } else {
-            model.faithProfile.favoriteBooks.append(book)
-        }
+        guard !shouldSkipStandaloneThemes else { return }
+        guard let theme = SpiritualTheme.standaloneOptions.first(where: { $0.title == title }) else { return }
+        model.toggleTheme(theme)
     }
 
     private func reflectionDepthSubtitle(for depth: ExplanationDepth) -> String {
@@ -1192,13 +1254,20 @@ private struct OnboardingView: View {
     }
 
     private func advance() {
+        if step == 2, !model.faithProfile.hasSelectedReadingPreferences {
+            readingPreferenceMessage = "Escolha pelo menos uma opção para personalizar suas leituras."
+            return
+        }
+
         if step == 5 {
+            model.saveProfile()
             advanceFromScreenTime()
             return
         }
 
-        if step < 6 {
-            withAnimation { step += 1 }
+        model.saveProfile()
+        if let nextStep = nextStep(after: displayedStep) {
+            withAnimation { step = nextStep }
         } else {
             model.completeOnboarding()
         }
@@ -1217,6 +1286,28 @@ private struct OnboardingView: View {
         }
 
         withAnimation { step = 6 }
+    }
+
+    private func moveToPreviousStep() {
+        guard let previousStep = previousStep(before: displayedStep) else { return }
+        withAnimation { step = previousStep }
+    }
+
+    private func nextStep(after currentStep: Int) -> Int? {
+        guard let currentIndex = visibleSteps.firstIndex(of: currentStep) else { return nil }
+        let nextIndex = currentIndex + 1
+        guard visibleSteps.indices.contains(nextIndex) else { return nil }
+        return visibleSteps[nextIndex]
+    }
+
+    private func previousStep(before currentStep: Int) -> Int? {
+        guard let currentIndex = visibleSteps.firstIndex(of: currentStep), currentIndex > 0 else { return nil }
+        return visibleSteps[currentIndex - 1]
+    }
+
+    private func normalizeCurrentStepForTradition() {
+        guard shouldSkipStandaloneThemes, step == 3 else { return }
+        step = 4
     }
 }
 
@@ -1262,8 +1353,8 @@ private struct ScreenTimeSetupPanel: View {
                     subtitle: "Permite que o app aplique os bloqueios.",
                     buttonTitle: isAuthorized ? "Autorizado" : "Autorizar",
                     systemImage: isAuthorized ? "checkmark.shield.fill" : "checkmark.shield",
-                    isEnabled: !isAuthorized,
-                    isPrimary: true,
+                    state: isAuthorized ? .completed : .available,
+                    allowsCompletedAction: false,
                     action: authorizeAction
                 )
 
@@ -1273,10 +1364,10 @@ private struct ScreenTimeSetupPanel: View {
                 ScreenTimeSetupStep(
                     title: "2. Escolher apps bloqueados",
                     subtitle: "Selecione apps ou categorias para limitar.",
-                    buttonTitle: !isAuthorized ? "Disponível após a autorização" : (hasSelection ? "Alterar seleção" : "Escolher apps"),
+                    buttonTitle: !isAuthorized ? "Disponível após a autorização" : (hasSelection ? "Apps escolhidos" : "Escolher apps"),
                     systemImage: !isAuthorized ? "lock" : (hasSelection ? "checkmark.circle" : "square.grid.2x2"),
-                    isEnabled: isAuthorized,
-                    isPrimary: false,
+                    state: appSelectionState,
+                    allowsCompletedAction: true,
                     action: selectAppsAction
                 )
             }
@@ -1284,6 +1375,17 @@ private struct ScreenTimeSetupPanel: View {
         .padding(18)
         .limiarPanel()
     }
+
+    private var appSelectionState: ScreenTimeStepActionState {
+        if !isAuthorized { return .disabled }
+        return hasSelection ? .completed : .available
+    }
+}
+
+private enum ScreenTimeStepActionState {
+    case available
+    case disabled
+    case completed
 }
 
 private struct ScreenTimeStepBadge: View {
@@ -1315,20 +1417,20 @@ private struct ScreenTimeSetupStep: View {
     let subtitle: String
     let buttonTitle: String
     let systemImage: String
-    let isEnabled: Bool
-    let isPrimary: Bool
+    let state: ScreenTimeStepActionState
+    let allowsCompletedAction: Bool
     let action: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Color.ivory)
+                .foregroundStyle(titleForeground)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(subtitle)
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.softText)
+                .foregroundStyle(subtitleForeground)
                 .lineSpacing(4)
 
             Button(action: action) {
@@ -1341,19 +1443,209 @@ private struct ScreenTimeSetupStep: View {
                     .background(buttonBackground, in: RoundedRectangle(cornerRadius: 8))
                     .foregroundStyle(buttonForeground)
             }
-            .disabled(!isEnabled)
+            .disabled(!isInteractive)
             .accessibilityLabel(buttonTitle)
         }
     }
 
+    private var isInteractive: Bool {
+        switch state {
+        case .available:
+            true
+        case .disabled:
+            false
+        case .completed:
+            allowsCompletedAction
+        }
+    }
+
+    private var titleForeground: Color {
+        switch state {
+        case .available, .completed:
+            Color.ivory
+        case .disabled:
+            Color.ivory.opacity(0.72)
+        }
+    }
+
+    private var subtitleForeground: Color {
+        switch state {
+        case .available:
+            Color.softText
+        case .disabled, .completed:
+            Color.softText.opacity(0.78)
+        }
+    }
+
     private var buttonBackground: Color {
-        if !isEnabled { return Color.white.opacity(0.10) }
-        return isPrimary ? Color.sageButton : Color.white.opacity(0.13)
+        switch state {
+        case .available:
+            Color.sageButton
+        case .disabled:
+            Color.white.opacity(0.10)
+        case .completed:
+            Color.white.opacity(0.12)
+        }
     }
 
     private var buttonForeground: Color {
-        if !isEnabled { return Color.softText.opacity(0.72) }
-        return isPrimary ? Color.deepInk : Color.ivory
+        switch state {
+        case .available:
+            Color.deepInk
+        case .disabled:
+            Color.softText.opacity(0.68)
+        case .completed:
+            Color.softText.opacity(0.82)
+        }
+    }
+}
+
+private struct BlockedSelectionHierarchySummary: View {
+    let selection: FamilyActivitySelection
+
+    private var categoryTokens: [ActivityCategoryToken] {
+        Array(selection.categoryTokens)
+    }
+
+    private var applicationTokens: [ApplicationToken] {
+        Array(selection.applicationTokens)
+    }
+
+    private var webDomainTokens: [WebDomainToken] {
+        Array(selection.webDomainTokens)
+    }
+
+    private var totalCount: Int {
+        categoryTokens.count + applicationTokens.count + webDomainTokens.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("SELEÇÃO ATUAL")
+                    .font(.system(size: 12, weight: .bold))
+                    .tracking(1.3)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(selectionCountText)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.softText.opacity(0.78))
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                if !categoryTokens.isEmpty {
+                    BlockedSelectionGroup(
+                        title: categoryTokens.count == 1 ? "Categoria selecionada" : "Categorias selecionadas",
+                        subtitle: "Todos os apps dessas categorias ficam protegidos."
+                    ) {
+                        ForEach(categoryTokens, id: \.self) { token in
+                            TokenChildRow {
+                                Label(token)
+                            }
+                        }
+                    }
+                }
+
+                if !applicationTokens.isEmpty {
+                    BlockedSelectionGroup(
+                        title: applicationTokens.count == 1 ? "App individual" : "Apps individuais",
+                        subtitle: "Selecionados fora de uma categoria completa."
+                    ) {
+                        ForEach(applicationTokens, id: \.self) { token in
+                            TokenChildRow {
+                                Label(token)
+                            }
+                        }
+                    }
+                }
+
+                if !webDomainTokens.isEmpty {
+                    BlockedSelectionGroup(
+                        title: webDomainTokens.count == 1 ? "Site selecionado" : "Sites selecionados",
+                        subtitle: "Domínios protegidos pelo Tempo de Uso."
+                    ) {
+                        ForEach(webDomainTokens, id: \.self) { token in
+                            TokenChildRow {
+                                Label(token)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.deepInk.opacity(0.34), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    private var selectionCountText: String {
+        totalCount == 1 ? "1 item" : "\(totalCount) itens"
+    }
+}
+
+private struct BlockedSelectionGroup<Content: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "folder")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sageButton)
+                    .frame(width: 24, height: 24)
+                    .background(Color.sageButton.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.ivory)
+
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.softText.opacity(0.74))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                Rectangle()
+                    .fill(Color.sageButton.opacity(0.24))
+                    .frame(width: 1)
+                    .padding(.vertical, 5)
+                    .padding(.leading, 11)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    content
+                }
+            }
+            .padding(.leading, 10)
+        }
+    }
+}
+
+private struct TokenChildRow<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .font(.system(size: 14, weight: .semibold))
+            .labelStyle(.titleAndIcon)
+            .foregroundStyle(Color.ivory.opacity(0.92))
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
     }
 }
 
@@ -1389,6 +1681,12 @@ struct SettingsView: View {
                         showingPicker = true
                     }
                     .disabled(!subscription.hasPremiumAccess)
+
+                    if model.hasBlockedAppsSelection {
+                        BlockedSelectionHierarchySummary(selection: model.selection)
+                            .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
+                            .listRowBackground(Color.clear)
+                    }
                 }
 
                 Section("Preferências bíblicas") {
@@ -1479,6 +1777,9 @@ struct SettingsView: View {
             model.saveProfile()
             model.applyBlocking()
         }
+        .onChange(of: model.faithProfile.tradition) { _, newValue in
+            model.selectTradition(newValue)
+        }
         .onChange(of: model.unlockDurationMinutes) { _, _ in model.saveProfile() }
         .onChange(of: model.faithProfile) { _, _ in model.saveProfile() }
         .familyActivityPicker(isPresented: $showingPicker, selection: $model.selection)
@@ -1509,42 +1810,40 @@ private struct BiblicalPreferencesView: View {
         @Bindable var model = model
 
         List {
-            Section("Partes da Bíblia") {
-                ForEach(BibleSection.allCases) { section in
-                    Toggle(section.title, isOn: binding(for: section, in: $model.faithProfile.favoriteBibleSections))
-                }
+            Section {
+                Text("Estas escolhas orientam as leituras e reflexões geradas pelo Limiar.")
+                    .foregroundStyle(.secondary)
             }
-            Section("Livros favoritos") {
-                ForEach(BibleBook.allCases) { book in
-                    Toggle(book.title, isOn: binding(for: book, in: $model.faithProfile.favoriteBooks))
-                }
-            }
-            Section("Temas") {
-                ForEach(SpiritualTheme.allCases) { theme in
-                    Toggle(theme.title, isOn: binding(for: theme, in: $model.faithProfile.favoriteThemes))
+
+            ForEach(model.faithProfile.tradition.readingPreferenceSections) { section in
+                Section(section.title) {
+                    ForEach(section.options) { option in
+                        Toggle(option.title, isOn: binding(for: option))
+                    }
                 }
             }
         }
-        .navigationTitle("Preferências bíblicas")
+        .navigationTitle("Textos e temas")
         .scrollContentBackground(.hidden)
         .background(LimiarBackground())
         .tint(Color.sageButton)
         .onDisappear {
+            model.faithProfile.normalizeReadingPreferencesForTradition()
             model.saveProfile()
             model.beginNewReading()
         }
     }
 
-    private func binding<T: Equatable>(for item: T, in collection: Binding<[T]>) -> Binding<Bool> {
+    private func binding(for option: ReadingPreferenceOption) -> Binding<Bool> {
         Binding {
-            collection.wrappedValue.contains(item)
+            model.faithProfile.contains(option)
         } set: { isSelected in
-            if isSelected {
-                if !collection.wrappedValue.contains(item) {
-                    collection.wrappedValue.append(item)
-                }
-            } else {
-                collection.wrappedValue.removeAll { $0 == item }
+            let currentlySelected = model.faithProfile.contains(option)
+            guard isSelected != currentlySelected else { return }
+            model.toggleReadingPreference(option)
+            if model.faithProfile.hasSelectedReadingPreferences == false,
+               let fallback = model.faithProfile.tradition.allowedReadingPreferenceOptions.first {
+                model.toggleReadingPreference(fallback)
             }
         }
     }
@@ -1795,12 +2094,78 @@ private struct ChipGrid: View {
                         .minimumScaleFactor(0.78)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(selected.contains(item) ? Color.sageButton.opacity(0.22) : Color.white.opacity(0.08), in: Capsule())
-                        .overlay(Capsule().stroke(selected.contains(item) ? Color.sageButton : Color.white.opacity(0.12)))
-                        .foregroundStyle(selected.contains(item) ? Color.sageButton : Color.ivory)
+                        .background(selected.contains(item) ? Color.sageButton.opacity(0.30) : Color.white.opacity(0.08), in: Capsule())
+                        .overlay(Capsule().stroke(selected.contains(item) ? Color.sageButton.opacity(0.95) : Color.white.opacity(0.16), lineWidth: selected.contains(item) ? 1.5 : 1))
+                        .foregroundStyle(selected.contains(item) ? Color.sageButton : Color.ivory.opacity(0.92))
                 }
             }
         }
+    }
+}
+
+private struct ReadingPreferenceChipSection: View {
+    let section: ReadingPreferenceSection
+    let profile: UserFaithProfile
+    let action: (ReadingPreferenceOption) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(section.title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+
+            FlowLayout(spacing: 9) {
+                ForEach(section.options) { option in
+                    let selected = profile.contains(option)
+                    Button {
+                        action(option)
+                    } label: {
+                        ReadingPreferenceChip(title: option.title, isSelected: selected)
+                    }
+                    .accessibilityLabel(option.title)
+                    .accessibilityValue(selected ? "Selecionado" : "Não selecionado")
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.deepInk.opacity(0.26), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+private struct ReadingPreferenceChip: View {
+    let title: String
+    let isSelected: Bool
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 14, weight: .semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(backgroundColor, in: Capsule())
+            .overlay(Capsule().stroke(borderColor, lineWidth: borderWidth))
+            .foregroundStyle(foregroundColor)
+    }
+
+    private var backgroundColor: Color {
+        isSelected ? Color.sageButton.opacity(0.30) : Color.deepInk.opacity(0.52)
+    }
+
+    private var borderColor: Color {
+        isSelected ? Color.sageButton.opacity(0.96) : Color.white.opacity(0.18)
+    }
+
+    private var borderWidth: CGFloat {
+        isSelected ? 1.5 : 1
+    }
+
+    private var foregroundColor: Color {
+        isSelected ? Color.sageButton : Color.ivory.opacity(0.94)
     }
 }
 
@@ -1911,13 +2276,45 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
     }
 
     private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
+        let utterance = AVSpeechUtterance(string: preparedSpeechText(text))
         utterance.voice = preferredVoice
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.82
-        utterance.pitchMultiplier = 0.92
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.76
+        utterance.pitchMultiplier = 0.95
         utterance.volume = 1
+        utterance.preUtteranceDelay = 0.12
+        utterance.postUtteranceDelay = 0.18
         synthesizer.speak(utterance)
         isSpeaking = true
+    }
+
+    private func preparedSpeechText(_ text: String) -> String {
+        var prepared = text
+            .replacingOccurrences(of: "APPs", with: "aplicativos")
+            .replacingOccurrences(of: "apps", with: "aplicativos")
+            .replacingOccurrences(of: "IA", with: "inteligência artificial")
+            .replacingOccurrences(of: " / ", with: ", ")
+            .replacingOccurrences(of: "—", with: ", ")
+            .replacingOccurrences(of: "–", with: ", ")
+            .replacingOccurrences(of: "\"", with: "")
+            .replacingOccurrences(of: "“", with: "")
+            .replacingOccurrences(of: "”", with: "")
+
+        prepared = prepared.replacingOccurrences(
+            of: #"(?m)^[ \t]+"#,
+            with: "",
+            options: .regularExpression
+        )
+        prepared = prepared.replacingOccurrences(
+            of: #"\n{3,}"#,
+            with: "\n\n",
+            options: .regularExpression
+        )
+        prepared = prepared.replacingOccurrences(
+            of: #"([.!?])\s+"#,
+            with: "$1\n\n",
+            options: .regularExpression
+        )
+        return prepared.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var preferredVoice: AVSpeechSynthesisVoice? {

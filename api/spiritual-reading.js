@@ -2,6 +2,8 @@ const {
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  enforceAIRateLimit,
+  logAIError,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
@@ -14,6 +16,8 @@ const {
 module.exports = async function handler(req, res) {
   applyCommonHeaders(res);
   if (!requirePost(req, res)) return;
+  const rateLimit = enforceAIRateLimit(req, res, "spiritual-reading");
+  if (!rateLimit.allowed) return;
 
   try {
     const body = parseBody(req);
@@ -31,7 +35,7 @@ module.exports = async function handler(req, res) {
     const prompt = [
       buildContextPrompt({ profile, passages, recentPassageIDs, recentReflections }),
       "",
-      "Gere um item de leitura para cada trecho enviado, até 5 itens quando houver 5 ou mais trechos.",
+      "Gere exatamente 4 itens de leitura, um para cada um dos 4 trechos enviados.",
       "Cada item deve usar os campos reference, passageText, homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion.",
       "Use passageText exatamente baseado no trecho enviado; não invente versículos."
     ].join("\n");
@@ -44,8 +48,9 @@ module.exports = async function handler(req, res) {
     });
 
     res.statusCode = 200;
-    res.end(JSON.stringify(validateSpiritualReading(result)));
+    res.end(JSON.stringify(validateSpiritualReading(result, 4)));
   } catch (error) {
+    logAIError("spiritual-reading", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_spiritual_reading_failed" }));
   }

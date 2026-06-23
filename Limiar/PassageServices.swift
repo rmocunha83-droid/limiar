@@ -1,5 +1,9 @@
 import Foundation
 
+enum LimiarReadingConstants {
+    static let targetItemCount = 4
+}
+
 struct PassageRecommendationService {
     private let passages: [ScripturePassage] = [
         ScripturePassage(
@@ -407,7 +411,7 @@ struct PassageRecommendationService {
             estimatedMinutes: 5,
             theme: .faith,
             section: .torah,
-            book: .exodus
+            book: .deuteronomy
         ),
         ScripturePassage(
             id: "psalm-46-jewish",
@@ -471,7 +475,7 @@ struct PassageRecommendationService {
             reference: "Mateus 5:5",
             text: "Bem-aventurados os mansos, porque herdarão a terra. A mansidão aqui não é fraqueza: é domínio de si antes da resposta impulsiva.",
             estimatedMinutes: 5,
-            theme: .discipline,
+            theme: .patience,
             section: .gospels,
             book: .matthew
         ),
@@ -482,7 +486,7 @@ struct PassageRecommendationService {
             reference: "João 14:27",
             text: "Deixo-vos a paz, a minha paz vos dou. Não se turbe o vosso coração, nem se atemorize.",
             estimatedMinutes: 5,
-            theme: .hope,
+            theme: .consolationHope,
             section: .gospels,
             book: .john
         ),
@@ -515,7 +519,7 @@ struct PassageRecommendationService {
             reference: "João 8:32",
             text: "Conhecereis a verdade, e a verdade vos libertará. A liberdade começa quando a consciência volta a dirigir o impulso.",
             estimatedMinutes: 5,
-            theme: .discipline,
+            theme: .innerReform,
             section: .gospels,
             book: .john
         ),
@@ -526,7 +530,7 @@ struct PassageRecommendationService {
             reference: "Mateus 11:29",
             text: "Aprendei de mim, que sou manso e humilde de coração. A mansidão transforma a pressa em escolha lúcida.",
             estimatedMinutes: 5,
-            theme: .presence,
+            theme: .patience,
             section: .gospels,
             book: .matthew
         ),
@@ -537,7 +541,7 @@ struct PassageRecommendationService {
             reference: "Romanos 12:2",
             text: "Transformai-vos pela renovação da vossa mente. Cada pausa consciente educa a vontade e fortalece o bem.",
             estimatedMinutes: 5,
-            theme: .discipline,
+            theme: .innerReform,
             section: .paulineLetters,
             book: .romans
         ),
@@ -548,7 +552,7 @@ struct PassageRecommendationService {
             reference: "1 Coríntios 13:4-7",
             text: "A caridade é paciente e benigna. Antes de reagir, escolha o gesto que mais se aproxima do amor.",
             estimatedMinutes: 5,
-            theme: .forgiveness,
+            theme: .charity,
             section: .paulineLetters,
             book: .corinthians
         ),
@@ -559,7 +563,7 @@ struct PassageRecommendationService {
             reference: "Mateus 6:21",
             text: "Onde está o teu tesouro, aí estará também o teu coração. A atenção revela aquilo que estamos alimentando.",
             estimatedMinutes: 5,
-            theme: .purpose,
+            theme: .moralApplication,
             section: .gospels,
             book: .matthew
         ),
@@ -570,7 +574,7 @@ struct PassageRecommendationService {
             reference: "Provérbios 4:23",
             text: "Guarda o teu coração, porque dele procedem as fontes da vida. Vigiar a atenção também é educar a alma.",
             estimatedMinutes: 5,
-            theme: .wisdom,
+            theme: .moralApplication,
             section: .wisdomBooks,
             book: .proverbs
         ),
@@ -581,7 +585,7 @@ struct PassageRecommendationService {
             reference: "Lucas 10:41-42",
             text: "Tu te inquietas por muitas coisas; uma só é necessária. A pausa ajuda a escolher o essencial.",
             estimatedMinutes: 5,
-            theme: .presence,
+            theme: .prayer,
             section: .gospels,
             book: .luke
         ),
@@ -592,7 +596,7 @@ struct PassageRecommendationService {
             reference: "Mateus 5:9",
             text: "Bem-aventurados os pacificadores. A paz começa quando a resposta deixa de ser automática.",
             estimatedMinutes: 5,
-            theme: .family,
+            theme: .charity,
             section: .gospels,
             book: .matthew
         ),
@@ -603,7 +607,7 @@ struct PassageRecommendationService {
             reference: "Gálatas 6:9",
             text: "Não nos cansemos de fazer o bem. Pequenas escolhas repetidas educam a vontade no caminho da caridade.",
             estimatedMinutes: 5,
-            theme: .discipline,
+            theme: .spiritualEvolution,
             section: .paulineLetters,
             book: .corinthians
         ),
@@ -614,7 +618,7 @@ struct PassageRecommendationService {
             reference: "João 15:5",
             text: "Quem permanece em mim produz fruto. A permanência no bem transforma intenção em atitude concreta.",
             estimatedMinutes: 5,
-            theme: .faith,
+            theme: .gospelOfJesus,
             section: .gospels,
             book: .john
         )
@@ -634,7 +638,7 @@ struct PassageRecommendationService {
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil,
         recentlyShownPassageIDs: [String] = [],
-        minimumCount: Int = 5
+        minimumCount: Int = LimiarReadingConstants.targetItemCount
     ) -> [ScripturePassage] {
         let ranked = rankedPassages(
             for: profile,
@@ -709,6 +713,7 @@ struct AISpiritualReadingRequest: Codable, Hashable {
 
     var cacheKey: String {
         let rawKey = [
+            "reading-content-v3-four-items",
             tradition.rawValue,
             favoriteSections.map(\.rawValue).sorted().joined(separator: ","),
             favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
@@ -725,16 +730,29 @@ struct AISpiritualReadingRequest: Codable, Hashable {
         let sections = favoriteSections.map(\.title).joined(separator: ", ")
         let books = favoriteBooks.map(\.title).joined(separator: ", ")
         let themes = favoriteThemes.map(\.title).joined(separator: ", ")
+        let sectionIDs = favoriteSections.map(\.rawValue).sorted().joined(separator: ", ")
+        let bookIDs = favoriteBooks.map(\.rawValue).sorted().joined(separator: ", ")
+        let themeIDs = favoriteThemes.map(\.rawValue).sorted().joined(separator: ", ")
+        let avoidedSections = tradition.avoidedSectionTitlesForAI.joined(separator: ", ")
+        let avoidedBooks = tradition.avoidedBookTitlesForAI.joined(separator: ", ")
         let references = candidateReferences.joined(separator: "; ")
         let recent = recentPassageIDs.prefix(20).joined(separator: ", ")
         let reflectionHistory = recentReflections.prefix(8)
             .map { "\($0.reference): \($0.summary) Pergunta: \($0.meditationQuestion)" }
             .joined(separator: "\n")
         return """
-        Gere uma leitura espiritual para um usuário \(tradition.title). Use pelo menos 5 trechos. Seja acolhedor, simples e pastoral, em tom de homilia. Retorne itens com referência, texto religioso, explicação e conclusão prática. Não invente conteúdo bíblico.
-        Seções: \(sections)
-        Livros: \(books)
-        Temas: \(themes)
+        Gere uma leitura espiritual para um usuário \(tradition.title) [id: \(tradition.rawValue)]. Use exatamente \(LimiarReadingConstants.targetItemCount) trechos. Seja acolhedor, simples e pastoral, em tom de homilia. Retorne itens com referência, texto religioso, explicação e conclusão prática. Não invente conteúdo bíblico.
+        Para cada item, a explicação deve ser o parágrafo principal: explique o sentido espiritual do trecho e conecte com o tema escolhido.
+        A conclusão prática deve ser curta, concreta e diferente em cada trecho. Ela precisa nascer do versículo e do tema, sem repetir fórmulas fixas como "Leve este trecho como uma pequena decisão".
+        Diretriz de tradição: \(tradition.aiToneGuidance)
+        Seções preferidas: \(sections.isEmpty ? "Nenhuma" : sections)
+        IDs das seções preferidas: \(sectionIDs.isEmpty ? "Nenhum" : sectionIDs)
+        Livros preferidos: \(books.isEmpty ? "Nenhum" : books)
+        IDs dos livros preferidos: \(bookIDs.isEmpty ? "Nenhum" : bookIDs)
+        Temas preferidos: \(themes.isEmpty ? "Nenhum" : themes)
+        IDs dos temas preferidos: \(themeIDs.isEmpty ? "Nenhum" : themeIDs)
+        Evitar seções incompatíveis: \(avoidedSections.isEmpty ? "Nenhuma" : avoidedSections)
+        Evitar livros incompatíveis: \(avoidedBooks.isEmpty ? "Nenhum" : avoidedBooks)
         Profundidade: \(explanationDepth.title)
         Referências sugeridas: \(references)
         Evite repetir estes trechos recentes: \(recent)
@@ -756,7 +774,7 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
         for request: AISpiritualReadingRequest,
         passages: [ScripturePassage]
     ) -> [SpiritualReadingItem] {
-        passages.prefix(max(5, passages.count)).map { passage in
+        passages.prefix(LimiarReadingConstants.targetItemCount).map { passage in
             SpiritualReadingItem(
                 id: "\(request.cacheKey).\(passage.id)",
                 reference: passage.reference,
@@ -817,19 +835,103 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
             "Ele chama a pessoa de volta ao presente, onde a graça pode ser reconhecida com simplicidade."
         case .purpose:
             "Ele ajuda a ordenar desejos e decisões ao redor de um propósito mais alto."
+        case .gospelOfJesus:
+            "Ele recoloca o Evangelho de Jesus como medida concreta para a próxima atitude."
+        case .innerReform:
+            "Ele lembra que a reforma íntima começa em escolhas pequenas, repetidas e conscientes."
+        case .charity:
+            "Ele mostra que a caridade ganha corpo no modo como a pessoa responde agora."
+        case .prayer:
+            "Ele convida a transformar a pausa em prece simples, lúcida e sincera."
+        case .patience:
+            "Ele educa a paciência como força interior antes da reação automática."
+        case .spiritualEvolution:
+            "Ele recorda que a evolução espiritual passa por atenção, esforço e responsabilidade."
+        case .consolationHope:
+            "Ele oferece consolação sem fuga, reacendendo força interior para o próximo passo."
+        case .moralApplication:
+            "Ele pede aplicação moral concreta, para que a leitura vire atitude no cotidiano."
+        case .practiceGood:
+            "Ele transforma a leitura em prática do bem, com uma decisão concreta para hoje."
+        case .prosperityWithPurpose:
+            "Ele recorda que prosperidade ganha sentido quando serve a um propósito maior."
+        case .financialBalance:
+            "Ele ajuda a olhar a vida financeira com equilíbrio, responsabilidade e confiança."
         }
 
         return "\(traditionOpening) \(themeLine)"
     }
 
     private func practicalConclusion(for passage: ScripturePassage, request: AISpiritualReadingRequest) -> String {
-        switch request.explanationDepth {
-        case .short:
-            "Antes de voltar ao app, respire e escolha uma atitude concreta que proteja sua atenção."
-        case .medium:
-            "Leve este trecho como uma pequena decisão: use o próximo período com presença, sem deixar que o impulso escolha por você."
-        case .deep:
-            "Permaneça alguns instantes com a pergunta que este trecho abre: o que Deus, a consciência e a vida estão pedindo de você agora? Depois, volte ao app com mais liberdade interior."
+        let action = practicalAction(for: passage.theme)
+        let variation = abs((request.cacheKey + passage.id + ".practice").hashValue) % 3
+
+        switch (request.explanationDepth, variation) {
+        case (.short, 0):
+            return "Antes de voltar ao app, \(action)."
+        case (.short, 1):
+            return "Agora, \(action)."
+        case (.short, _):
+            return "Na próxima pausa, \(action)."
+        case (.medium, 0):
+            return "Para levar este trecho consigo, \(action)."
+        case (.medium, 1):
+            return "No próximo período, \(action); deixe o versículo orientar uma escolha pequena."
+        case (.medium, _):
+            return "Transforme esta leitura em um gesto simples: \(action)."
+        case (.deep, 0):
+            return "Permaneça alguns instantes com o que este trecho desperta e, ao voltar ao app, \(action)."
+        case (.deep, 1):
+            return "Depois desta leitura, observe onde a Palavra toca sua rotina e \(action)."
+        case (.deep, _):
+            return "Deixe a pergunta do trecho acompanhar você por alguns minutos; em seguida, \(action)."
+        }
+    }
+
+    private func practicalAction(for theme: SpiritualTheme) -> String {
+        switch theme {
+        case .faith:
+            "confie um passo pequeno a Deus antes de reagir"
+        case .hope:
+            "procure um sinal de esperança no que ainda pode ser recomeçado"
+        case .forgiveness:
+            "responda com menos defesa e mais abertura ao perdão"
+        case .discipline:
+            "escolha um limite concreto para proteger sua atenção"
+        case .wisdom:
+            "separe o que é urgente do que é realmente importante"
+        case .family:
+            "ofereça mais presença a uma pessoa próxima"
+        case .work:
+            "retome uma tarefa com serenidade e intenção"
+        case .anxiety:
+            "respire antes de decidir e entregue a inquietação em prece"
+        case .presence:
+            "faça uma pausa consciente antes da próxima escolha"
+        case .purpose:
+            "alinhe uma decisão pequena ao propósito que você quer cultivar"
+        case .gospelOfJesus:
+            "olhe para Jesus como medida de uma atitude concreta"
+        case .innerReform:
+            "perceba um hábito que precisa ser educado com mansidão"
+        case .charity:
+            "transforme a pausa em um gesto discreto de caridade"
+        case .prayer:
+            "faça uma prece curta antes de retomar o que estava fazendo"
+        case .patience:
+            "espere alguns segundos antes de responder ao impulso"
+        case .spiritualEvolution:
+            "escolha uma atitude que favoreça seu crescimento espiritual"
+        case .consolationHope:
+            "receba consolo sem abandonar o próximo passo possível"
+        case .moralApplication:
+            "leve a leitura para uma atitude simples no cotidiano"
+        case .practiceGood:
+            "pratique o bem em uma escolha pequena e visível"
+        case .prosperityWithPurpose:
+            "use seus recursos com um propósito que também sirva ao bem"
+        case .financialBalance:
+            "olhe uma decisão financeira com equilíbrio e responsabilidade"
         }
     }
 }
@@ -881,7 +983,7 @@ struct AISpiritualReadingService {
             recentReflections: recentReflections
         )
 
-        if let cached = cache.readingItems(for: request), cached.count >= 5 {
+        if let cached = cache.readingItems(for: request), cached.count >= LimiarReadingConstants.targetItemCount {
             return cached
         }
 
@@ -909,7 +1011,7 @@ struct AISpiritualReadingService {
 
         do {
             let items = try await remoteService.readingItems(for: request, passages: passages)
-            guard items.count >= min(5, max(1, passages.count)) else { return nil }
+            guard items.count >= min(LimiarReadingConstants.targetItemCount, max(1, passages.count)) else { return nil }
             cache.save(items, for: request)
             return items
         } catch {
@@ -948,16 +1050,28 @@ struct AIReflectionRequest: Codable, Hashable {
         let sections = favoriteSections.map(\.title).joined(separator: ", ")
         let books = favoriteBooks.map(\.title).joined(separator: ", ")
         let themes = favoriteThemes.map(\.title).joined(separator: ", ")
+        let sectionIDs = favoriteSections.map(\.rawValue).sorted().joined(separator: ", ")
+        let bookIDs = favoriteBooks.map(\.rawValue).sorted().joined(separator: ", ")
+        let themeIDs = favoriteThemes.map(\.rawValue).sorted().joined(separator: ", ")
+        let avoidedSections = tradition.avoidedSectionTitlesForAI.joined(separator: ", ")
+        let avoidedBooks = tradition.avoidedBookTitlesForAI.joined(separator: ", ")
         let compactText = String(passageText.prefix(1200))
         let reflectionHistory = recentReflections.prefix(8)
             .map { "\($0.reference): \($0.summary) Pergunta: \($0.meditationQuestion)" }
             .joined(separator: "\n")
         return """
-        Explique este trecho para um usuário \(tradition.title). Seja claro, breve e pastoral. Não invente conteúdo bíblico. Retorne: resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
+        Explique este trecho para um usuário \(tradition.title) [id: \(tradition.rawValue)]. Seja claro, breve e pastoral. Não invente conteúdo bíblico. Retorne: resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
+        A aplicação prática deve ser curta, concreta, conectada ao trecho e ao tema do usuário, sem repetir fórmulas fixas entre respostas.
+        Diretriz de tradição: \(tradition.aiToneGuidance)
         Referência: \(passageReference)
-        Seções preferidas: \(sections)
-        Livros preferidos: \(books)
-        Temas: \(themes)
+        Seções preferidas: \(sections.isEmpty ? "Nenhuma" : sections)
+        IDs das seções preferidas: \(sectionIDs.isEmpty ? "Nenhum" : sectionIDs)
+        Livros preferidos: \(books.isEmpty ? "Nenhum" : books)
+        IDs dos livros preferidos: \(bookIDs.isEmpty ? "Nenhum" : bookIDs)
+        Temas preferidos: \(themes.isEmpty ? "Nenhum" : themes)
+        IDs dos temas preferidos: \(themeIDs.isEmpty ? "Nenhum" : themeIDs)
+        Evitar seções incompatíveis: \(avoidedSections.isEmpty ? "Nenhuma" : avoidedSections)
+        Evitar livros incompatíveis: \(avoidedBooks.isEmpty ? "Nenhum" : avoidedBooks)
         Profundidade: \(explanationDepth.title)
         Texto: \(compactText)
         Evite repetir estas reflexões recentes:
@@ -1102,6 +1216,18 @@ struct RemoteAIBackendClient {
     var timeout: TimeInterval = 14
     var session: URLSession = .shared
 
+    private static var clientID: String {
+        let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+        let key = "limiar.ai.clientID"
+        if let saved = defaults.string(forKey: key), !saved.isEmpty {
+            return saved
+        }
+
+        let generated = UUID().uuidString
+        defaults.set(generated, forKey: key)
+        return generated
+    }
+
     func post<Request: Encodable, Response: Decodable>(
         _ path: String,
         body: Request,
@@ -1116,6 +1242,7 @@ struct RemoteAIBackendClient {
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(Self.clientID, forHTTPHeaderField: "X-Limiar-Client-ID")
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)
@@ -1150,17 +1277,31 @@ struct RemotePassagePayload: Codable {
 
 struct RemoteAIProfilePayload: Codable {
     let tradition: String
+    let traditionID: String
     let favoriteSections: [String]
+    let favoriteSectionIDs: [String]
     let favoriteBooks: [String]
+    let favoriteBookIDs: [String]
     let favoriteThemes: [String]
+    let favoriteThemeIDs: [String]
     let explanationDepth: String
+    let avoidedSections: [String]
+    let avoidedBooks: [String]
+    let toneGuidance: String
 
     init(profile: UserFaithProfile) {
         tradition = profile.tradition.title
+        traditionID = profile.tradition.rawValue
         favoriteSections = profile.favoriteBibleSections.map(\.title)
+        favoriteSectionIDs = profile.selectedSectionOptionIds
         favoriteBooks = profile.favoriteBooks.map(\.title)
+        favoriteBookIDs = profile.selectedBookOptionIds
         favoriteThemes = profile.favoriteThemes.map(\.title)
+        favoriteThemeIDs = profile.selectedThemeOptionIds
         explanationDepth = profile.explanationDepth.remoteValue
+        avoidedSections = profile.tradition.avoidedSectionTitlesForAI
+        avoidedBooks = profile.tradition.avoidedBookTitlesForAI
+        toneGuidance = profile.tradition.aiToneGuidance
     }
 }
 
@@ -1208,12 +1349,14 @@ struct RemoteSpiritualReadingItemResponse: Codable {
         let cleanReference = reference.trimmedForAI
         let cleanText = passageText.trimmedForAI
         let cleanHomily = homily.trimmedForAI
+        let cleanPracticalApplication = practicalApplication?.trimmedForAI ?? ""
         let cleanConclusion = conclusion.trimmedForAI
+        let practicalText = cleanPracticalApplication.isEmpty ? cleanConclusion : cleanPracticalApplication
 
         guard !cleanReference.isEmpty,
               !cleanText.isEmpty,
               !cleanHomily.isEmpty,
-              !cleanConclusion.isEmpty else {
+              !practicalText.isEmpty else {
             throw RemoteAIError.emptyContent
         }
 
@@ -1222,7 +1365,7 @@ struct RemoteSpiritualReadingItemResponse: Codable {
             reference: cleanReference,
             text: cleanText,
             homily: cleanHomily,
-            practicalConclusion: cleanConclusion
+            practicalConclusion: practicalText
         )
     }
 }

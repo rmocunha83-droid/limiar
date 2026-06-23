@@ -2,6 +2,8 @@ const {
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  enforceAIRateLimit,
+  logAIError,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
@@ -14,6 +16,8 @@ const {
 module.exports = async function handler(req, res) {
   applyCommonHeaders(res);
   if (!requirePost(req, res)) return;
+  const rateLimit = enforceAIRateLimit(req, res, "reflection");
+  if (!rateLimit.allowed) return;
 
   try {
     const body = parseBody(req);
@@ -45,6 +49,7 @@ module.exports = async function handler(req, res) {
     res.statusCode = 200;
     res.end(JSON.stringify(validateReflection(result)));
   } catch (error) {
+    logAIError("reflection", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_reflection_failed" }));
   }

@@ -38,6 +38,11 @@ enum BibleSection: String, Codable, CaseIterable, Identifiable {
     case torah
     case historicalBooks
     case wisdomBooks
+    case deuterocanonical
+    case ketuvim
+    case ethicalWisdom
+    case sermonOnMount
+    case parablesOfJesus
 
     var id: String { rawValue }
 
@@ -51,6 +56,11 @@ enum BibleSection: String, Codable, CaseIterable, Identifiable {
         case .torah: "Pentateuco / Torá"
         case .historicalBooks: "Históricos"
         case .wisdomBooks: "Sapienciais"
+        case .deuterocanonical: "Deuterocanônicos"
+        case .ketuvim: "Escritos — Ketuvim"
+        case .ethicalWisdom: "Sabedoria e ética"
+        case .sermonOnMount: "Sermão da Montanha"
+        case .parablesOfJesus: "Parábolas de Jesus"
         }
     }
 }
@@ -67,6 +77,13 @@ enum BibleBook: String, Codable, CaseIterable, Identifiable {
     case romans
     case corinthians
     case revelation
+    case tobias
+    case wisdom
+    case sirach
+    case maccabees
+    case leviticus
+    case numbers
+    case deuteronomy
 
     var id: String { rawValue }
 
@@ -83,6 +100,13 @@ enum BibleBook: String, Codable, CaseIterable, Identifiable {
         case .romans: "Romanos"
         case .corinthians: "Coríntios"
         case .revelation: "Apocalipse"
+        case .tobias: "Tobias"
+        case .wisdom: "Sabedoria"
+        case .sirach: "Eclesiástico"
+        case .maccabees: "Macabeus"
+        case .leviticus: "Levítico / Vayikra"
+        case .numbers: "Números / Bamidbar"
+        case .deuteronomy: "Deuteronômio / Devarim"
         }
     }
 }
@@ -98,8 +122,41 @@ enum SpiritualTheme: String, Codable, CaseIterable, Identifiable {
     case anxiety
     case presence
     case purpose
+    case gospelOfJesus
+    case innerReform
+    case charity
+    case prayer
+    case patience
+    case spiritualEvolution
+    case consolationHope
+    case moralApplication
+    case practiceGood
+    case prosperityWithPurpose
+    case financialBalance
 
     var id: String { rawValue }
+
+    static let standaloneOptions: [SpiritualTheme] = [
+        .faith,
+        .hope,
+        .forgiveness,
+        .discipline,
+        .wisdom,
+        .family,
+        .work,
+        .anxiety,
+        .presence,
+        .purpose,
+        .charity,
+        .prayer,
+        .patience,
+        .innerReform,
+        .consolationHope,
+        .spiritualEvolution,
+        .practiceGood,
+        .prosperityWithPurpose,
+        .financialBalance
+    ]
 
     var title: String {
         switch self {
@@ -113,6 +170,245 @@ enum SpiritualTheme: String, Codable, CaseIterable, Identifiable {
         case .anxiety: "Ansiedade"
         case .presence: "Presença"
         case .purpose: "Propósito"
+        case .gospelOfJesus: "Evangelho de Jesus"
+        case .innerReform: "Reforma íntima"
+        case .charity: "Caridade"
+        case .prayer: "Prece"
+        case .patience: "Paciência"
+        case .spiritualEvolution: "Evolução espiritual"
+        case .consolationHope: "Consolação"
+        case .moralApplication: "Aplicação moral"
+        case .practiceGood: "Prática do bem"
+        case .prosperityWithPurpose: "Prosperidade com propósito"
+        case .financialBalance: "Vida financeira e equilíbrio"
+        }
+    }
+}
+
+enum ReadingPreferenceCategory: String, Hashable {
+    case section
+    case book
+    case theme
+}
+
+struct ReadingPreferenceOption: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let category: ReadingPreferenceCategory
+    let tradition: FaithTradition
+    let section: BibleSection?
+    let book: BibleBook?
+    let theme: SpiritualTheme?
+
+    static func section(_ section: BibleSection, title: String? = nil, tradition: FaithTradition) -> ReadingPreferenceOption {
+        ReadingPreferenceOption(
+            id: "\(tradition.rawValue).section.\(section.rawValue)",
+            title: title ?? section.title,
+            category: .section,
+            tradition: tradition,
+            section: section,
+            book: nil,
+            theme: nil
+        )
+    }
+
+    static func book(_ book: BibleBook, title: String? = nil, tradition: FaithTradition) -> ReadingPreferenceOption {
+        ReadingPreferenceOption(
+            id: "\(tradition.rawValue).book.\(book.rawValue)",
+            title: title ?? book.title,
+            category: .book,
+            tradition: tradition,
+            section: nil,
+            book: book,
+            theme: nil
+        )
+    }
+
+    static func theme(_ theme: SpiritualTheme, title: String? = nil, tradition: FaithTradition) -> ReadingPreferenceOption {
+        ReadingPreferenceOption(
+            id: "\(tradition.rawValue).theme.\(theme.rawValue)",
+            title: title ?? theme.title,
+            category: .theme,
+            tradition: tradition,
+            section: nil,
+            book: nil,
+            theme: theme
+        )
+    }
+}
+
+struct ReadingPreferenceSection: Identifiable, Hashable {
+    let title: String
+    let options: [ReadingPreferenceOption]
+
+    var id: String { title }
+}
+
+extension FaithTradition {
+    var readingPreferenceSections: [ReadingPreferenceSection] {
+        switch self {
+        case .catholic:
+            [
+                ReadingPreferenceSection(
+                    title: "Partes principais",
+                    options: [
+                        .section(.gospels, tradition: self),
+                        .section(.psalms, tradition: self),
+                        .section(.proverbs, tradition: self),
+                        .section(.paulineLetters, tradition: self),
+                        .section(.prophets, tradition: self),
+                        .section(.torah, title: "Pentateuco", tradition: self),
+                        .section(.historicalBooks, tradition: self),
+                        .section(.wisdomBooks, tradition: self),
+                        .section(.deuterocanonical, tradition: self)
+                    ]
+                ),
+                ReadingPreferenceSection(
+                    title: "Livros favoritos",
+                    options: [
+                        .book(.genesis, tradition: self),
+                        .book(.exodus, tradition: self),
+                        .book(.psalms, tradition: self),
+                        .book(.proverbs, tradition: self),
+                        .book(.isaiah, tradition: self),
+                        .book(.matthew, tradition: self),
+                        .book(.luke, tradition: self),
+                        .book(.john, tradition: self),
+                        .book(.romans, tradition: self),
+                        .book(.corinthians, tradition: self),
+                        .book(.tobias, tradition: self),
+                        .book(.wisdom, tradition: self),
+                        .book(.sirach, tradition: self),
+                        .book(.maccabees, tradition: self)
+                    ]
+                )
+            ]
+        case .protestant:
+            [
+                ReadingPreferenceSection(
+                    title: "Partes principais",
+                    options: [
+                        .section(.gospels, tradition: self),
+                        .section(.psalms, tradition: self),
+                        .section(.proverbs, tradition: self),
+                        .section(.paulineLetters, tradition: self),
+                        .section(.prophets, tradition: self),
+                        .section(.torah, title: "Pentateuco", tradition: self),
+                        .section(.historicalBooks, tradition: self),
+                        .section(.wisdomBooks, tradition: self)
+                    ]
+                ),
+                ReadingPreferenceSection(
+                    title: "Livros favoritos",
+                    options: [
+                        .book(.genesis, tradition: self),
+                        .book(.exodus, tradition: self),
+                        .book(.psalms, tradition: self),
+                        .book(.proverbs, tradition: self),
+                        .book(.isaiah, tradition: self),
+                        .book(.matthew, tradition: self),
+                        .book(.luke, tradition: self),
+                        .book(.john, tradition: self),
+                        .book(.romans, tradition: self),
+                        .book(.corinthians, tradition: self),
+                        .book(.revelation, tradition: self)
+                    ]
+                )
+            ]
+        case .jewish:
+            [
+                ReadingPreferenceSection(
+                    title: "Partes principais",
+                    options: [
+                        .section(.torah, title: "Torá", tradition: self),
+                        .section(.prophets, title: "Profetas — Nevi’im", tradition: self),
+                        .section(.ketuvim, title: "Escritos — Ketuvim", tradition: self),
+                        .section(.psalms, title: "Salmos — Tehilim", tradition: self),
+                        .section(.proverbs, title: "Provérbios — Mishlei", tradition: self),
+                        .section(.ethicalWisdom, title: "Sabedoria e ética", tradition: self)
+                    ]
+                ),
+                ReadingPreferenceSection(
+                    title: "Livros favoritos",
+                    options: [
+                        .book(.genesis, title: "Gênesis / Bereshit", tradition: self),
+                        .book(.exodus, title: "Êxodo / Shemot", tradition: self),
+                        .book(.leviticus, title: "Levítico / Vayikra", tradition: self),
+                        .book(.numbers, title: "Números / Bamidbar", tradition: self),
+                        .book(.deuteronomy, title: "Deuteronômio / Devarim", tradition: self),
+                        .book(.psalms, title: "Salmos / Tehilim", tradition: self),
+                        .book(.proverbs, title: "Provérbios / Mishlei", tradition: self),
+                        .book(.isaiah, title: "Isaías / Yeshayahu", tradition: self)
+                    ]
+                )
+            ]
+        case .spiritist:
+            [
+                ReadingPreferenceSection(
+                    title: "Temas principais",
+                    options: [
+                        .theme(.gospelOfJesus, tradition: self),
+                        .theme(.innerReform, tradition: self),
+                        .theme(.charity, tradition: self),
+                        .theme(.forgiveness, tradition: self),
+                        .theme(.prayer, tradition: self),
+                        .theme(.family, tradition: self),
+                        .theme(.patience, tradition: self),
+                        .theme(.spiritualEvolution, tradition: self),
+                        .theme(.consolationHope, tradition: self),
+                        .theme(.moralApplication, tradition: self)
+                    ]
+                ),
+                ReadingPreferenceSection(
+                    title: "Textos de apoio",
+                    options: [
+                        .section(.gospels, tradition: self),
+                        .section(.psalms, tradition: self),
+                        .section(.proverbs, tradition: self),
+                        .section(.sermonOnMount, tradition: self),
+                        .section(.parablesOfJesus, tradition: self)
+                    ]
+                )
+            ]
+        }
+    }
+
+    var allowedReadingPreferenceOptions: [ReadingPreferenceOption] {
+        readingPreferenceSections.flatMap(\.options)
+    }
+
+    var aiToneGuidance: String {
+        switch self {
+        case .catholic:
+            "Tom católico pastoral, com espaço para Evangelhos, Salmos e deuterocanônicos quando selecionados."
+        case .protestant:
+            "Tom evangélico devocional, sem livros deuterocanônicos."
+        case .jewish:
+            "Tom judaico baseado no Tanakh, sem referências ao Novo Testamento."
+        case .spiritist:
+            "Tom espírita com foco em aplicação moral, reforma íntima, caridade e vida prática."
+        }
+    }
+
+    var avoidedSectionTitlesForAI: [String] {
+        switch self {
+        case .catholic, .spiritist:
+            []
+        case .protestant:
+            ["Deuterocanônicos"]
+        case .jewish:
+            ["Evangelhos", "Cartas de Paulo"]
+        }
+    }
+
+    var avoidedBookTitlesForAI: [String] {
+        switch self {
+        case .catholic, .spiritist:
+            []
+        case .protestant:
+            ["Tobias", "Sabedoria", "Eclesiástico", "Macabeus"]
+        case .jewish:
+            ["Mateus", "Lucas", "João", "Romanos", "Coríntios", "Apocalipse"]
         }
     }
 }
@@ -147,6 +443,88 @@ struct UserFaithProfile: Codable, Equatable {
         favoriteThemes: [.presence, .discipline],
         explanationDepth: .medium
     )
+
+    var selectedReadingPreferenceCount: Int {
+        tradition.allowedReadingPreferenceOptions.filter { contains($0) }.count
+    }
+
+    var hasSelectedReadingPreferences: Bool {
+        selectedReadingPreferenceCount > 0
+    }
+
+    var selectedSectionOptionIds: [String] {
+        favoriteBibleSections.map(\.rawValue).sorted()
+    }
+
+    var selectedBookOptionIds: [String] {
+        favoriteBooks.map(\.rawValue).sorted()
+    }
+
+    var selectedThemeOptionIds: [String] {
+        favoriteThemes.map(\.rawValue).sorted()
+    }
+
+    func contains(_ option: ReadingPreferenceOption) -> Bool {
+        switch option.category {
+        case .section:
+            guard let section = option.section else { return false }
+            return favoriteBibleSections.contains(section)
+        case .book:
+            guard let book = option.book else { return false }
+            return favoriteBooks.contains(book)
+        case .theme:
+            guard let theme = option.theme else { return false }
+            return favoriteThemes.contains(theme)
+        }
+    }
+
+    mutating func toggle(_ option: ReadingPreferenceOption) {
+        switch option.category {
+        case .section:
+            guard let section = option.section else { return }
+            if favoriteBibleSections.contains(section) {
+                favoriteBibleSections.removeAll { $0 == section }
+            } else {
+                favoriteBibleSections.append(section)
+            }
+        case .book:
+            guard let book = option.book else { return }
+            if favoriteBooks.contains(book) {
+                favoriteBooks.removeAll { $0 == book }
+            } else {
+                favoriteBooks.append(book)
+            }
+        case .theme:
+            guard let theme = option.theme else { return }
+            if favoriteThemes.contains(theme) {
+                favoriteThemes.removeAll { $0 == theme }
+            } else {
+                favoriteThemes.append(theme)
+            }
+        }
+    }
+
+    mutating func normalizeReadingPreferencesForTradition() {
+        let allowed = tradition.allowedReadingPreferenceOptions
+        let allowedSections = Set(allowed.compactMap(\.section))
+        let allowedBooks = Set(allowed.compactMap(\.book))
+        let allowedThemes = Set(allowed.compactMap(\.theme))
+        if !allowedSections.isEmpty {
+            favoriteBibleSections = favoriteBibleSections.filter { allowedSections.contains($0) }
+        }
+        if !allowedBooks.isEmpty || tradition == .spiritist {
+            favoriteBooks = favoriteBooks.filter { allowedBooks.contains($0) }
+        }
+        if !allowedThemes.isEmpty {
+            favoriteThemes = favoriteThemes.filter { allowedThemes.contains($0) }
+        }
+    }
+
+    mutating func normalizeStandaloneThemesForCurrentTradition() {
+        guard tradition != .spiritist else { return }
+        let allowedThemes = Set(SpiritualTheme.standaloneOptions)
+        favoriteThemes = favoriteThemes.filter { allowedThemes.contains($0) }
+    }
 }
 
 struct ScripturePassage: Identifiable, Codable, Equatable {
@@ -289,9 +667,14 @@ final class LimiarAppModel {
     private var lastForegroundRefreshAt = Date.distantPast
     private var aiGenerationTask: Task<Void, Never>?
     private var aiGenerationID = UUID()
+    private var lastRemoteAIRequestKey = ""
+    private var lastRemoteAIRequestAt = Date.distantPast
 
     init() {
-        let savedProfile = policyStore.loadFaithProfile() ?? .starter
+        var savedProfile = policyStore.loadFaithProfile() ?? .starter
+        savedProfile.normalizeReadingPreferencesForTradition()
+        savedProfile.normalizeStandaloneThemesForCurrentTradition()
+        policyStore.saveFaithProfile(savedProfile)
         faithProfile = savedProfile
         hasCompletedOnboarding = policyStore.loadOnboardingState()
         hasSeenValueDemo = policyStore.loadValueDemoSeen()
@@ -364,14 +747,28 @@ final class LimiarAppModel {
     }
 
     var currentReadingNarrationText: String {
-        currentSpiritualReadingItems.enumerated().map { index, item in
+        let passageBlocks = currentSpiritualReadingItems.enumerated().map { index, item in
             """
-            \(index + 1). \(item.reference). \(item.text)
-            \(item.homily)
-            \(item.practicalConclusion)
+            Texto \(index + 1).
+            \(item.reference).
+            \(item.text)
             """
         }
         .joined(separator: "\n\n")
+
+        let reflectionBlock = """
+        Explicação espiritual.
+        \(currentReflection.summary)
+        \(currentReflection.spiritualMeaning)
+
+        Aplicação prática.
+        \(currentReflection.practicalApplication)
+        \(currentReflection.conclusion)
+        """
+
+        return [passageBlocks, reflectionBlock]
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .joined(separator: "\n\n")
     }
 
     var unlockDurationDescription: String {
@@ -424,10 +821,51 @@ final class LimiarAppModel {
     }
 
     func saveProfile() {
+        faithProfile.normalizeReadingPreferencesForTradition()
+        faithProfile.normalizeStandaloneThemesForCurrentTradition()
         policyStore.saveFaithProfile(faithProfile)
         policyStore.saveUnlockDuration(unlockDurationMinutes)
         policyStore.saveBlockingEnabled(blockingEnabled)
         policyStore.saveSelection(selection)
+    }
+
+    func selectTradition(_ tradition: FaithTradition) {
+        let didChangeTradition = faithProfile.tradition != tradition
+        faithProfile.tradition = tradition
+        faithProfile.normalizeReadingPreferencesForTradition()
+        faithProfile.normalizeStandaloneThemesForCurrentTradition()
+        saveProfile()
+        if didChangeTradition {
+            beginNewReading(avoidingCurrent: true)
+        }
+    }
+
+    func toggleReadingPreference(_ option: ReadingPreferenceOption) {
+        faithProfile.toggle(option)
+        faithProfile.normalizeReadingPreferencesForTradition()
+        saveProfile()
+    }
+
+    func toggleTheme(_ theme: SpiritualTheme) {
+        faithProfile.normalizeStandaloneThemesForCurrentTradition()
+        if faithProfile.favoriteThemes.contains(theme) {
+            faithProfile.favoriteThemes.removeAll { $0 == theme }
+        } else {
+            faithProfile.favoriteThemes.append(theme)
+        }
+        faithProfile.normalizeReadingPreferencesForTradition()
+        faithProfile.normalizeStandaloneThemesForCurrentTradition()
+        saveProfile()
+    }
+
+    func selectExplanationDepth(_ depth: ExplanationDepth) {
+        faithProfile.explanationDepth = depth
+        saveProfile()
+    }
+
+    func selectUnlockDuration(minutes: Int) {
+        unlockDurationMinutes = minutes
+        saveProfile()
     }
 
     func beginNewReading(avoidingCurrent: Bool = false) {
@@ -444,11 +882,8 @@ final class LimiarAppModel {
     func prepareFreshPassageForForeground() {
         reapplyBlockIfNeeded()
         guard hasCompletedOnboarding else { return }
-        guard !isReadingSessionActive else { return }
-        guard readingProgress == 0 else { return }
         guard Date().timeIntervalSince(lastForegroundRefreshAt) > 2 else { return }
         lastForegroundRefreshAt = Date()
-        beginNewReading(avoidingCurrent: true)
     }
 
     func startReadingSession() {
@@ -616,8 +1051,29 @@ final class LimiarAppModel {
             return
         }
 
+        let remoteRequestKey = remoteAIRequestKey(for: resolvedPlan, profile: profile)
+        let isDuplicateRemoteRequest = remoteRequestKey == lastRemoteAIRequestKey
+            && Date().timeIntervalSince(lastRemoteAIRequestAt) < 90
+        guard !isDuplicateRemoteRequest else {
+            aiContentState = .localReady
+            return
+        }
+
+        lastRemoteAIRequestKey = remoteRequestKey
+        lastRemoteAIRequestAt = Date()
         aiContentState = .generating
         refreshRemoteAIContent(for: resolvedPlan, profile: profile, generationID: generationID)
+    }
+
+    private func remoteAIRequestKey(for passages: [ScripturePassage], profile: UserFaithProfile) -> String {
+        [
+            passages.map(\.id).joined(separator: "+"),
+            profile.tradition.rawValue,
+            profile.explanationDepth.rawValue,
+            profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
+            profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
+            profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
+        ].joined(separator: "|")
     }
 
     private func rememberShownPassages(_ passages: [ScripturePassage]) {

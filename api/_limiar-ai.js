@@ -1,5 +1,9 @@
 const DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
+const rateLimitBuckets = globalThis.__limiarAIRateLimitBuckets || new Map();
+globalThis.__limiarAIRateLimitBuckets = rateLimitBuckets;
 
 const reflectionSchema = {
   type: "object",
@@ -50,6 +54,55 @@ function requirePost(req, res) {
   res.setHeader("Allow", "POST");
   res.end(JSON.stringify({ error: "method_not_allowed" }));
   return false;
+}
+
+function requestContext(req, endpoint) {
+  const clientID = trimText(
+    req.headers?.["x-limiar-client-id"] || req.headers?.["x-vercel-id"] || "",
+    120
+  );
+  const forwardedFor = trimText(req.headers?.["x-forwarded-for"] || "", 180)
+    .split(",")[0]
+    .trim();
+  const key = clientID || forwardedFor || "unknown-client";
+  return {
+    endpoint,
+    clientID: clientID || undefined,
+    rateLimitKey: `${endpoint}:${key}`,
+    requestID: trimText(req.headers?.["x-vercel-id"] || req.headers?.["x-request-id"] || "", 160) || undefined
+  };
+}
+
+function enforceAIRateLimit(req, res, endpoint) {
+  const context = requestContext(req, endpoint);
+  const now = Date.now();
+  const windowMs = Number(process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS || DEFAULT_RATE_LIMIT_WINDOW_MS);
+  const maxRequests = Number(process.env.LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS || DEFAULT_RATE_LIMIT_MAX_REQUESTS);
+  const bucket = rateLimitBuckets.get(context.rateLimitKey) || { count: 0, resetAt: now + windowMs };
+
+  if (now > bucket.resetAt) {
+    bucket.count = 0;
+    bucket.resetAt = now + windowMs;
+  }
+
+  bucket.count += 1;
+  rateLimitBuckets.set(context.rateLimitKey, bucket);
+
+  if (bucket.count <= maxRequests) {
+    return { allowed: true, context };
+  }
+
+  const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+  console.warn("limiar_ai_rate_limited", {
+    endpoint,
+    requestID: context.requestID,
+    clientID: context.clientID,
+    retryAfter
+  });
+  res.statusCode = 429;
+  res.setHeader("Retry-After", String(retryAfter));
+  res.end(JSON.stringify({ error: "ai_rate_limited" }));
+  return { allowed: false, context };
 }
 
 function parseBody(req) {
@@ -177,6 +230,7 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     const error = new Error("OPENAI_API_KEY is not configured");
+    error.code = "missing_openai_api_key";
     error.statusCode = 503;
     throw error;
   }
@@ -188,35 +242,49 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens }) {
   );
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
-        store: false,
-        max_output_tokens: maxOutputTokens,
-        input: [
-          { role: "system", content: buildSystemPrompt() },
-          { role: "user", content: prompt }
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: schemaName,
-            schema,
-            strict: true
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
+          store: false,
+          max_output_tokens: maxOutputTokens,
+          input: [
+            { role: "system", content: buildSystemPrompt() },
+            { role: "user", content: prompt }
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: schemaName,
+              schema,
+              strict: true
+            }
           }
-        }
-      }),
-      signal: controller.signal
-    });
+        }),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        const timeoutError = new Error("OpenAI request timed out");
+        timeoutError.code = "openai_timeout";
+        timeoutError.statusCode = 504;
+        throw timeoutError;
+      }
+      error.code = error.code || "openai_network_error";
+      error.statusCode = error.statusCode || 502;
+      throw error;
+    }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = new Error(data?.error?.message || "OpenAI request failed");
+      const error = new Error(data?.error?.message || `OpenAI request failed with ${response.status}`);
+      error.code = classifyOpenAIError(response.status, data);
       error.statusCode = response.status;
       throw error;
     }
@@ -224,14 +292,47 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens }) {
     const outputText = extractOutputText(data);
     if (!outputText) {
       const error = new Error("OpenAI response did not include output text");
+      error.code = "openai_empty_output";
       error.statusCode = 502;
       throw error;
     }
 
-    return JSON.parse(outputText);
+    try {
+      return JSON.parse(outputText);
+    } catch (error) {
+      error.code = "openai_json_parse_error";
+      error.statusCode = 502;
+      throw error;
+    }
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function classifyOpenAIError(status, data) {
+  const message = String(data?.error?.message || "").toLowerCase();
+  const type = String(data?.error?.type || "").toLowerCase();
+  const code = String(data?.error?.code || "").toLowerCase();
+
+  if (status === 401 || status === 403) return "openai_auth_error";
+  if (status === 408 || status === 504) return "openai_timeout";
+  if (message.includes("model") || type.includes("model") || code.includes("model")) {
+    return "openai_model_error";
+  }
+  if (status === 429) return "openai_rate_limited";
+  return "openai_api_error";
+}
+
+function logAIError(endpoint, error, context = {}) {
+  console.error("limiar_ai_error", {
+    endpoint,
+    code: error.code || "ai_unknown_error",
+    statusCode: error.statusCode || 502,
+    message: error.message,
+    requestID: context.requestID,
+    clientID: context.clientID,
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL
+  });
 }
 
 function extractOutputText(response) {
@@ -256,17 +357,24 @@ function validateReflection(value) {
   return value;
 }
 
-function validateSpiritualReading(value) {
+function validateSpiritualReading(value, expectedItemCount) {
   if (!value || !Array.isArray(value.items)) throw new Error("invalid_items");
-  const items = value.items.map(validateReflection).slice(0, 8);
+  const maxItems = expectedItemCount || 8;
+  const items = value.items.map(validateReflection).slice(0, maxItems);
   if (!items.length) throw new Error("empty_items");
+  if (expectedItemCount && items.length !== expectedItemCount) {
+    throw new Error("unexpected_item_count");
+  }
   return { items };
 }
 
 module.exports = {
+  DEFAULT_MODEL,
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  enforceAIRateLimit,
+  logAIError,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,

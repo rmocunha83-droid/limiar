@@ -2,13 +2,19 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  DEFAULT_MODEL,
   buildContextPrompt,
+  enforceAIRateLimit,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
   validateReflection,
   validateSpiritualReading
 } = require("../api/_limiar-ai");
+
+test("keeps GPT-4.1 mini as the default commercial model", () => {
+  assert.equal(DEFAULT_MODEL, "gpt-4.1-mini");
+});
 
 test("validates a complete reflection payload", () => {
   const reflection = validateReflection({
@@ -53,6 +59,46 @@ test("validates spiritual reading items", () => {
   });
 
   assert.equal(reading.items.length, 1);
+});
+
+test("can enforce a simple per-client AI rate limit", () => {
+  const previousMax = process.env.LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS;
+  const previousWindow = process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS;
+  process.env.LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS = "1";
+  process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS = "60000";
+
+  const req = {
+    headers: {
+      "x-limiar-client-id": `unit-${Date.now()}-${Math.random()}`
+    }
+  };
+  const res = {
+    statusCode: 200,
+    headers: {},
+    body: "",
+    setHeader(key, value) {
+      this.headers[key] = value;
+    },
+    end(value) {
+      this.body = value;
+    }
+  };
+
+  assert.equal(enforceAIRateLimit(req, res, "reflection").allowed, true);
+  assert.equal(enforceAIRateLimit(req, res, "reflection").allowed, false);
+  assert.equal(res.statusCode, 429);
+  assert.match(res.body, /ai_rate_limited/);
+
+  if (previousMax === undefined) {
+    delete process.env.LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS;
+  } else {
+    process.env.LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS = previousMax;
+  }
+  if (previousWindow === undefined) {
+    delete process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS;
+  } else {
+    process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS = previousWindow;
+  }
 });
 
 test("normalizes request context without personal identifiers", () => {
