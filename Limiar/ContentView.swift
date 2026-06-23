@@ -1553,10 +1553,14 @@ private struct BlockedSelectionHierarchySummary: View {
                         title: applicationTokens.count == 1 ? "App escolhido" : "Apps escolhidos",
                         subtitle: "Selecionados individualmente no Tempo de Uso.",
                         itemCount: applicationTokens.count,
-                        systemImage: "app.badge.fill"
+                        systemImage: "app.badge.fill",
+                        showsChildConnectors: false
                     ) {
                         ForEach(Array(applicationTokens.enumerated()), id: \.element) { index, token in
-                            TokenChildRow(isLast: index == applicationTokens.count - 1) {
+                            TokenChildRow(
+                                isLast: index == applicationTokens.count - 1,
+                                showsConnector: false
+                            ) {
                                 Label(token)
                             }
                         }
@@ -1597,6 +1601,7 @@ private struct BlockedSelectionGroup<Content: View>: View {
     let subtitle: String
     let itemCount: Int
     let systemImage: String
+    var showsChildConnectors = true
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -1638,27 +1643,35 @@ private struct BlockedSelectionGroup<Content: View>: View {
                     .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color.sageButton.opacity(0.28))
-                        .frame(width: 1.2)
-                }
-                .frame(width: 16)
-                .padding(.leading, 4)
+            if showsChildConnectors {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(spacing: 0) {
+                        Rectangle()
+                            .fill(Color.sageButton.opacity(0.28))
+                            .frame(width: 1.2)
+                    }
+                    .frame(width: 16)
+                    .padding(.leading, 4)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    content
+                    childRows
                 }
-                .padding(10)
-                .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
-                )
+                .padding(.leading, 22)
+            } else {
+                childRows
             }
-            .padding(.leading, 22)
         }
+    }
+
+    private var childRows: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            content
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
     }
 
     private var countText: String {
@@ -1668,12 +1681,15 @@ private struct BlockedSelectionGroup<Content: View>: View {
 
 private struct TokenChildRow<Content: View>: View {
     let isLast: Bool
+    var showsConnector = true
     @ViewBuilder let content: Content
 
     var body: some View {
-        HStack(spacing: 8) {
-            BranchConnector(isLast: isLast)
-                .frame(width: 18, height: 38)
+        HStack(spacing: showsConnector ? 8 : 0) {
+            if showsConnector {
+                BranchConnector(isLast: isLast)
+                    .frame(width: 18, height: 38)
+            }
 
             content
                 .font(.system(size: 14, weight: .semibold))
