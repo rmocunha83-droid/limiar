@@ -84,7 +84,7 @@ private struct FreeTrialStartView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura de R$ 9,99/mês para continuar usando os bloqueios, leituras e reflexões personalizadas.")
+                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura de R$ 9,90/mês para continuar usando os bloqueios, leituras e reflexões personalizadas.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -92,7 +92,7 @@ private struct FreeTrialStartView: View {
 
                     VStack(alignment: .leading, spacing: 13) {
                         TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias grátis")
-                        TrialDisclosureRow(icon: "creditcard", text: "Depois R$ 9,99/mês")
+                        TrialDisclosureRow(icon: "creditcard", text: "Depois R$ 9,90/mês")
                         TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
                         TrialDisclosureRow(icon: "checkmark.shield", text: "Sem cobrança antes do fim do teste")
                         TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária após o teste para continuar usando")
@@ -164,7 +164,7 @@ private struct TrialConversionView: View {
                         }
                     } label: {
                         HStack(spacing: 12) {
-                            Text("Assinar por R$ 9,99/mês")
+                            Text("Assinar por R$ 9,90/mês")
                             Image(systemName: "arrow.right")
                         }
                         .font(.system(size: 18, weight: .semibold))
@@ -2256,6 +2256,8 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
     @Published var isSpeaking = false
 
     private let synthesizer = AVSpeechSynthesizer()
+    private var pendingUtteranceCount = 0
+    private var activeSpeechText = ""
 
     override init() {
         super.init()
@@ -2263,7 +2265,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
     }
 
     func toggle(text: String) {
-        if synthesizer.isSpeaking || isSpeaking {
+        if (synthesizer.isSpeaking || isSpeaking), activeSpeechText == text {
             stop()
         } else {
             speak(text)
@@ -2272,19 +2274,41 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
 
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
+        pendingUtteranceCount = 0
+        activeSpeechText = ""
         isSpeaking = false
     }
 
     private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: preparedSpeechText(text))
-        utterance.voice = preferredVoice
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.76
-        utterance.pitchMultiplier = 0.95
-        utterance.volume = 1
-        utterance.preUtteranceDelay = 0.12
-        utterance.postUtteranceDelay = 0.18
-        synthesizer.speak(utterance)
+        if synthesizer.isSpeaking || isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
+
+        let blocks = speechBlocks(from: text)
+        guard !blocks.isEmpty else { return }
+
+        pendingUtteranceCount = blocks.count
+        activeSpeechText = text
         isSpeaking = true
+
+        for (index, block) in blocks.enumerated() {
+            let utterance = AVSpeechUtterance(string: block)
+            utterance.voice = preferredVoice
+            utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.72
+            utterance.pitchMultiplier = 0.96
+            utterance.volume = 1
+            utterance.preUtteranceDelay = index == 0 ? 0.08 : 0.2
+            utterance.postUtteranceDelay = blockPostDelay(block, isLast: index == blocks.count - 1)
+            synthesizer.speak(utterance)
+        }
+    }
+
+    private func speechBlocks(from text: String) -> [String] {
+        preparedSpeechText(text)
+            .components(separatedBy: "\n\n")
+            .flatMap(splitLongSpeechBlock)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     private func preparedSpeechText(_ text: String) -> String {
@@ -2295,10 +2319,38 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
             .replacingOccurrences(of: " / ", with: ", ")
             .replacingOccurrences(of: "—", with: ", ")
             .replacingOccurrences(of: "–", with: ", ")
+            .replacingOccurrences(of: "###", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .replacingOccurrences(of: "`", with: "")
+            .replacingOccurrences(of: "{", with: "")
+            .replacingOccurrences(of: "}", with: "")
+            .replacingOccurrences(of: "[", with: "")
+            .replacingOccurrences(of: "]", with: "")
+            .replacingOccurrences(of: "*", with: "")
             .replacingOccurrences(of: "\"", with: "")
             .replacingOccurrences(of: "“", with: "")
             .replacingOccurrences(of: "”", with: "")
 
+        prepared = prepared.replacingOccurrences(
+            of: #"(?m)^\s*[-•]\s*"#,
+            with: "",
+            options: .regularExpression
+        )
+        prepared = prepared.replacingOccurrences(
+            of: #"(?m)^\s*#{1,6}\s*"#,
+            with: "",
+            options: .regularExpression
+        )
+        prepared = prepared.replacingOccurrences(
+            of: #""[A-Za-z0-9_]+":\s*"#,
+            with: "",
+            options: .regularExpression
+        )
+        prepared = prepared.replacingOccurrences(
+            of: #"\b[a-zA-Z]+_[a-zA-Z0-9_]+\b"#,
+            with: "",
+            options: .regularExpression
+        )
         prepared = prepared.replacingOccurrences(
             of: #"(?m)^[ \t]+"#,
             with: "",
@@ -2317,21 +2369,61 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
         return prepared.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private func splitLongSpeechBlock(_ block: String) -> [String] {
+        let cleaned = block.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleaned.count > 520 else { return [cleaned] }
+
+        var result: [String] = []
+        var current = ""
+        let sentences = cleaned.components(separatedBy: ". ")
+        for sentence in sentences {
+            let normalizedSentence = sentence.hasSuffix(".") ? sentence : sentence + "."
+            if current.count + normalizedSentence.count > 520, !current.isEmpty {
+                result.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
+                current = normalizedSentence
+            } else {
+                current = current.isEmpty ? normalizedSentence : current + " " + normalizedSentence
+            }
+        }
+        if !current.isEmpty {
+            result.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        return result
+    }
+
+    private func blockPostDelay(_ block: String, isLast: Bool) -> TimeInterval {
+        if isLast { return 0.08 }
+        if block.localizedCaseInsensitiveContains("explicação espiritual")
+            || block.localizedCaseInsensitiveContains("aplicação prática")
+            || block.localizedCaseInsensitiveContains("texto ") {
+            return 0.35
+        }
+        return 0.24
+    }
+
     private var preferredVoice: AVSpeechSynthesisVoice? {
         AVSpeechSynthesisVoice.speechVoices().first {
-            $0.language == "pt-BR" && $0.gender == .male && $0.quality == .enhanced
-        } ?? AVSpeechSynthesisVoice.speechVoices().first {
-            $0.language == "pt-BR" && $0.gender == .male
-        } ?? AVSpeechSynthesisVoice.speechVoices().first {
             $0.language == "pt-BR" && $0.quality == .enhanced
+        } ?? AVSpeechSynthesisVoice.speechVoices().first {
+            $0.language == "pt-BR"
+        } ?? AVSpeechSynthesisVoice.speechVoices().first {
+            $0.language.hasPrefix("pt") && $0.quality == .enhanced
+        } ?? AVSpeechSynthesisVoice.speechVoices().first {
+            $0.language.hasPrefix("pt")
         } ?? AVSpeechSynthesisVoice(language: "pt-BR")
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        isSpeaking = false
+        pendingUtteranceCount = max(0, pendingUtteranceCount - 1)
+        if pendingUtteranceCount == 0 {
+            activeSpeechText = ""
+            isSpeaking = false
+        }
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        pendingUtteranceCount = 0
+        activeSpeechText = ""
         isSpeaking = false
     }
 }

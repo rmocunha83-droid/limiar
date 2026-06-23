@@ -589,6 +589,7 @@ enum AIContentState: Equatable {
     case generating
     case remoteReady
     case fallback
+    case dailyLimitReached
 
     var title: String {
         switch self {
@@ -600,20 +601,45 @@ enum AIContentState: Equatable {
             "Reflexão gerada por IA"
         case .fallback:
             "Reflexão local disponível"
+        case .dailyLimitReached:
+            "Leitura local para continuar"
         }
     }
 
     var subtitle: String {
         switch self {
         case .localReady:
-            "Preparando uma versão personalizada."
+            "Leitura preparada no app."
         case .generating:
             "A leitura já pode começar enquanto a IA trabalha."
         case .remoteReady:
             "Texto atualizado com uma reflexão nova."
         case .fallback:
-            "A conexão falhou, então mantivemos a versão local."
+            "Não foi possível gerar uma nova reflexão com IA agora, então preparamos uma leitura local para você continuar."
+        case .dailyLimitReached:
+            "Você já completou as leituras com IA disponíveis por hoje. Para continuar, vamos usar uma leitura local até amanhã."
         }
+    }
+}
+
+struct RemoteAIDailyUsage: Codable, Equatable {
+    var dayKey: String
+    var generationCount: Int
+}
+
+enum RemoteAIUsagePolicy {
+    static let defaultDailyGenerationLimit = 6
+
+    static var dailyGenerationLimit: Int {
+        defaultDailyGenerationLimit
+    }
+
+    static func dayKey(for date: Date = Date(), calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        return String(format: "%04d-%02d-%02d", year, month, day)
     }
 }
 
@@ -658,6 +684,7 @@ final class LimiarAppModel {
     var recentPassageIDs: [String] = []
     var recentAIReflections: [RecentAIReflectionDigest] = []
     var aiContentState = AIContentState.localReady
+    var remoteAIUsage = RemoteAIDailyUsage(dayKey: RemoteAIUsagePolicy.dayKey(), generationCount: 0)
 
     private let recommender = PassageRecommendationService()
     private let reflectionService = AIReflectionService()
@@ -687,6 +714,7 @@ final class LimiarAppModel {
         hasAuthorizedScreenTime = policyStore.loadScreenTimeAuthorized()
         recentPassageIDs = policyStore.loadRecentPassageIDs()
         recentAIReflections = policyStore.loadRecentAIReflections()
+        remoteAIUsage = normalizedRemoteAIUsage(policyStore.loadRemoteAIUsage())
 
         setReadingPlan(
             recommender.readingPlan(
@@ -1055,7 +1083,11 @@ final class LimiarAppModel {
         let isDuplicateRemoteRequest = remoteRequestKey == lastRemoteAIRequestKey
             && Date().timeIntervalSince(lastRemoteAIRequestAt) < 90
         guard !isDuplicateRemoteRequest else {
-            aiContentState = .localReady
+            return
+        }
+
+        guard registerRemoteAIGenerationIfAllowed() else {
+            aiContentState = .dailyLimitReached
             return
         }
 
@@ -1074,6 +1106,26 @@ final class LimiarAppModel {
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
         ].joined(separator: "|")
+    }
+
+    private func normalizedRemoteAIUsage(_ savedUsage: RemoteAIDailyUsage?) -> RemoteAIDailyUsage {
+        let today = RemoteAIUsagePolicy.dayKey()
+        guard let savedUsage, savedUsage.dayKey == today else {
+            return RemoteAIDailyUsage(dayKey: today, generationCount: 0)
+        }
+        return savedUsage
+    }
+
+    private func registerRemoteAIGenerationIfAllowed() -> Bool {
+        remoteAIUsage = normalizedRemoteAIUsage(remoteAIUsage)
+        guard remoteAIUsage.generationCount < RemoteAIUsagePolicy.dailyGenerationLimit else {
+            policyStore.saveRemoteAIUsage(remoteAIUsage)
+            return false
+        }
+
+        remoteAIUsage.generationCount += 1
+        policyStore.saveRemoteAIUsage(remoteAIUsage)
+        return true
     }
 
     private func rememberShownPassages(_ passages: [ScripturePassage]) {

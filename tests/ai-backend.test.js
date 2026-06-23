@@ -2,8 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  DEFAULT_DAILY_GENERATION_LIMIT,
   DEFAULT_MODEL,
   buildContextPrompt,
+  enforceAIDailyLimit,
   enforceAIRateLimit,
   normalizePassages,
   normalizeProfile,
@@ -14,6 +16,10 @@ const {
 
 test("keeps GPT-4.1 mini as the default commercial model", () => {
   assert.equal(DEFAULT_MODEL, "gpt-4.1-mini");
+});
+
+test("keeps six remote generations as the default daily limit", () => {
+  assert.equal(DEFAULT_DAILY_GENERATION_LIMIT, 6);
 });
 
 test("validates a complete reflection payload", () => {
@@ -98,6 +104,40 @@ test("can enforce a simple per-client AI rate limit", () => {
     delete process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS;
   } else {
     process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS = previousWindow;
+  }
+});
+
+test("can enforce a daily remote AI generation limit", () => {
+  const previousLimit = process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT;
+  process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT = "2";
+
+  const req = {
+    headers: {
+      "x-limiar-client-id": `daily-${Date.now()}-${Math.random()}`
+    }
+  };
+  const res = {
+    statusCode: 200,
+    headers: {},
+    body: "",
+    setHeader(key, value) {
+      this.headers[key] = value;
+    },
+    end(value) {
+      this.body = value;
+    }
+  };
+
+  assert.equal(enforceAIDailyLimit(req, res, "spiritual-reading").allowed, true);
+  assert.equal(enforceAIDailyLimit(req, res, "spiritual-reading").allowed, true);
+  assert.equal(enforceAIDailyLimit(req, res, "spiritual-reading").allowed, false);
+  assert.equal(res.statusCode, 429);
+  assert.match(res.body, /ai_daily_limit_reached/);
+
+  if (previousLimit === undefined) {
+    delete process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT;
+  } else {
+    process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT = previousLimit;
   }
 });
 

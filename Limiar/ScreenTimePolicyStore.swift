@@ -17,6 +17,7 @@ struct ScreenTimePolicyStore {
         static let recentPassageIDs = "recentPassageIDs"
         static let recentAIReflections = "recentAIReflections"
         static let valueDemoSeen = "valueDemoSeen"
+        static let remoteAIUsage = "remoteAIUsage"
     }
 
     private var defaults: UserDefaults {
@@ -118,6 +119,14 @@ struct ScreenTimePolicyStore {
 
     func saveValueDemoSeen(_ value: Bool) {
         defaults.set(value, forKey: Key.valueDemoSeen)
+    }
+
+    func loadRemoteAIUsage() -> RemoteAIDailyUsage? {
+        load(RemoteAIDailyUsage.self, key: Key.remoteAIUsage)
+    }
+
+    func saveRemoteAIUsage(_ usage: RemoteAIDailyUsage) {
+        save(usage, key: Key.remoteAIUsage)
     }
 
     private func load<T: Decodable>(_ type: T.Type, key: String) -> T? {

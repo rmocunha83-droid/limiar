@@ -13,7 +13,7 @@ Limiar é um app iOS em SwiftUI para criar uma pausa espiritual antes de voltar 
 - IA generativa via backend próprio, com OpenAI no servidor, cache, histórico antirrepetição e fallback local.
 - Explicação espiritual por trecho, com resumo, aplicação prática e pergunta de meditação.
 - Histórico local de leituras e opção individual de salvar cada trecho.
-- Narração do trecho com voz masculina do iOS quando disponível.
+- Narração local com voz nativa do iOS em português do Brasil quando disponível, sem uso de API remota de áudio.
 - Botão “Li com calma, liberar acesso” com cadeado animado e liberação temporária pelo período escolhido.
 - Preview web e materiais de marketing/App Store.
 
@@ -34,4 +34,4 @@ Todos os textos visíveis e textos gerados para o usuário devem usar português
 
 ## IA generativa
 
-O app iOS chama os endpoints em `api/` e nunca carrega a chave da OpenAI no cliente. Configure `OPENAI_API_KEY` no Vercel e, opcionalmente, `OPENAI_MODEL` para trocar o modelo sem alterar o app. A arquitetura está detalhada em `docs/AI_ARCHITECTURE.md`.
+O app iOS chama os endpoints em `api/` e nunca carrega a chave da OpenAI no cliente. Configure `OPENAI_API_KEY` no Vercel e, opcionalmente, `OPENAI_MODEL` para trocar o modelo sem alterar o app. O modelo padrão é `gpt-4.1-mini`, com limite diário inicial de 6 gerações remotas por usuário premium ou em teste gratuito. A arquitetura está detalhada em `docs/AI_ARCHITECTURE.md`.

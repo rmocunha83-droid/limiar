@@ -2,8 +2,11 @@ const DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
+const DEFAULT_DAILY_GENERATION_LIMIT = 6;
 const rateLimitBuckets = globalThis.__limiarAIRateLimitBuckets || new Map();
+const dailyLimitBuckets = globalThis.__limiarAIDailyLimitBuckets || new Map();
 globalThis.__limiarAIRateLimitBuckets = rateLimitBuckets;
+globalThis.__limiarAIDailyLimitBuckets = dailyLimitBuckets;
 
 const reflectionSchema = {
   type: "object",
@@ -69,6 +72,7 @@ function requestContext(req, endpoint) {
     endpoint,
     clientID: clientID || undefined,
     rateLimitKey: `${endpoint}:${key}`,
+    dailyLimitKey: `${endpoint}:${key}`,
     requestID: trimText(req.headers?.["x-vercel-id"] || req.headers?.["x-request-id"] || "", 160) || undefined
   };
 }
@@ -102,6 +106,33 @@ function enforceAIRateLimit(req, res, endpoint) {
   res.statusCode = 429;
   res.setHeader("Retry-After", String(retryAfter));
   res.end(JSON.stringify({ error: "ai_rate_limited" }));
+  return { allowed: false, context };
+}
+
+function enforceAIDailyLimit(req, res, endpoint) {
+  const context = requestContext(req, endpoint);
+  const now = new Date();
+  const dayKey = now.toISOString().slice(0, 10);
+  const maxGenerations = Number(process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT || DEFAULT_DAILY_GENERATION_LIMIT);
+  const bucketKey = `${context.dailyLimitKey}:${dayKey}`;
+  const bucket = dailyLimitBuckets.get(bucketKey) || { count: 0, dayKey };
+
+  bucket.count += 1;
+  dailyLimitBuckets.set(bucketKey, bucket);
+
+  if (bucket.count <= maxGenerations) {
+    return { allowed: true, context };
+  }
+
+  console.warn("limiar_ai_daily_limit_reached", {
+    endpoint,
+    requestID: context.requestID,
+    clientID: context.clientID,
+    dayKey,
+    limit: maxGenerations
+  });
+  res.statusCode = 429;
+  res.end(JSON.stringify({ error: "ai_daily_limit_reached" }));
   return { allowed: false, context };
 }
 
@@ -370,9 +401,11 @@ function validateSpiritualReading(value, expectedItemCount) {
 
 module.exports = {
   DEFAULT_MODEL,
+  DEFAULT_DAILY_GENERATION_LIMIT,
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  enforceAIDailyLimit,
   enforceAIRateLimit,
   logAIError,
   normalizePassages,

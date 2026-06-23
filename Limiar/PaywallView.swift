@@ -80,7 +80,7 @@ struct PaywallView: View {
         if subscription.accessState == .trialExpired {
             return "Seu teste gratuito terminou. A assinatura mensal é necessária para continuar usando os recursos principais."
         }
-        return "Depois dos 7 dias grátis, R$ 9,99/mês. Cancele quando quiser."
+        return "Depois dos 7 dias grátis, R$ 9,90/mês. Cancele quando quiser."
     }
 
     private var benefits: some View {
@@ -126,7 +126,7 @@ struct PaywallView: View {
                         ProgressView()
                             .tint(Color.deepInk)
                     }
-                    Text("Assinar por R$ 9,99/mês")
+                    Text("Assinar por R$ 9,90/mês")
                     Image(systemName: "arrow.right")
                 }
                 .font(.system(size: 18, weight: .semibold))
@@ -138,7 +138,7 @@ struct PaywallView: View {
             .disabled(!subscription.canPurchase(subscription.selectedPlan))
             .opacity(subscription.canPurchase(subscription.selectedPlan) ? 1 : 0.62)
 
-            Text("Assinatura mensal de R$ 9,99/mês. Cancele quando quiser.")
+            Text("Assinatura mensal de R$ 9,90/mês. Cancele quando quiser.")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.softText)
                 .multilineTextAlignment(.center)

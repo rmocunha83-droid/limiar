@@ -2,6 +2,7 @@ const {
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  enforceAIDailyLimit,
   enforceAIRateLimit,
   logAIError,
   normalizePassages,
@@ -18,6 +19,8 @@ module.exports = async function handler(req, res) {
   if (!requirePost(req, res)) return;
   const rateLimit = enforceAIRateLimit(req, res, "spiritual-reading");
   if (!rateLimit.allowed) return;
+  const dailyLimit = enforceAIDailyLimit(req, res, "spiritual-reading");
+  if (!dailyLimit.allowed) return;
 
   try {
     const body = parseBody(req);
@@ -50,7 +53,7 @@ module.exports = async function handler(req, res) {
     res.statusCode = 200;
     res.end(JSON.stringify(validateSpiritualReading(result, 4)));
   } catch (error) {
-    logAIError("spiritual-reading", error, rateLimit.context);
+    logAIError("spiritual-reading", error, dailyLimit.context);
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_spiritual_reading_failed" }));
   }

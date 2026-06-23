@@ -1011,10 +1011,21 @@ struct AISpiritualReadingService {
 
         do {
             let items = try await remoteService.readingItems(for: request, passages: passages)
-            guard items.count >= min(LimiarReadingConstants.targetItemCount, max(1, passages.count)) else { return nil }
+            guard items.count >= min(LimiarReadingConstants.targetItemCount, max(1, passages.count)) else {
+                debugPrint("limiar_ai_fallback_local", [
+                    "endpoint": "spiritual-reading",
+                    "reason": "unexpected_item_count",
+                    "count": "\(items.count)"
+                ])
+                return nil
+            }
             cache.save(items, for: request)
             return items
         } catch {
+            debugPrint("limiar_ai_fallback_local", [
+                "endpoint": "spiritual-reading",
+                "reason": String(describing: error)
+            ])
             return nil
         }
     }
@@ -1199,6 +1210,10 @@ struct AIReflectionService {
             cache.save(reflection, for: request)
             return reflection
         } catch {
+            debugPrint("limiar_ai_fallback_local", [
+                "endpoint": "reflection",
+                "reason": String(describing: error)
+            ])
             return nil
         }
     }

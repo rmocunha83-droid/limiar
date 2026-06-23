@@ -20,7 +20,7 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
 
     var fallbackPrice: String {
         switch self {
-        case .monthly: "R$ 9,99/mês"
+        case .monthly: "R$ 9,90/mês"
         case .yearly: "R$ 79,90/ano"
         }
     }
