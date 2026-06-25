@@ -104,6 +104,10 @@ final class SubscriptionManager {
         accessState.allowsPremiumFeatures
     }
 
+    var isEssentialMode: Bool {
+        accessState == .trialExpired && !hasActiveSubscription
+    }
+
     var trialEndsAt: Date? {
         trialStartedAt?.addingTimeInterval(Constants.trialDuration)
     }
@@ -310,10 +314,10 @@ final class SubscriptionManager {
                 await transaction.finish()
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
-                message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium liberado." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
+                message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium ativo." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
             case .pending:
                 state = .pending
-                message = "A compra ficou pendente. Quando a Apple aprovar, o Premium será liberado automaticamente."
+                message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
             case .userCancelled:
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."

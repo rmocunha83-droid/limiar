@@ -71,14 +71,14 @@ struct PaywallView: View {
 
     private var headerSubtitle: String {
         if subscription.accessState == .trialExpired {
-            return "Para continuar usando os bloqueios, leituras e reflexões personalizadas, assine o Limiar Premium."
+            return "Você ainda pode continuar no Modo Essencial com os trechos principais. Para ter reflexões personalizadas, narração e maior variedade, assine o Limiar completo."
         }
-        return "Transforme o desbloqueio do celular em um momento de reflexão."
+        return "Transforme a pausa antes dos apps selecionados em um momento de reflexão."
     }
 
     private var headerDisclosure: String {
         if subscription.accessState == .trialExpired {
-            return "Seu teste gratuito terminou. A assinatura mensal é necessária para continuar usando os recursos principais."
+            return "Seu teste gratuito terminou. O Modo Essencial continua disponível sem chamadas de IA."
         }
         return "Depois dos 7 dias grátis, R$ 9,90/mês. Cancele quando quiser."
     }
@@ -91,7 +91,7 @@ struct PaywallView: View {
             PaywallBenefit(icon: "slider.horizontal.3", text: "Reflexões curtas, médias ou longas")
             PaywallBenefit(icon: "arrow.triangle.2.circlepath", text: "Novas mensagens com menos repetição")
             PaywallBenefit(icon: "clock.arrow.circlepath", text: "Histórico de leituras")
-            PaywallBenefit(icon: "lock.open", text: "Liberação temporária dos apps protegidos")
+            PaywallBenefit(icon: "sunrise.fill", text: "Pausas conscientes antes dos apps selecionados")
         }
         .padding(16)
         .limiarPanel()

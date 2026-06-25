@@ -19,6 +19,7 @@ module.exports = async function handler(req, res) {
     const audio = await callOpenAISpeech({
       input: body.text,
       voice: body.voice,
+      speed: body.speed,
       instructions: body.instructions,
       debugContext: {
         endpoint: "speech",

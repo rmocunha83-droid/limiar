@@ -242,18 +242,24 @@ def draw_return_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) 
     draw.polygon([(x1 + size * 0.28, y1 + size * 0.55), (x1 + size * 0.12, y1 + size * 0.58), (x1 + size * 0.21, y1 + size * 0.42)], fill=COLORS["deep_ink"] + (245,))
 
 
-def draw_lock_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: tuple[int, int, int] = COLORS["deep_ink"]) -> None:
+def draw_sunrise_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: tuple[int, int, int] = COLORS["deep_ink"]) -> None:
     x1, y1, x2, y2 = box
     size = x2 - x1
     stroke = fill + (245,)
-    body = (x1 + int(size * 0.22), y1 + int(size * 0.44), x2 - int(size * 0.22), y2 - int(size * 0.14))
-    shackle = (x1 + int(size * 0.30), y1 + int(size * 0.18), x2 - int(size * 0.30), y1 + int(size * 0.60))
-    draw.arc(shackle, 180, 360, fill=stroke, width=max(4, size // 12))
-    draw.rounded_rectangle(body, radius=max(5, size // 10), outline=stroke, width=max(4, size // 13))
     cx = (x1 + x2) // 2
-    cy = y1 + int(size * 0.62)
-    draw.ellipse((cx - size * 0.055, cy - size * 0.055, cx + size * 0.055, cy + size * 0.055), fill=stroke)
-    draw.line((cx, cy + size * 0.04, cx, cy + size * 0.18), fill=stroke, width=max(3, size // 18))
+    horizon_y = y1 + int(size * 0.68)
+    r = int(size * 0.22)
+    draw.arc((cx - r, horizon_y - r, cx + r, horizon_y + r), 180, 360, fill=stroke, width=max(4, size // 13))
+    draw.line((x1 + int(size * 0.16), horizon_y, x2 - int(size * 0.16), horizon_y), fill=stroke, width=max(4, size // 13))
+    for angle in (-50, -25, 0, 25, 50):
+        rad = math.radians(angle - 90)
+        inner = int(size * 0.32)
+        outer = int(size * 0.44)
+        sx = cx + int(math.cos(rad) * inner)
+        sy = horizon_y + int(math.sin(rad) * inner)
+        ex = cx + int(math.cos(rad) * outer)
+        ey = horizon_y + int(math.sin(rad) * outer)
+        draw.line((sx, sy, ex, ey), fill=stroke, width=max(3, size // 18))
 
 
 def make_mark_svg() -> str:
@@ -377,26 +383,26 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
     y = 160
     draw.text((x, y), "Limiar", font=font(GEORGIA, 96), fill=COLORS["ivory"] + (255,))
     y += 126
-    draw_wrapped(draw, "Reserve alguns minutos para iluminar sua mente.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 780, 12)
+    draw_wrapped(draw, "Reserve alguns minutos para uma leitura que fortaleça sua fé.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 780, 12)
 
     def panel(box):
         draw.rounded_rectangle(box, radius=34, fill=(5, 10, 11, 222), outline=COLORS["sage"] + (92,), width=2)
 
     y = 442
     panel((x, y, 1092, y + 220))
-    draw.text((x + 28, y + 26), "APPS PROTEGIDOS", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
+    draw.text((x + 28, y + 26), "APPS QUE ATIVAM O LIMIAR", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
     icon_x = x + 30
     for icon_drawer in (draw_instagram_icon, draw_tiktok_icon, draw_youtube_icon, draw_x_icon):
         icon_drawer(draw, (icon_x, y + 86, icon_x + 98, y + 184))
         icon_x += 126
-    draw_wrapped(draw, "Somente os ícones aparecem antes da leitura.", (x + 548, y + 88), font(ARIAL, 32), COLORS["soft_text"] + (255,), 430, 9)
+    draw_wrapped(draw, "Os ícones indicam quais apps acionam a pausa.", (x + 548, y + 88), font(ARIAL, 32), COLORS["soft_text"] + (255,), 430, 9)
 
     y += 300
     draw.text((x, y), "SEU LIMIAR", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
     y += 54
     draw_wrapped(draw, "Caminho de leitura", (x, y), font(GEORGIA, 78), COLORS["ivory"] + (255,), 940, 10)
     y += 120
-    draw_wrapped(draw, "Leia com calma e conclua para liberar temporariamente os apps protegidos.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 920, 12)
+    draw_wrapped(draw, "Leia com calma e reflita sobre sua vida.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 920, 12)
 
     y += 132
     panel((x, y, 1092, y + 680))
@@ -411,16 +417,61 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
 
     y += 740
     panel((x, y, 1092, y + 172))
-    draw.text((x + 34, y + 38), "Ajustar apps protegidos", font=font(GEORGIA, 43), fill=COLORS["ivory"] + (255,))
-    draw.text((x + 34, y + 96), "Escolha quais apps você quer proteger", font=font(ARIAL, 30), fill=COLORS["soft_text"] + (255,))
+    draw.text((x + 34, y + 38), "Ajustar apps que ativam o Limiar", font=font(GEORGIA, 37), fill=COLORS["ivory"] + (255,))
+    draw.text((x + 34, y + 96), "Defina quais apps vão acionar essa pausa", font=font(ARIAL, 30), fill=COLORS["soft_text"] + (255,))
     draw.text((1046, y + 58), "›", font=font(ARIAL_BOLD, 64), fill=COLORS["sage"] + (255,))
 
     y += 230
     draw.rounded_rectangle((x, y, 1092, y + 204), radius=42, fill=COLORS["sage"] + (255,))
-    draw_lock_icon(draw, (x + 44, y + 58, x + 92, y + 106))
-    draw.text((x + 118, y + 42), "Li com calma, liberar acesso", font=font(GEORGIA, 46), fill=COLORS["deep_ink"] + (255,))
-    draw.text((x + 120, y + 108), "Libera por 30 minutos", font=font(ARIAL, 30), fill=COLORS["deep_ink"] + (210,))
+    draw_sunrise_icon(draw, (x + 44, y + 58, x + 92, y + 106))
+    draw.text((x + 118, y + 62), "Li com calma, continuar", font=font(GEORGIA, 46), fill=COLORS["deep_ink"] + (255,))
     draw.text((1010, y + 58), "›", font=font(ARIAL_BOLD, 58), fill=COLORS["deep_ink"] + (255,))
+    img.convert("RGB").save(path, quality=95)
+
+
+def make_onboarding_mock(path: Path, visual: Image.Image) -> None:
+    size = (1170, 2532)
+    img = cover_crop(visual, size).convert("RGBA")
+    img.alpha_composite(Image.new("RGBA", size, (5, 10, 11, 118)))
+
+    vignette = Image.new("RGBA", size, (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vignette)
+    for inset in range(0, 560, 10):
+        alpha = int(108 * (inset / 560))
+        vd.rounded_rectangle((inset, inset, size[0] - inset, size[1] - inset), radius=80, outline=(0, 0, 0, alpha), width=12)
+    img.alpha_composite(vignette)
+
+    draw = ImageDraw.Draw(img)
+    logo = Image.open(BRAND / "logo-mark-1024.png").convert("RGBA").resize((196, 196), Image.Resampling.LANCZOS)
+    img.alpha_composite(logo, (88, 620))
+
+    draw.text((88, 878), "B E M - V I N D O", font=font(ARIAL_BOLD, 44), fill=COLORS["gold"] + (255,))
+    draw.text((88, 1016), "Limiar", font=font(GEORGIA, 166), fill=COLORS["ivory"] + (255,))
+
+    lines = [
+        "Antes de voltar às",
+        "distrações,",
+        "reserve alguns minutos",
+        "para uma",
+        "leitura que fortaleça sua fé.",
+    ]
+    y = 1266
+    body_font = font(ARIAL, 64)
+    for line in lines:
+        draw.text((88, y), line, font=body_font, fill=COLORS["soft_text"] + (255,))
+        y += 126
+
+    nav_y = 2264
+    draw.rounded_rectangle((88, nav_y + 32, 214, nav_y + 48), radius=8, fill=COLORS["sage"] + (255,))
+    dot_x = 282
+    for _ in range(4):
+        draw.ellipse((dot_x, nav_y + 21, dot_x + 42, nav_y + 63), fill=(255, 255, 255, 208))
+        dot_x += 72
+
+    draw.rounded_rectangle((662, 2194, 1086, 2346), radius=50, fill=COLORS["sage"] + (255,))
+    draw.text((708, 2232), "Continuar", font=font(GEORGIA, 56), fill=COLORS["deep_ink"] + (255,))
+    draw.text((1006, 2228), "→", font=font(ARIAL, 62), fill=COLORS["deep_ink"] + (255,))
+
     img.convert("RGB").save(path, quality=95)
 
 
@@ -482,8 +533,8 @@ def make_card(
     else:
         panel_x1, panel_y1, panel_x2, panel_y2 = 118, 760, 1172, 2246
         draw.rounded_rectangle((panel_x1, panel_y1, panel_x2, panel_y2), radius=58, fill=(5, 10, 11, 184), outline=COLORS["sage"] + (88,), width=2)
-        draw.text((panel_x1 + 64, panel_y1 + 68), "Apps protegidos", font=font(GEORGIA_BOLD, 62), fill=COLORS["ivory"] + (255,))
-        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha quais apps deseja proteger.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
+        draw.text((panel_x1 + 64, panel_y1 + 68), "Apps que ativam o Limiar", font=font(GEORGIA_BOLD, 54), fill=COLORS["ivory"] + (255,))
+        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha quais apps vão acionar a pausa.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
 
         app_y = panel_y1 + 260
         social_icons = [
@@ -500,13 +551,13 @@ def make_card(
             draw.rounded_rectangle((x1, y1, x1 + 412, y1 + 142), radius=34, fill=(255, 255, 255, 22), outline=COLORS["sage"] + (70,), width=2)
             icon_drawer(draw, (x1 + 28, y1 + 29, x1 + 112, y1 + 113))
             draw.text((x1 + 138, y1 + 36), label, font=font(ARIAL_BOLD, 35), fill=COLORS["deep_ink"] + (245,))
-            draw.text((x1 + 138, y1 + 82), "proteger", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
+            draw.text((x1 + 138, y1 + 82), "ativar pausa", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
 
         chip_y = panel_y1 + 716
         features = [
             ("Tempo de Uso", "Permissões nativas do iPhone.", draw_screen_time_icon),
             ("Leitura com IA", "Três trechos com explicação.", draw_book_icon),
-            ("Cadeado aberto", "Libera por 30 minutos.", draw_return_icon),
+            ("Retomar com presença", "Depois da leitura, continue com calma.", draw_return_icon),
         ]
         for label, detail, icon_drawer in features:
             draw.rounded_rectangle((panel_x1 + 64, chip_y, panel_x2 - 64, chip_y + 210), radius=40, fill=(5, 10, 11, 214), outline=accent + (108,), width=2)
@@ -527,25 +578,25 @@ def make_app_store_cards() -> None:
     cards = [
         (
             "01-pausa-antes-do-impulso.png",
-            "Foco com sentido",
+            "Pausa consciente",
             "Uma pausa antes de voltar para as distrações.",
-            "Apps protegidos aparecem pelos ícones, sem nomes, horários ou descrições de uso.",
+            "Apps que puxam sua atenção podem ativar o Limiar antes do uso.",
             onboarding,
             COLORS["sage"],
         ),
         (
             "02-leitura-com-proposito.png",
-            "Seu limiar",
-            "Três trechos para uma pausa real.",
-            "Cada trecho vem com texto, explicação espiritual e botão próprio para salvar.",
+            "Leitura com IA",
+            "Três trechos para voltar com presença.",
+            "Cada jornada vem com texto, explicação espiritual e aplicação prática.",
             dashboard,
             COLORS["gold"],
         ),
         (
             "03-protecao-nativa.png",
             "Tempo de Uso",
-            "Escolha os apps que precisam de um limiar.",
-            "A proteção usa recursos nativos do iPhone e libera por 30 minutos após a leitura.",
+            "Escolha apps que ativam o Limiar.",
+            "O iPhone cria a pausa; você atravessa com calma e retoma com presença.",
             None,
             COLORS["sage"],
         ),
@@ -559,9 +610,9 @@ def make_app_store_cards() -> None:
         ),
         (
             "05-retome-consciente.png",
-            "Volte melhor",
-            "Cadeado aberto, acesso liberado.",
-            "Ao concluir a leitura, o botão muda de estado e os apps ficam livres por 30 minutos.",
+            "Continue melhor",
+            "Li com calma, continuar.",
+            "Após concluir a leitura, os apps selecionados ficam disponíveis para uso.",
             dashboard,
             COLORS["sage"],
         ),
@@ -573,6 +624,7 @@ def make_app_store_cards() -> None:
 
 def make_hero_exports() -> None:
     visual = Image.open(ASSETS / "limiar-threshold-visual.png")
+    make_onboarding_mock(ROOT / "preview" / "limiar-onboarding.png", visual)
     make_dashboard_mock(ASSETS / "limiar-dashboard-marketing.png", visual)
     cover_crop(visual, (2400, 1350)).save(SITE_ASSETS / "hero-wide.jpg", quality=92)
     cover_crop(visual, (1200, 1600)).save(SITE_ASSETS / "hero-portrait.jpg", quality=92)
@@ -583,7 +635,7 @@ def make_hero_exports() -> None:
 def make_manifest(generated_visual: Path) -> None:
     manifest = {
         "brand": "Limiar",
-        "positioning": "Jornada espiritual antes de liberar apps protegidos.",
+        "positioning": "Jornada espiritual antes dos apps que ativam o Limiar.",
         "source_imagegen_asset": str(GENERATED_FALLBACK),
         "workspace_visual": str(generated_visual.relative_to(ROOT)),
         "assets": {

@@ -8,6 +8,7 @@ struct ContentView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.scenePhase) private var scenePhase
     @State private var dismissedTrialConversion = false
+    @State private var dismissedEssentialModeIntro = false
 
     private static var forcePaywallForReviewScreenshot: Bool {
         #if DEBUG
@@ -32,10 +33,12 @@ struct ContentView: View {
                     TrialConversionView {
                         dismissedTrialConversion = true
                     }
-                } else if subscription.hasPremiumAccess {
-                    DashboardView()
+                } else if subscription.isEssentialMode && !dismissedEssentialModeIntro {
+                    EssentialModeIntroView {
+                        dismissedEssentialModeIntro = true
+                    }
                 } else {
-                    PaywallView()
+                    DashboardView()
                 }
             }
             .preferredColorScheme(.dark)
@@ -45,16 +48,100 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 subscription.refreshAccessState()
-                model.updatePremiumAccess(subscription.hasPremiumAccess)
+                model.updateAccess(
+                    hasPremiumAccess: subscription.hasPremiumAccess,
+                    isEssentialMode: subscription.isEssentialMode
+                )
                 model.prepareFreshPassageForForeground()
             }
         }
         .task {
             subscription.start()
-            model.updatePremiumAccess(subscription.hasPremiumAccess)
+            model.updateAccess(
+                hasPremiumAccess: subscription.hasPremiumAccess,
+                isEssentialMode: subscription.isEssentialMode
+            )
         }
         .onChange(of: subscription.accessState) { _, _ in
-            model.updatePremiumAccess(subscription.hasPremiumAccess)
+            model.updateAccess(
+                hasPremiumAccess: subscription.hasPremiumAccess,
+                isEssentialMode: subscription.isEssentialMode
+            )
+        }
+    }
+}
+
+private struct EssentialModeIntroView: View {
+    let continueEssential: () -> Void
+
+    var body: some View {
+        ZStack {
+            LimiarBackground()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    Image("LimiarLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 62, height: 62)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("MODO ESSENCIAL")
+                            .font(.system(size: 13, weight: .bold))
+                            .tracking(1.3)
+                            .foregroundStyle(Color.warmGold)
+
+                        Text("Modo Essencial ativado")
+                            .font(.system(size: 43, weight: .regular, design: .serif))
+                            .foregroundStyle(Color.ivory)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Seu teste gratuito terminou. Você ainda pode continuar usando o Limiar com os trechos principais, mas sem narração e sem reflexões geradas pela IA.")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.softText)
+                            .lineSpacing(5)
+
+                        Text("Para ter reflexões personalizadas, narração dos textos e maior variedade de trechos, assine o Limiar completo.")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color.sageButton)
+                            .lineSpacing(4)
+                    }
+
+                    VStack(alignment: .leading, spacing: 13) {
+                        TrialDisclosureRow(icon: "book.closed", text: "3 trechos principais continuam disponíveis")
+                        TrialDisclosureRow(icon: "sparkles", text: "Reflexões personalizadas na versão completa")
+                        TrialDisclosureRow(icon: "speaker.wave.2", text: "Narração dos textos na versão completa")
+                        TrialDisclosureRow(icon: "arrow.triangle.2.circlepath", text: "Maior variedade de trechos na versão completa")
+                    }
+                    .padding(16)
+                    .limiarPanel()
+
+                    NavigationLink {
+                        PaywallView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text("Ver planos")
+                            Image(systemName: "arrow.right")
+                        }
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(Color.deepInk)
+                    }
+
+                    Button("Continuar no Modo Essencial") {
+                        continueEssential()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.sageButton)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 58)
+                .padding(.bottom, 30)
+            }
         }
     }
 }
@@ -84,7 +171,7 @@ private struct FreeTrialStartView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura de R$ 9,90/mês para continuar usando os bloqueios, leituras e reflexões personalizadas.")
+                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura de R$ 9,90/mês para continuar usando as pausas, leituras e reflexões personalizadas.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -114,7 +201,7 @@ private struct FreeTrialStartView: View {
                         .foregroundStyle(Color.deepInk)
                     }
 
-                    Text("Você não está assinando agora. O teste é liberado localmente e o app pedirá assinatura somente após os 7 dias.")
+                    Text("Você não está assinando agora. O teste começa localmente e o app pedirá assinatura somente após os 7 dias.")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -150,7 +237,7 @@ private struct TrialConversionView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Você já começou a recuperar seu foco e criar uma rotina espiritual. Para continuar usando os bloqueios, leituras e reflexões personalizadas após o teste gratuito, assine o Limiar Premium.")
+                        Text("Você já começou a recuperar seu foco e criar uma rotina espiritual. Para continuar usando as pausas, leituras e reflexões personalizadas após o teste gratuito, assine o Limiar Premium.")
                             .font(.system(size: 17))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -234,12 +321,12 @@ struct TrialMetricsPanel: View {
             TrialMetricRow(
                 icon: "clock",
                 value: model.estimatedFocusTimeText,
-                label: "longe dos apps protegidos"
+                label: "com pausas antes dos apps"
             )
             TrialMetricRow(
                 icon: "lock.open",
                 value: "\(model.history.count)",
-                label: model.history.count == 1 ? "desbloqueio consciente" : "desbloqueios conscientes"
+                label: model.history.count == 1 ? "pausa consciente" : "pausas conscientes"
             )
         }
         .padding(16)
@@ -277,7 +364,6 @@ private struct DashboardView: View {
     @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
-    @State private var showingAccessReleasedGuide = false
     @State private var unlockPhase = UnlockButtonPhase.locked
     @State private var unlockAnimationTick = 0
 
@@ -300,7 +386,7 @@ private struct DashboardView: View {
                                     .font(.system(size: 48, weight: .regular, design: .serif))
                                     .foregroundStyle(Color.ivory)
 
-                                Text("Reserve alguns minutos para iluminar sua mente.")
+                                Text("Reserve alguns minutos para uma leitura que fortaleça sua fé.")
                                     .font(.system(size: 18, weight: .regular))
                                     .foregroundStyle(Color.softText)
                                     .lineSpacing(4)
@@ -322,6 +408,7 @@ private struct DashboardView: View {
                         blockedAppsStrip
                         trialStatusBadge
                         readingRequirementHeader
+                        essentialModeNotice
                         readingItemsList
                         chooseAppsButton
                         completionExplanation
@@ -346,14 +433,8 @@ private struct DashboardView: View {
         .navigationDestination(isPresented: $showingSettings) {
             SettingsView()
         }
-        .fullScreenCover(isPresented: $showingAccessReleasedGuide) {
-            AccessReleasedView(
-                duration: model.unlockDurationDescription,
-                unlockedUntil: model.unlockedUntil
-            )
-        }
         .familyActivityPicker(
-            headerText: "Escolha apps, categorias ou sites que o Limiar deve proteger.",
+            headerText: "Escolha apps, categorias ou sites que vão ativar o Limiar.",
             footerText: "Você pode alterar isso depois em Preferências.",
             isPresented: $showingPicker,
             selection: $model.selection
@@ -394,7 +475,7 @@ private struct DashboardView: View {
 
     private var blockedAppsStrip: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("APPS PROTEGIDOS")
+            Text("APPS QUE ATIVAM O LIMIAR")
                 .font(.system(size: 13, weight: .bold))
                 .tracking(1.5)
                 .foregroundStyle(Color.warmGold)
@@ -432,7 +513,7 @@ private struct DashboardView: View {
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Leia com calma e conclua para liberar os apps protegidos por 30 minutos.")
+            Text("Leia com calma e reflita sobre sua vida.")
                 .font(.system(size: 18))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(5)
@@ -441,14 +522,16 @@ private struct DashboardView: View {
 
     private var readingItemsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Button {
-                    narration.toggle(text: model.currentReadingNarrationText)
-                } label: {
-                    Label(narration.isSpeaking ? "Parar narração" : "Ouvir leitura", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
-                        .lineLimit(1)
+            if model.hasPremiumAccess {
+                HStack(spacing: 12) {
+                    Button {
+                        narration.toggle(text: model.currentReadingNarrationText)
+                    } label: {
+                        Label(narration.isSpeaking ? "Parar narração" : "Ouvir leitura", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
                 }
-                .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
             }
 
             ForEach(model.currentSpiritualReadingItems) { item in
@@ -461,7 +544,46 @@ private struct DashboardView: View {
                     listenAction: {
                         narration.toggle(text: "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)")
                     },
-                    isSpeaking: narration.isSpeaking
+                    isSpeaking: narration.isSpeaking,
+                    showsReflection: model.hasPremiumAccess,
+                    showsNarration: model.hasPremiumAccess
+                )
+            }
+        }
+    }
+
+    private var essentialModeNotice: some View {
+        Group {
+            if model.isEssentialMode {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "leaf.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.sageButton)
+
+                        Text("Modo Essencial")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.ivory)
+                    }
+
+                    Text("Você está lendo os trechos principais. Reflexões, narração e maior variedade estão disponíveis no Limiar completo.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(4)
+
+                    NavigationLink {
+                        PaywallView()
+                    } label: {
+                        Text("Ver planos")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.sageButton)
+                    }
+                }
+                .padding(14)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
                 )
             }
         }
@@ -478,10 +600,10 @@ private struct DashboardView: View {
                     .glassCircle()
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ajustar apps protegidos")
+                    Text("Ajustar Apps que ativam o Limiar")
                         .font(.system(size: 19, weight: .regular, design: .serif))
                         .foregroundStyle(Color.ivory)
-                    Text("Escolha quais apps você quer proteger")
+                    Text("Defina quais apps vão acionar essa pausa")
                         .font(.system(size: 15))
                         .foregroundStyle(Color.softText)
                 }
@@ -500,7 +622,7 @@ private struct DashboardView: View {
     }
 
     private var completionExplanation: some View {
-        Text("Após concluir a leitura, seus apps protegidos serão liberados por \(model.unlockDurationDescription). Quando esse período terminar, será necessário fazer uma nova leitura para liberar o acesso novamente.")
+        Text("Após concluir a leitura, os apps selecionados ficarão disponíveis para uso.")
             .font(.system(size: 14))
             .foregroundStyle(Color.softText)
             .lineSpacing(5)
@@ -524,9 +646,6 @@ private struct DashboardView: View {
                     Text(unlockPhase.title)
                         .font(.system(size: 22, weight: .regular, design: .serif))
                         .foregroundStyle(Color.deepInk)
-                    Text(unlockPhase.subtitle(duration: model.unlockDurationDescription))
-                        .font(.system(size: 15))
-                        .foregroundStyle(Color.deepInk.opacity(0.70))
                 }
                 Spacer()
                 Image(systemName: unlockPhase.trailingIconName)
@@ -571,148 +690,8 @@ private struct DashboardView: View {
             unlockAnimationTick += 1
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
-            showingAccessReleasedGuide = true
-        }
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
             unlockPhase = .locked
-        }
-    }
-}
-
-private struct AccessReleasedView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let duration: String
-    let unlockedUntil: Date?
-
-    var body: some View {
-        ZStack {
-            LimiarBackground()
-
-            GeometryReader { geometry in
-                let contentWidth = min(max(geometry.size.width - 48, 0), 560)
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 28) {
-                        Spacer(minLength: 24)
-
-                        VStack(spacing: 18) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.sageButton.opacity(0.20))
-                                    .frame(width: 96, height: 96)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.sageButton.opacity(0.48), lineWidth: 1)
-                                    )
-
-                                Image(systemName: "lock.open.fill")
-                                    .font(.system(size: 36, weight: .semibold))
-                                    .foregroundStyle(Color.sageButton)
-                            }
-                            .shadow(color: Color.sageButton.opacity(0.24), radius: 24, x: 0, y: 12)
-
-                            VStack(spacing: 12) {
-                                Text("Acesso liberado")
-                                    .font(.system(size: 44, weight: .regular, design: .serif))
-                                    .foregroundStyle(Color.ivory)
-                                    .multilineTextAlignment(.center)
-                                    .fixedSize(horizontal: false, vertical: true)
-
-                                Text("Seus apps protegidos foram liberados por \(duration).")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(Color.sageButton)
-                                    .multilineTextAlignment(.center)
-                                    .lineSpacing(4)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-
-                        VStack(alignment: .leading, spacing: 14) {
-                            AccessReleasedInstructionRow(
-                                icon: "checkmark.shield.fill",
-                                title: "Leitura concluída",
-                                text: "O Limiar confirmou sua pausa e retirou o bloqueio temporariamente."
-                            )
-
-                            AccessReleasedInstructionRow(
-                                icon: "iphone.homebutton",
-                                title: "Volte para a Tela de Início",
-                                text: "Use o gesto do iPhone ou o botão Início e abra o aplicativo que deseja usar."
-                            )
-
-                            AccessReleasedInstructionRow(
-                                icon: "clock.arrow.circlepath",
-                                title: "O bloqueio volta depois",
-                                text: "Quando o período terminar, será necessária uma nova leitura para liberar mais acesso."
-                            )
-                        }
-                        .padding(18)
-                        .limiarPanel()
-
-                        if let unlockedUntil {
-                            Text("Liberado até \(unlockedUntil.formatted(date: .omitted, time: .shortened)).")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.softText)
-                                .multilineTextAlignment(.center)
-                        }
-
-                        Spacer(minLength: 20)
-
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text("Continuar no Limiar")
-                                .font(.system(size: 18, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 60)
-                                .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 18))
-                                .foregroundStyle(Color.deepInk)
-                        }
-
-                        Text("Por segurança, o iOS não permite que o app feche sozinho. O acesso já está liberado.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.softText)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(4)
-                            .padding(.horizontal, 8)
-                    }
-                    .frame(width: contentWidth)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-}
-
-private struct AccessReleasedInstructionRow: View {
-    let icon: String
-    let title: String
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 13) {
-            Image(systemName: icon)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.sageButton)
-                .frame(width: 28, height: 28)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.ivory)
-
-                Text(text)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.softText)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
     }
 }
@@ -724,8 +703,9 @@ private enum UnlockButtonPhase: Equatable {
 
     var iconName: String {
         switch self {
-        case .locked: "lock.fill"
-        case .opening, .unlocked: "lock.open.fill"
+        case .locked: "sunrise.fill"
+        case .opening: "sparkles"
+        case .unlocked: "checkmark.circle.fill"
         }
     }
 
@@ -739,17 +719,9 @@ private enum UnlockButtonPhase: Equatable {
 
     var title: String {
         switch self {
-        case .locked: "Li com calma, liberar acesso"
-        case .opening: "Liberando acesso"
-        case .unlocked: "Acesso liberado"
-        }
-    }
-
-    func subtitle(duration: String) -> String {
-        switch self {
-        case .locked: "Libera por \(duration)"
-        case .opening: "Abrindo seus apps protegidos"
-        case .unlocked: "Apps liberados por \(duration)"
+        case .locked: "Li com calma, continuar"
+        case .opening: "Preparando sua volta"
+        case .unlocked: "Tudo pronto"
         }
     }
 
@@ -823,7 +795,7 @@ private struct BlockedApplicationIcon: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.sageButton.opacity(0.20), lineWidth: 1)
             )
-            .accessibilityLabel("APP bloqueado")
+            .accessibilityLabel("App selecionado")
     }
 }
 
@@ -833,6 +805,8 @@ private struct SpiritualReadingCard: View {
     let saveAction: () -> Void
     let listenAction: () -> Void
     let isSpeaking: Bool
+    var showsReflection = true
+    var showsNarration = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -861,30 +835,34 @@ private struct SpiritualReadingCard: View {
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Explicação espiritual")
-                    .font(.system(size: 13, weight: .bold))
-                    .tracking(1.1)
-                    .foregroundStyle(Color.warmGold)
+            if showsReflection {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Explicação espiritual")
+                        .font(.system(size: 13, weight: .bold))
+                        .tracking(1.1)
+                        .foregroundStyle(Color.warmGold)
 
-                Text(item.homily)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.ivory.opacity(0.92))
-                    .lineSpacing(5)
+                    Text(item.homily)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Color.ivory.opacity(0.92))
+                        .lineSpacing(5)
 
-                Text(item.practicalConclusion)
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(Color.softText.opacity(0.92))
-                    .lineSpacing(5)
+                    Text(item.practicalConclusion)
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(Color.softText.opacity(0.92))
+                        .lineSpacing(5)
+                }
+                .padding(14)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
             }
-            .padding(14)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
 
-            Button(action: listenAction) {
-                Label(isSpeaking ? "Parar narração" : "Ouvir este trecho", systemImage: isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
-                    .lineLimit(1)
+            if showsNarration {
+                Button(action: listenAction) {
+                    Label(isSpeaking ? "Parar narração" : "Ouvir este trecho", systemImage: isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
+                        .lineLimit(1)
+                }
+                .buttonStyle(ReadingActionButtonStyle(isHighlighted: isSpeaking))
             }
-            .buttonStyle(ReadingActionButtonStyle(isHighlighted: isSpeaking))
         }
         .padding(18)
         .limiarPanel()
@@ -893,10 +871,8 @@ private struct SpiritualReadingCard: View {
 
 private struct ReadingView: View {
     @Environment(LimiarAppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var narration = PassageNarrationService()
     @State private var now = Date()
-    @State private var showingAccessReleasedGuide = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -920,7 +896,9 @@ private struct ReadingView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.warmGold)
 
-                    readingActions
+                    if model.hasPremiumAccess {
+                        readingActions
+                    }
 
                     Text(model.currentReadingText)
                         .font(.system(size: 24, weight: .regular, design: .serif))
@@ -928,10 +906,16 @@ private struct ReadingView: View {
                         .lineSpacing(8)
                         .padding(.vertical, 10)
 
-                    aiStatusBanner
-                    reflectionSection
+                    if model.hasPremiumAccess {
+                        aiStatusBanner
+                        reflectionSection
+                    } else if model.isEssentialMode {
+                        essentialModeReadingNotice
+                    }
                     readingGate
-                    disclaimer
+                    if model.hasPremiumAccess {
+                        disclaimer
+                    }
                     completionButton
                 }
                 .padding(22)
@@ -940,14 +924,6 @@ private struct ReadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $showingAccessReleasedGuide, onDismiss: {
-            dismiss()
-        }) {
-            AccessReleasedView(
-                duration: model.unlockDurationDescription,
-                unlockedUntil: model.unlockedUntil
-            )
-        }
         .onReceive(timer) { date in
             now = date
             model.updateReadingProgress(at: date)
@@ -995,6 +971,26 @@ private struct ReadingView: View {
         }
     }
 
+    private var essentialModeReadingNotice: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Modo Essencial", systemImage: "leaf.fill")
+                .font(.system(size: 13, weight: .bold))
+                .tracking(1.1)
+                .foregroundStyle(Color.warmGold)
+
+            Text("Você está lendo os trechos principais. Reflexões, narração e maior variedade estão disponíveis no Limiar completo.")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.softText)
+                .lineSpacing(4)
+        }
+        .padding(14)
+        .background(Color.black.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.ivory.opacity(0.1), lineWidth: 1)
+        )
+    }
+
     private var aiStatusBanner: some View {
         HStack(alignment: .top, spacing: 10) {
             if model.aiContentState == .generating {
@@ -1030,11 +1026,11 @@ private struct ReadingView: View {
 
     private var readingGate: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(model.canCompleteReading ? "Leitura suficiente para liberar" : "Permaneça mais um pouco no trecho")
+            Text(model.canCompleteReading ? "Leitura suficiente para continuar" : "Permaneça mais um pouco no trecho")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.ivory)
 
-            Text(model.canCompleteReading ? "Você já pode concluir e liberar os apps protegidos por 30 minutos." : "A barra avança enquanto você lê ou escuta. O objetivo é atravessar com calma.")
+            Text(model.canCompleteReading ? "Você já pode concluir e retomar os apps selecionados." : "A barra avança enquanto você lê ou escuta. O objetivo é atravessar com calma.")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(4)
@@ -1052,7 +1048,6 @@ private struct ReadingView: View {
     private var completionButton: some View {
         Button {
             model.finishReading()
-            showingAccessReleasedGuide = true
         } label: {
             Text(model.canCompleteReading ? "Concluir leitura" : "Siga no seu tempo")
                 .font(.system(size: 18, weight: .semibold))
@@ -1165,7 +1160,7 @@ private struct OnboardingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .familyActivityPicker(
-            headerText: "Escolha quais apps você quer proteger.",
+            headerText: "Escolha quais apps vão ativar o Limiar.",
             footerText: "O Limiar usa o seletor nativo do Tempo de Uso.",
             isPresented: $showingPicker,
             selection: $model.selection
@@ -1308,7 +1303,7 @@ private struct OnboardingView: View {
     private var screenTime: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 22) {
-                OnboardingTitle(eyebrow: "TEMPO DE USO", title: "Ative o bloqueio")
+                OnboardingTitle(eyebrow: "ATIVAÇÃO", title: "Ative o Limiar")
 
                 Text("Siga estas 2 etapas para começar.")
                     .font(.system(size: 20, weight: .regular))
@@ -1336,7 +1331,7 @@ private struct OnboardingView: View {
                         .foregroundStyle(Color.sageButton)
                         .padding(.top, 1)
 
-                    Text(status.isEmpty ? "O iOS pedirá permissão antes de aplicar bloqueios." : status)
+                    Text(status.isEmpty ? "O iOS pedirá permissão antes de ativar as pausas." : status)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -1428,7 +1423,7 @@ private struct OnboardingView: View {
         }
 
         if !model.hasBlockedAppsSelection {
-            status = "Agora escolha os apps ou categorias que deseja proteger."
+            status = "Agora escolha os apps ou categorias que vão ativar o Limiar."
             showingPicker = true
             return
         }
@@ -1498,7 +1493,7 @@ private struct ScreenTimeSetupPanel: View {
             VStack(spacing: 22) {
                 ScreenTimeSetupStep(
                     title: "1. Autorizar Tempo de Uso",
-                    subtitle: "Permite que o app aplique os bloqueios.",
+                    subtitle: "Permite que o Limiar crie pausas antes dos apps selecionados.",
                     buttonTitle: isAuthorized ? "Autorizado" : "Autorizar",
                     systemImage: isAuthorized ? "checkmark.shield.fill" : "checkmark.shield",
                     state: isAuthorized ? .completed : .available,
@@ -1510,10 +1505,10 @@ private struct ScreenTimeSetupPanel: View {
                     .overlay(Color.white.opacity(0.10))
 
                 ScreenTimeSetupStep(
-                    title: "2. Escolher apps bloqueados",
-                    subtitle: "Selecione apps ou categorias para limitar.",
+                    title: "2. Escolher apps que ativam o Limiar",
+                    subtitle: "Selecione apps ou categorias que vão acionar essa pausa.",
                     buttonTitle: !isAuthorized ? "Disponível após a autorização" : (hasSelection ? "Apps escolhidos" : "Escolher apps"),
-                    systemImage: !isAuthorized ? "lock" : (hasSelection ? "checkmark.circle" : "square.grid.2x2"),
+                    systemImage: !isAuthorized ? "hourglass" : (hasSelection ? "checkmark.circle" : "square.grid.2x2"),
                     state: appSelectionState,
                     allowsCompletedAction: true,
                     action: selectAppsAction
@@ -1684,7 +1679,7 @@ private struct BlockedSelectionHierarchySummary: View {
                 if !categoryTokens.isEmpty {
                     BlockedSelectionGroup(
                         title: categoryTokens.count == 1 ? "Categoria selecionada" : "Categorias selecionadas",
-                        subtitle: categoryTokens.count == 1 ? "Todos os apps desta categoria ficam protegidos." : "Todos os apps dessas categorias ficam protegidos.",
+                        subtitle: categoryTokens.count == 1 ? "Todos os apps desta categoria vão acionar a pausa." : "Todos os apps dessas categorias vão acionar a pausa.",
                         itemCount: categoryTokens.count,
                         systemImage: "square.stack.3d.up.fill"
                     ) {
@@ -1718,7 +1713,7 @@ private struct BlockedSelectionHierarchySummary: View {
                 if !webDomainTokens.isEmpty {
                     BlockedSelectionGroup(
                         title: webDomainTokens.count == 1 ? "Site selecionado" : "Sites selecionados",
-                        subtitle: "Domínios protegidos pelo Tempo de Uso.",
+                        subtitle: "Domínios selecionados no Tempo de Uso.",
                         itemCount: webDomainTokens.count,
                         systemImage: "globe"
                     ) {
@@ -1890,17 +1885,17 @@ struct SettingsView: View {
             LimiarBackground()
 
             Form {
-                Section("Bloqueio") {
-                    Toggle("Bloqueio ativo", isOn: $model.blockingEnabled)
-                        .disabled(!subscription.hasPremiumAccess)
-                    LabeledContent("Liberação temporária") {
+                Section("Ativação") {
+                    Toggle("Limiar ativo", isOn: $model.blockingEnabled)
+                        .disabled(!model.hasPauseAccess)
+                    LabeledContent("Período após a leitura") {
                         Text(model.unlockDurationDescription)
                             .foregroundStyle(.secondary)
                     }
-                    Button("Ajustar apps protegidos") {
+                    Button("Ajustar apps que ativam o Limiar") {
                         showingPicker = true
                     }
-                    .disabled(!subscription.hasPremiumAccess)
+                    .disabled(!model.hasPauseAccess)
 
                     if model.hasBlockedAppsSelection {
                         BlockedSelectionHierarchySummary(selection: model.selection)
@@ -1948,7 +1943,7 @@ struct SettingsView: View {
                         Text("Status")
                         Spacer()
                         Text(subscriptionStatusLabel)
-                            .foregroundStyle(subscription.hasPremiumAccess ? Color.sageButton : .secondary)
+                            .foregroundStyle(subscription.hasPremiumAccess || subscription.isEssentialMode ? Color.sageButton : .secondary)
                     }
 
                     if !subscription.hasActiveSubscription {

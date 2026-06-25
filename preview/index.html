@@ -526,8 +526,8 @@
         <button class="screen-button active" data-screen="welcome">1. Boas-vindas</button>
         <button class="screen-button" data-screen="tradition">2. Tradição</button>
         <button class="screen-button" data-screen="preferences">3. Preferências</button>
-        <button class="screen-button" data-screen="apps">4. APPs bloqueados</button>
-        <button class="screen-button" data-screen="release">5. Liberação</button>
+        <button class="screen-button" data-screen="apps">4. Ativação</button>
+        <button class="screen-button" data-screen="release">5. Teste grátis</button>
         <button class="screen-button" data-screen="home">6. Início</button>
       </div>
     </aside>
@@ -558,7 +558,7 @@
           <img class="logo" src="./limiar-logo.png" alt="">
           <div class="gold">B E M - V I N D O</div>
           <div class="title" style="font-size: 76px;">Limiar</div>
-          <div class="lead">Antes de voltar para as<br>distrações, reserve alguns<br>minutos para iluminar<br>sua mente.</div>
+          <div class="lead">Antes de voltar às<br>distrações, reserve alguns<br>minutos para uma leitura<br>que fortaleça sua fé.</div>
           <div class="bottom-nav">
             <div class="progress"><span class="current"></span><span></span><span></span><span></span><span></span></div>
             <button class="continue">Continuar →</button>
@@ -597,45 +597,44 @@
         `
       },
       apps: {
-        title: "APPs bloqueados",
+        title: "Ativação",
         note: "Tela para revisar textos do Tempo de Uso, botões, alerta e clareza da permissão.",
         body: `
           <div style="height: 142px;"></div>
-          <div class="gold">TEMPO DE USO</div>
-          <div class="title">Escolha quais APPs você quer bloquear.</div>
+          <div class="gold">ATIVAÇÃO</div>
+          <div class="title">Ative o Limiar.</div>
           <div class="rows">
-            <button class="secondary">▦ Selecionar APPs e categorias</button>
             <button class="primary">▣ Autorizar Tempo de Uso</button>
+            <button class="secondary">▦ Escolher apps que ativam o Limiar</button>
           </div>
-          <p class="lead" style="font-size:15px;">O iOS pedirá permissão antes de aplicar bloqueios.</p>
+          <p class="lead" style="font-size:15px;">O iOS pedirá permissão antes de ativar as pausas.</p>
           <div class="bottom-nav"><div class="back">‹</div><div class="progress"><span></span><span></span><span></span><span class="current"></span><span></span></div><button class="continue">Continuar →</button></div>
         `
       },
       release: {
-        title: "Liberação",
-        note: "Tela para anotar texto de duração, subtítulo e opções de 15, 30 e 60 minutos.",
+        title: "Teste grátis",
+        note: "Tela para anotar clareza de preço, teste gratuito e assinatura.",
         body: `
-          <div class="gold">LIBERAÇÃO</div>
-          <div class="title">Defina o tempo de liberação do app após a leitura religiosa.</div>
-          <p class="lead" style="font-size:16px;line-height:1.5;">Depois desse tempo, será necessário fazer uma nova leitura para liberar mais tempo de uso do APP.</p>
+          <div class="gold">TESTE GRÁTIS</div>
+          <div class="title">Comece com 7 dias grátis.</div>
+          <p class="lead" style="font-size:16px;line-height:1.5;">Use o Limiar completo gratuitamente por 7 dias. Depois, assine por R$ 9,90/mês para continuar.</p>
           <div class="rows">
-            <div class="row"><div class="row-title"><span class="dot"></span>15 minutos</div><p class="row-subtitle">Pode ser alterado depois.</p></div>
-            <div class="row selected"><div class="row-title"><span class="dot"></span>30 minutos</div><p class="row-subtitle">Equilíbrio recomendado para começar.</p></div>
-            <div class="row"><div class="row-title"><span class="dot"></span>60 minutos</div><p class="row-subtitle">Pode ser alterado depois.</p></div>
+            <div class="row selected"><div class="row-title"><span class="dot"></span>7 dias grátis</div><p class="row-subtitle">Sem cobrança antes do fim do teste.</p></div>
+            <div class="row"><div class="row-title"><span class="dot"></span>Depois R$ 9,90/mês</div><p class="row-subtitle">Cancele quando quiser.</p></div>
           </div>
-          <div class="bottom-nav"><div class="back">‹</div><div class="progress"><span></span><span></span><span></span><span></span><span class="current"></span></div><button class="continue small">Ativar</button></div>
+          <div class="bottom-nav"><div class="back">‹</div><div class="progress"><span></span><span></span><span></span><span></span><span class="current"></span></div><button class="continue small">Começar</button></div>
         `
       },
       home: {
         title: "Início",
-        note: "Tela para anotar a nova arquitetura: APPs em ícones, cinco trechos, explicação por trecho e botão de liberação.",
+        note: "Tela para anotar a arquitetura atual: apps em ícones, três trechos, explicação por trecho e botão de continuidade.",
         body: `
           <div class="dash-header">
-            <div><div class="title" style="font-size:48px;margin:0;">Limiar</div><p class="lead" style="font-size:17px;margin-top:8px;">Reserve alguns minutos para iluminar sua mente.</p></div>
+            <div><div class="title" style="font-size:48px;margin:0;">Limiar</div><p class="lead" style="font-size:17px;margin-top:8px;">Reserve alguns minutos para uma leitura que fortaleça sua fé.</p></div>
             <div class="profile">♙</div>
           </div>
           <div class="card" style="margin-top:22px;">
-            <div class="gold">APPS BLOQUEADOS</div>
+            <div class="gold">APPS QUE ATIVAM O LIMIAR</div>
             <div class="app-icons">
               <div class="app-icon instagram">◎</div>
               <div class="app-icon tiktok">♪</div>
@@ -645,7 +644,7 @@
           </div>
           <div class="gold" style="margin-top:20px;">SEU LIMIAR</div>
           <div class="title" style="font-size:43px;">Caminho de leitura</div>
-          <p class="lead" style="font-size:17px;margin-top:8px;">Leia com calma e conclua para liberar seus APPs pelo tempo escolhido.</p>
+          <p class="lead" style="font-size:17px;margin-top:8px;">Leia com calma e reflita sobre sua vida.</p>
           <button class="mini-action" style="margin-top:12px;width:100%;">Ouvir leitura</button>
           <div class="card passage-card">
             <button class="save">♥</button>
@@ -665,20 +664,8 @@
             <div class="passage-small">Tu te inquietas por muitas coisas. No entanto, uma só coisa é necessária.</div>
             <div class="homily"><strong>Explicação espiritual</strong><br>O trecho ajuda a escolher melhor onde colocar a atenção neste momento.</div>
           </div>
-          <div class="card passage-card">
-            <button class="save">♡</button>
-            <div class="reference"><span>Mateus 11, 28-30</span></div>
-            <div class="passage-small">Vinde a mim, todos vós que estais cansados, e eu vos darei descanso.</div>
-            <div class="homily"><strong>Explicação espiritual</strong><br>Antes do impulso, há um convite ao descanso e a uma escolha mais livre.</div>
-          </div>
-          <div class="card passage-card">
-            <button class="save">♡</button>
-            <div class="reference"><span>Provérbios 3, 5-6</span></div>
-            <div class="passage-small">Confia no Senhor de todo o teu coração e reconhece-o em teus caminhos.</div>
-            <div class="homily"><strong>Explicação espiritual</strong><br>A conclusão prática é voltar ao app com consciência, sem deixar que o impulso decida sozinho.</div>
-          </div>
-          <p class="lead" style="font-size:12px;margin-top:12px;">Após concluir a leitura, seus APPs serão liberados pelo tempo escolhido no onboarding.</p>
-          <button class="primary unlock-button" style="margin-top:12px;"><span>🔒</span>Li com calma, liberar acesso</button>
+          <p class="lead" style="font-size:12px;margin-top:12px;">Após concluir a leitura, os apps selecionados ficarão disponíveis para uso.</p>
+          <button class="primary unlock-button" style="margin-top:12px;"><span>☀</span>Li com calma, continuar</button>
         `
       }
     };

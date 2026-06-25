@@ -598,6 +598,7 @@ enum AIContentState: Equatable {
     case generating
     case remoteReady
     case fallback
+    case essentialMode
 
     var title: String {
         switch self {
@@ -609,6 +610,8 @@ enum AIContentState: Equatable {
             "Reflexão gerada por IA"
         case .fallback:
             "Atualização indisponível"
+        case .essentialMode:
+            "Modo Essencial"
         }
     }
 
@@ -622,6 +625,8 @@ enum AIContentState: Equatable {
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
             "Não foi possível buscar uma nova leitura agora. Tente novamente em instantes."
+        case .essentialMode:
+            "Você está lendo os trechos principais. Reflexões, narração e maior variedade estão disponíveis no Limiar completo."
         }
     }
 }
@@ -634,6 +639,7 @@ final class LimiarAppModel {
     var hasCompletedOnboarding = false
     var hasSeenValueDemo = false
     var hasPremiumAccess = false
+    var isEssentialMode = false
     var faithProfile = UserFaithProfile.starter
     var unlockDurationMinutes = LimiarAppModel.defaultUnlockDurationMinutes
     var blockingEnabled = true
@@ -759,6 +765,8 @@ final class LimiarAppModel {
     }
 
     var currentReadingNarrationText: String {
+        guard hasPremiumAccess else { return "" }
+
         let passageBlocks = currentSpiritualReadingItems.enumerated().map { index, item in
             """
             Texto \(index + 1).
@@ -793,6 +801,10 @@ final class LimiarAppModel {
             || !selection.webDomainTokens.isEmpty
     }
 
+    var hasPauseAccess: Bool {
+        hasPremiumAccess || isEssentialMode
+    }
+
     var estimatedFocusTimeText: String {
         let totalMinutes = max(0, history.count * unlockDurationMinutes)
         guard totalMinutes >= 60 else {
@@ -809,7 +821,7 @@ final class LimiarAppModel {
         policyStore.saveOnboardingState(true)
         saveProfile()
         beginNewReading(avoidingCurrent: true)
-        if hasPremiumAccess {
+        if hasPauseAccess {
             applyBlocking()
         }
     }
@@ -820,17 +832,27 @@ final class LimiarAppModel {
     }
 
     func updatePremiumAccess(_ isActive: Bool) {
-        let hadPremiumAccess = hasPremiumAccess
-        hasPremiumAccess = isActive
+        updateAccess(hasPremiumAccess: isActive, isEssentialMode: false)
+    }
 
-        if isActive {
-            if !hadPremiumAccess || currentSpiritualReadingItems.isEmpty {
+    func updateAccess(hasPremiumAccess isActive: Bool, isEssentialMode essentialMode: Bool) {
+        let hadPauseAccess = hasPauseAccess
+        let hadFullAccess = hasPremiumAccess
+        let hadEssentialMode = isEssentialMode
+
+        hasPremiumAccess = isActive
+        isEssentialMode = essentialMode && !isActive
+
+        if hasPauseAccess {
+            if !hadPauseAccess || currentSpiritualReadingItems.isEmpty || hadFullAccess != isActive || hadEssentialMode != isEssentialMode {
                 beginNewReading(avoidingCurrent: true)
             }
             applyBlocking()
         } else {
             aiContentState = .localReady
+            aiGenerationTask?.cancel()
             screenTimeController.clearShield()
+            cancelLocalUnlockExpiration()
         }
     }
 
@@ -961,9 +983,9 @@ final class LimiarAppModel {
     }
 
     func finishReading() {
-        guard hasPremiumAccess else {
+        guard hasPauseAccess else {
             isReadingSessionActive = false
-            unlockNote = "O desbloqueio completo exige o Limiar Premium."
+            unlockNote = "Inicie o teste gratuito para ativar a pausa antes dos apps selecionados."
             screenTimeController.clearShield()
             return
         }
@@ -986,12 +1008,12 @@ final class LimiarAppModel {
         screenTimeController.clearShield()
         screenTimeController.scheduleUnlockExpiration(at: until)
         scheduleLocalUnlockExpiration(at: until)
-        unlockNote = "Liberado até \(until.formatted(date: .omitted, time: .shortened))."
+        unlockNote = "Disponível até \(until.formatted(date: .omitted, time: .shortened))."
         beginNewReading()
     }
 
     func applyBlocking() {
-        guard hasPremiumAccess else {
+        guard hasPauseAccess else {
             screenTimeController.clearShield()
             return
         }
@@ -1011,7 +1033,7 @@ final class LimiarAppModel {
     }
 
     func reapplyBlockIfNeeded() {
-        guard hasPremiumAccess else {
+        guard hasPauseAccess else {
             screenTimeController.clearShield()
             cancelLocalUnlockExpiration()
             return
@@ -1060,6 +1082,24 @@ final class LimiarAppModel {
         aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
+        if isEssentialMode {
+            currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
+            currentReflection = AIReflection(
+                summary: "",
+                spiritualMeaning: "",
+                practicalApplication: "",
+                conclusion: "",
+                meditationQuestion: ""
+            )
+            aiContentState = .essentialMode
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "essential"
+            values["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
+            LimiarAIDiagnostics.log("essential_mode_reading_prepared", values: values)
+            rememberShownPassages(resolvedPlan)
+            return
+        }
+
         let spiritualReadingService = AISpiritualReadingService()
         let reflectionService = AIReflectionService()
         currentSpiritualReadingItems = spiritualReadingService.readingItems(
@@ -1097,6 +1137,18 @@ final class LimiarAppModel {
         values["requestKey"] = remoteRequestKey
         LimiarAIDiagnostics.log("remote_ai_started", values: values)
         refreshRemoteAIContent(for: resolvedPlan, profile: profile, generationID: generationID)
+    }
+
+    private func essentialReadingItems(for passages: [ScripturePassage]) -> [SpiritualReadingItem] {
+        passages.map { passage in
+            SpiritualReadingItem(
+                id: passage.id,
+                reference: passage.reference,
+                text: passage.text,
+                homily: "",
+                practicalConclusion: ""
+            )
+        }
     }
 
     private func remoteAIRequestKey(for passages: [ScripturePassage], profile: UserFaithProfile) -> String {
@@ -1137,7 +1189,7 @@ final class LimiarAppModel {
         self.unlockedUntil = nil
         policyStore.saveUnlockedUntil(nil)
         screenTimeController.applyShield(selection: selection)
-        unlockNote = "O período liberado terminou. Faça uma nova leitura para liberar temporariamente os apps protegidos."
+        unlockNote = "O período de uso terminou. Faça uma nova leitura para retomar os apps selecionados com presença."
         cancelLocalUnlockExpiration()
     }
 
@@ -1145,7 +1197,7 @@ final class LimiarAppModel {
         let ids = passages.map(\.id)
         recentPassageIDs.removeAll { ids.contains($0) }
         recentPassageIDs.insert(contentsOf: ids, at: 0)
-        recentPassageIDs = Array(recentPassageIDs.prefix(40))
+        recentPassageIDs = Array(recentPassageIDs.prefix(isEssentialMode ? 12 : 40))
         policyStore.saveRecentPassageIDs(recentPassageIDs)
     }
 

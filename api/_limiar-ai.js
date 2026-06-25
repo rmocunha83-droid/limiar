@@ -1,6 +1,7 @@
 const DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
 const DEFAULT_TTS_VOICE = "coral";
+const DEFAULT_TTS_SPEED = 0.92;
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
@@ -413,7 +414,7 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugCo
   }
 }
 
-async function callOpenAISpeech({ input, voice, instructions, debugContext = {} }) {
+async function callOpenAISpeech({ input, voice, instructions, speed, debugContext = {} }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     const error = new Error("OPENAI_API_KEY is not configured");
@@ -429,6 +430,7 @@ async function callOpenAISpeech({ input, voice, instructions, debugContext = {} 
     error.statusCode = 400;
     throw error;
   }
+  const speechSpeed = normalizeTTSSpeed(speed ?? process.env.OPENAI_TTS_SPEED ?? DEFAULT_TTS_SPEED);
 
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -443,7 +445,8 @@ async function callOpenAISpeech({ input, voice, instructions, debugContext = {} 
       clientID: debugContext.clientID,
       inputLength: cleanInput.length,
       ttsModel: process.env.OPENAI_TTS_MODEL || DEFAULT_TTS_MODEL,
-      voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE
+      voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE,
+      speed: speechSpeed
     });
 
     let response;
@@ -459,8 +462,9 @@ async function callOpenAISpeech({ input, voice, instructions, debugContext = {} 
           voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE,
           input: cleanInput,
           instructions: trimText(instructions, 900)
-            || "Narre em português do Brasil com voz calma, natural, acolhedora e ritmo contemplativo.",
-          response_format: "mp3"
+            || "Narre em português do Brasil com voz calma, natural, acolhedora e ritmo contemplativo. Faça pausas discretas entre referência, trecho, explicação e aplicação prática.",
+          response_format: "mp3",
+          speed: speechSpeed
         }),
         signal: controller.signal
       });
@@ -513,6 +517,12 @@ function normalizeSpeechInput(value) {
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+}
+
+function normalizeTTSSpeed(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_TTS_SPEED;
+  return Math.min(1.1, Math.max(0.75, parsed));
 }
 
 function classifyOpenAIError(status, data) {
@@ -578,6 +588,7 @@ module.exports = {
   DEFAULT_MODEL,
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE,
+  DEFAULT_TTS_SPEED,
   applyAudioHeaders,
   applyCommonHeaders,
   buildContextPrompt,

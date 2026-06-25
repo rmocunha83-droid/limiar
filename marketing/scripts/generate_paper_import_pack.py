@@ -116,14 +116,22 @@ def make_brand_board() -> Path:
 def make_app_store_board() -> Path:
     canvas = Image.new("RGB", (2200, 1540), COLORS["ink"])
     draw = ImageDraw.Draw(canvas)
-    header(draw, "App Store cards", "Five 1290 x 2796 store cards grouped as a review board.")
+    header(draw, "App Store cards", "Cinco cards 1290 x 2796 com a linguagem atual do Limiar.")
     cards = sorted(APP_STORE.glob("[0-9][0-9]-*.png"))
+    labels = [
+        "pausa consciente",
+        "leitura com IA",
+        "apps que ativam o Limiar",
+        "tradição espiritual",
+        "continuar com calma",
+    ]
     x = 72
     y = 310
     for idx, path in enumerate(cards, 1):
         thumb = contain(Image.open(path), (360, 780))
         rounded_paste(canvas, thumb, (x, y), 18)
-        draw_label(draw, (x, y + thumb.height + 26), f"Card {idx}", path.stem.replace("-", " "))
+        caption = labels[idx - 1] if idx - 1 < len(labels) else path.stem.replace("-", " ")
+        draw_label(draw, (x, y + thumb.height + 26), f"Card {idx}", caption)
         x += 412
     path = OUT / "paper-board-02-app-store-cards.png"
     canvas.save(path, quality=95)

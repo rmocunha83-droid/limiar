@@ -891,7 +891,7 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
             return """
             \(traditionOpening) \(themeLine)
 
-            Em \(passage.reference), a leitura não aparece apenas como uma frase bonita para acalmar o momento. Ela funciona como um convite a reconhecer o que está conduzindo a atenção antes de voltar aos apps bloqueados.
+            Em \(passage.reference), a leitura não aparece apenas como uma frase bonita para acalmar o momento. Ela funciona como um convite a reconhecer o que está conduzindo a atenção antes de voltar aos apps selecionados.
 
             Como você escolheu uma reflexão mais profunda, vale permanecer mais um pouco com esta pergunta interior: que parte da sua rotina precisa ser educada por este trecho hoje? A resposta pode começar em uma atitude pequena, mas mais fiel ao que você deseja cultivar.
             """
@@ -933,7 +933,7 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
         case .forgiveness:
             "responda com menos defesa e mais abertura ao perdão"
         case .discipline:
-            "escolha um limite concreto para proteger sua atenção"
+            "escolha um limite concreto para cuidar da sua atenção"
         case .wisdom:
             "separe o que é urgente do que é realmente importante"
         case .family:
@@ -1162,7 +1162,7 @@ struct LocalLightweightReflectionGenerator: AIReflectionGenerating {
                 spiritualMeaning: "\(tone) O foco de hoje é \(themeTitle.lowercased()), vivido em uma decisão simples.",
                 practicalApplication: practical,
                 conclusion: "Atravesse este momento com presença.",
-                meditationQuestion: "Que escolha protege sua atenção agora?"
+                meditationQuestion: "Que escolha ajuda você a cuidar da sua atenção agora?"
             )
         case .medium:
             return AIReflection(
@@ -1170,7 +1170,7 @@ struct LocalLightweightReflectionGenerator: AIReflectionGenerating {
                 spiritualMeaning: """
                 \(tone) A leitura convida você a olhar para \(themeTitle.lowercased()) sem pressa, deixando que a mensagem reorganize a próxima atitude.
 
-                Como \(bookTitle) está entre suas preferências ou no caminho sugerido, a reflexão procura aproximar o texto da sua rotina real, especialmente antes de voltar aos apps bloqueados.
+                Como \(bookTitle) está entre suas preferências ou no caminho sugerido, a reflexão procura aproximar o texto da sua rotina real, especialmente antes de voltar aos apps selecionados.
                 """,
                 practicalApplication: practical,
                 conclusion: "O Limiar ajuda a transformar o retorno ao celular em uma escolha mais consciente.",
@@ -1187,7 +1187,7 @@ struct LocalLightweightReflectionGenerator: AIReflectionGenerating {
                 Ao relacionar este caminho com \(bookTitle), a leitura procura respeitar a tradição escolhida e transformar o texto em uma meditação prática para o cotidiano, sem separar fé, atenção e decisão.
                 """,
                 practicalApplication: practical,
-                conclusion: "Antes de liberar mais tempo de uso, deixe este trecho tocar uma escolha concreta: voltar com mais intenção, menos automatismo e mais fidelidade ao que você quer formar em si.",
+                conclusion: "Antes de retomar o uso, deixe este trecho tocar uma escolha concreta: voltar com mais intenção, menos automatismo e mais fidelidade ao que você quer formar em si.",
                 meditationQuestion: "Que impulso costuma decidir por você, e que resposta mais livre este trecho convida você a praticar hoje?"
             )
         }
@@ -1209,7 +1209,7 @@ struct LocalLightweightReflectionGenerator: AIReflectionGenerating {
     private func practicalApplication(for request: AIReflectionRequest, themeTitle: String) -> String {
         switch request.explanationDepth {
         case .short:
-            return "Antes de seguir, escolha uma atitude simples ligada a \(themeTitle.lowercased()) para proteger sua atenção."
+            return "Antes de seguir, escolha uma atitude simples ligada a \(themeTitle.lowercased()) para cuidar da sua atenção."
         case .medium:
             return "Antes de seguir, respire, observe o impulso e escolha uma atitude ligada a \(themeTitle.lowercased()) para orientar os próximos minutos."
         case .deep:
@@ -1483,6 +1483,7 @@ struct RemoteReflectionRequestPayload: Codable {
 struct RemoteSpeechRequestPayload: Codable {
     let text: String
     let voice: String?
+    let speed: Double?
     let instructions: String
 }
 
@@ -1646,8 +1647,12 @@ struct RemoteAISpeechService {
         let payload = RemoteSpeechRequestPayload(
             text: text,
             voice: nil,
+            speed: 0.92,
             instructions: """
-            Narre em português do Brasil com voz calma, natural e acolhedora. Use ritmo contemplativo, pausas discretas entre referência, trecho, explicação e aplicação prática. Não soe apressado nem dramático.
+            Narre em português do Brasil com voz calma, natural e acolhedora, como uma leitura espiritual íntima.
+            Use ritmo contemplativo, com pausas discretas entre referência, trecho, explicação espiritual e aplicação prática.
+            Leia números de capítulos e versículos com naturalidade, sem pressa.
+            Evite tom robótico, dramático, publicitário ou acelerado.
             """
         )
 

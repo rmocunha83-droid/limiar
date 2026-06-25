@@ -5,6 +5,7 @@ const {
   DEFAULT_MODEL,
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE,
+  DEFAULT_TTS_SPEED,
   buildContextPrompt,
   depthGuidance,
   depthOutputTokenLimit,
@@ -24,6 +25,7 @@ test("keeps GPT-4.1 mini as the default commercial model", () => {
 test("keeps GPT-4o mini TTS as the economical default voice model", () => {
   assert.equal(DEFAULT_TTS_MODEL, "gpt-4o-mini-tts");
   assert.equal(DEFAULT_TTS_VOICE, "coral");
+  assert.equal(DEFAULT_TTS_SPEED, 0.92);
 });
 
 test("validates a complete reflection payload", () => {
@@ -34,7 +36,7 @@ test("validates a complete reflection payload", () => {
     spiritualMeaning: "O trecho recorda cuidado e direção.",
     practicalApplication: "Respire antes de abrir o app.",
     conclusion: "Atravesse com presença.",
-    meditationQuestion: "Que escolha protege sua atenção agora?"
+    meditationQuestion: "Que escolha ajuda você a cuidar da sua atenção agora?"
   });
 
   assert.equal(reflection.reference, "Salmo 23");
@@ -62,7 +64,7 @@ test("validates spiritual reading items", () => {
         homily: "A passagem chama a permanecer no essencial.",
         spiritualMeaning: "Permanecer é ordenar a atenção.",
         practicalApplication: "Volte ao app com escolha clara.",
-        conclusion: "A pausa protege a liberdade.",
+        conclusion: "A pausa fortalece a liberdade.",
         meditationQuestion: "O que merece permanência hoje?"
       }
     ]
