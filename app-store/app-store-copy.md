@@ -4,7 +4,7 @@
 Limiar
 
 ## Subtítulo
-Pausa espiritual antes dos apps
+Pausa espiritual antes de apps
 
 ## Texto promocional
 Crie uma pausa antes de abrir apps que puxam sua atenção. Leia uma jornada com trechos e explicações espirituais, conclua com calma e retome o uso com mais presença.
@@ -36,10 +36,10 @@ Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica 
 foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos
 
 ## URLs para App Store Connect
-- Marketing URL: publicar `marketing/site/index.html`
-- Privacy Policy URL: publicar `marketing/site/privacy.html`
-- Support URL: publicar `marketing/site/support.html`
-- Terms URL: publicar `marketing/site/terms.html`
+- Marketing URL: https://limiar-five.vercel.app/
+- Privacy Policy URL: https://limiar-five.vercel.app/privacy.html
+- Support URL: https://limiar-five.vercel.app/support.html
+- Terms URL: https://limiar-five.vercel.app/terms.html
 
 ## Compras dentro do app
 

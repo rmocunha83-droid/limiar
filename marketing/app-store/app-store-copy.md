@@ -4,7 +4,7 @@
 Limiar
 
 ## Subtítulo
-Pausa espiritual antes dos apps
+Pausa espiritual antes de apps
 
 ## Texto promocional
 Crie uma pausa antes de abrir apps que puxam sua atenção. Leia uma jornada com trechos e explicações espirituais, conclua com calma e retome o uso com mais presença.

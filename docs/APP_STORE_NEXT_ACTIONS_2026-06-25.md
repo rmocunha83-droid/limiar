@@ -82,7 +82,7 @@ Use estes arquivos como fonte:
 Campos principais:
 
 - Nome: `Limiar`
-- Subtítulo: `Pausa espiritual antes dos apps`
+- Subtítulo: `Pausa espiritual antes de apps`
 - Política de Privacidade: `https://limiar-five.vercel.app/privacy.html`
 - Suporte: `https://limiar-five.vercel.app/support.html`
 - Marketing URL: `https://limiar-five.vercel.app/`

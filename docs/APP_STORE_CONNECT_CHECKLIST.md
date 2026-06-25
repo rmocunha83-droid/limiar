@@ -53,7 +53,7 @@ Fonte principal:
 Campos:
 
 - Nome: `Limiar`
-- Subtítulo: `Pausa espiritual antes dos apps`
+- Subtítulo: `Pausa espiritual antes de apps`
 - Texto promocional: usar o campo `Texto promocional`.
 - Descrição: usar o campo `Descrição`.
 - Palavras-chave: `foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos`

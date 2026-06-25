@@ -32,7 +32,7 @@
 
 ### Subtítulo
 
-Pausa espiritual antes dos apps
+Pausa espiritual antes de apps
 
 ### Texto promocional
 

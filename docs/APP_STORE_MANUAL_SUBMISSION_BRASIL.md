@@ -85,7 +85,7 @@ Use como fonte:
 Campos principais:
 
 - Nome: `Limiar`
-- Subtítulo: `Pausa espiritual antes dos apps`
+- Subtítulo: `Pausa espiritual antes de apps`
 - Palavras-chave: `foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos`
 - Marketing URL: `https://limiar-five.vercel.app/`
 - Política de Privacidade: `https://limiar-five.vercel.app/privacy.html`
