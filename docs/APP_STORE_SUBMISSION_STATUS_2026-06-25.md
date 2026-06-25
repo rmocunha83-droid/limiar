@@ -50,6 +50,8 @@ Estas etapas dependem da interface do App Store Connect ou de uma chave App Stor
 11. Revisar App Privacy, classificação etária, export compliance e notas para revisão.
 12. Enviar app e assinatura para revisão juntos.
 
+Guia operacional para executar as etapas acima: `docs/APP_STORE_MANUAL_SUBMISSION_BRASIL.md`.
+
 ## Observação importante sobre o teste grátis
 
 O teste gratuito de 7 dias está implementado como experiência interna do app antes da assinatura. A assinatura StoreKit não precisa ter oferta introdutória para o lançamento inicial, salvo decisão posterior de produto.
