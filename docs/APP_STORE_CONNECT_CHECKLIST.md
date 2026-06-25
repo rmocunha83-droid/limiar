@@ -53,10 +53,10 @@ Fonte principal:
 Campos:
 
 - Nome: `Limiar`
-- Subtítulo: `Pausa espiritual antes dos APPs`
+- Subtítulo: `Pausa espiritual antes dos apps`
 - Texto promocional: usar o campo `Texto promocional`.
 - Descrição: usar o campo `Descrição`.
-- Palavras-chave: `foco,tempo de uso,bloqueio,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos`
+- Palavras-chave: `foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos`
 - Marketing URL: `https://limiar-five.vercel.app/`
 - Política de Privacidade: `https://limiar-five.vercel.app/privacy.html`
 - Suporte: `https://limiar-five.vercel.app/support.html`
@@ -125,7 +125,7 @@ Declaração sugerida com base no app atual:
 - Dados coletados: `Other Data Types`, finalidade `App Functionality`, não vinculado à identidade.
 - Dados sensíveis, saúde, financeiro, localização precisa, contatos, fotos, áudio, conteúdo do usuário, histórico de navegação: não declarar, salvo se algum recurso novo passar a coletar isso.
 
-O app usa UserDefaults/local storage para preferências, histórico local e estado de assinatura. As seleções de APPs via Screen Time devem permanecer no dispositivo e não ser vendidas ou compartilhadas.
+O app usa UserDefaults/local storage para preferências, histórico local e estado de assinatura. As seleções de apps via Screen Time devem permanecer no dispositivo e não ser vendidas ou compartilhadas.
 
 ## Age Rating
 

@@ -3,7 +3,7 @@
 ## Estado comprovado no projeto
 
 - Repositório local limpo em `main`.
-- Último commit enviado ao GitHub: `727a9a4 Atualiza checklist de publicação para Brasil`.
+- Último commit enviado ao GitHub antes desta checagem: `83d6ab0 Alinha assinatura inicial ao plano mensal`.
 - Site publicado na Vercel em `https://limiar-five.vercel.app/`.
 - Site público já reflete:
   - apps que ativam o Limiar;
