@@ -5,7 +5,6 @@ import StoreKit
 
 enum SubscriptionPlan: String, CaseIterable, Identifiable {
     case monthly = "limiar_premium_monthly"
-    case yearly = "limiar_premium_yearly"
 
     var id: String { rawValue }
 
@@ -14,21 +13,12 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .monthly: "Mensal"
-        case .yearly: "Anual"
         }
     }
 
     var fallbackPrice: String {
         switch self {
         case .monthly: "R$ 9,90/mês"
-        case .yearly: "R$ 79,90/ano"
-        }
-    }
-
-    var fallbackMonthlyEquivalent: String? {
-        switch self {
-        case .monthly: nil
-        case .yearly: "equivale a R$ 6,66/mês"
         }
     }
 }
@@ -70,7 +60,7 @@ final class SubscriptionManager {
         static let entitlementCacheKey = "limiar.subscription.hasActiveSubscription"
         static let trialStartDefaultsKey = "limiar.subscription.trialStartedAt"
         static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
-        static let productIDs = SubscriptionPlan.allCases.map(\.productID)
+        static let productIDs = [SubscriptionPlan.monthly.productID]
     }
 
     private(set) var products: [Product] = []
@@ -215,21 +205,7 @@ final class SubscriptionManager {
 
     func displayPrice(for plan: SubscriptionPlan) -> String {
         guard let product = product(for: plan) else { return plan.fallbackPrice }
-
-        switch plan {
-        case .monthly:
-            return "\(product.displayPrice)/mês"
-        case .yearly:
-            return "\(product.displayPrice)/ano"
-        }
-    }
-
-    func monthlyEquivalentText(for plan: SubscriptionPlan) -> String? {
-        guard plan == .yearly else { return nil }
-        guard let product = product(for: .yearly) else { return plan.fallbackMonthlyEquivalent }
-
-        let monthlyPrice = product.price / Decimal(12)
-        return "equivale a \(monthlyPrice.formatted(product.priceFormatStyle))/mês"
+        return "\(product.displayPrice)/mês"
     }
 
     func hasConfirmedFreeTrial(for plan: SubscriptionPlan) -> Bool {
@@ -251,10 +227,6 @@ final class SubscriptionManager {
     }
 
     func planDetailText(for plan: SubscriptionPlan) -> String {
-        if let monthlyEquivalent = monthlyEquivalentText(for: plan) {
-            return monthlyEquivalent
-        }
-
         guard product(for: plan) != nil else {
             return products.isEmpty ? "Carregando oferta" : "Plano indisponível"
         }

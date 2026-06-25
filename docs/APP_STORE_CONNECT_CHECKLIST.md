@@ -6,7 +6,7 @@
 - App compila em Release para iOS.
 - Archive foi criado com sucesso.
 - Export para App Store foi concluído com assinatura de distribuição.
-- Upload para App Store Connect/TestFlight concluído com sucesso na build `1.0 (22)`.
+- Upload para App Store Connect/TestFlight concluído com sucesso na build `1.0 (23)`.
 - O entitlement `com.apple.developer.family-controls` aparece no pacote exportado de distribuição.
 - Conta do Xcode em uso: `Romeu Cunha - L38WCHAWJ9`.
 - Bundle ID principal: `com.romeucunha.Limiar`.
@@ -163,8 +163,8 @@ Sem isso, o app pode até ser preparado, mas não fica livre para vender assinat
 
 ## Próximos passos no App Store Connect
 
-1. Aguardar a build `1.0 (22)` terminar processamento no App Store Connect.
-2. Selecionar a build `22` na versão iOS `1.0`.
+1. Aguardar a build `1.0 (23)` terminar processamento no App Store Connect.
+2. Selecionar a build `23` na versão iOS `1.0`.
 3. Conferir distribuição pública somente para Brasil.
 4. Conferir disponibilidade das assinaturas somente para Brasil.
 5. Aceitar Paid Apps Agreement e preencher banco/impostos como pessoa física.

@@ -6,14 +6,13 @@ Este guia consolida o que falta fazer no App Store Connect para vender o Limiar 
 
 ## Estado atual comprovado
 
-- Repositório GitHub: `main` estava atualizado até `5052b7f` no início desta checagem.
+- Repositório GitHub: `main` estava atualizado até `208444c` no início desta checagem.
 - Site público: `https://limiar-five.vercel.app/`.
-- Build enviada à Apple: `1.0 (22)`.
+- Build enviada à Apple: `1.0 (23)`.
 - App Apple ID: `6783115468`.
 - Bundle ID: `com.romeucunha.Limiar`.
-- Archive local: `build/TestFlight/Limiar-1.0-22.xcarchive`.
-- IPA local: `build/TestFlight/export-22/Limiar.ipa`.
-- Registro local do Xcode: `Uploaded to Apple` em `2026-06-25T19:17:26Z`.
+- Archive local: `build/TestFlight/Limiar-1.0-23.xcarchive`.
+- Registro local do Xcode: `Uploaded to Apple` em `2026-06-25T21:41:47Z`.
 - Produto de assinatura preparado para lançamento: somente plano mensal.
 
 Fontes oficiais úteis:
@@ -72,7 +71,7 @@ Sobre teste gratuito: o teste de 7 dias atual é uma experiência interna do app
 
 Na versão iOS `1.0`, selecione:
 
-- Build: `1.0 (22)`
+- Build: `1.0 (23)`
 
 Se a build ainda aparecer como processando, aguarde o processamento terminar no App Store Connect/TestFlight.
 
@@ -162,7 +161,7 @@ Checklist final:
 - App disponível somente no Brasil.
 - Assinatura mensal disponível somente no Brasil.
 - Produto `limiar_premium_monthly` em estado pronto para submissão.
-- Build `1.0 (22)` selecionada.
+- Build `1.0 (23)` selecionada.
 - Assinatura mensal selecionada na seção de In-App Purchases/Subscriptions da versão.
 - App Privacy preenchido.
 - Age Rating preenchido.

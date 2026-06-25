@@ -2,8 +2,7 @@
 
 ## Estado comprovado no projeto
 
-- Repositório local limpo em `main`.
-- Último commit enviado ao GitHub antes desta checagem: `83d6ab0 Alinha assinatura inicial ao plano mensal`.
+- Último commit enviado ao GitHub antes desta checagem: `208444c Adiciona guia manual de submissao App Store Brasil`.
 - Site publicado na Vercel em `https://limiar-five.vercel.app/`.
 - Site público já reflete:
   - apps que ativam o Limiar;
@@ -21,11 +20,10 @@
 - App: Limiar.
 - Bundle ID: `com.romeucunha.Limiar`.
 - Versão: `1.0`.
-- Build: `22`.
+- Build: `23`.
 - App Apple ID: `6783115468`.
-- Archive local: `build/TestFlight/Limiar-1.0-22.xcarchive`.
-- Export local: `build/TestFlight/export-22/Limiar.ipa`.
-- O registro local do Xcode mostra `Uploaded to Apple` em `2026-06-25T19:17:26Z`.
+- Archive local: `build/TestFlight/Limiar-1.0-23.xcarchive`.
+- O registro local do Xcode mostra `Uploaded to Apple` em `2026-06-25T21:41:47Z`.
 - O pacote exportado tem assinatura de distribuição `Cloud Managed Apple Distribution`.
 - O pacote exportado inclui:
   - `com.apple.developer.family-controls = true`;
@@ -37,8 +35,8 @@
 
 Estas etapas dependem da interface do App Store Connect ou de uma chave App Store Connect API, que não está configurada no projeto.
 
-1. Confirmar se o build `1.0 (22)` já terminou o processamento.
-2. Selecionar o build `1.0 (22)` na versão iOS `1.0`.
+1. Confirmar se o build `1.0 (23)` já terminou o processamento.
+2. Selecionar o build `1.0 (23)` na versão iOS `1.0`.
 3. Confirmar distribuição pública pela App Store.
 4. Definir disponibilidade do app somente para o Brasil.
 5. Confirmar que novas regiões/países não serão ativados automaticamente.

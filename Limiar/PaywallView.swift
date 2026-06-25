@@ -258,15 +258,6 @@ private struct PaywallPlanRow: View {
                         Text(plan.title)
                             .font(.system(size: 21, weight: .semibold, design: .serif))
                             .foregroundStyle(Color.ivory)
-
-                        if plan == .yearly {
-                            Text("Melhor oferta")
-                                .font(.system(size: 12, weight: .bold))
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 5)
-                                .background(Color.warmGold.opacity(0.22), in: Capsule())
-                                .foregroundStyle(Color.warmGold)
-                        }
                     }
 
                     Text(price)
@@ -277,11 +268,6 @@ private struct PaywallPlanRow: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.softText)
 
-                    if plan == .yearly {
-                        Text(yearlyEmphasisText)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.sageButton)
-                    }
                 }
 
                 Spacer()
@@ -295,10 +281,6 @@ private struct PaywallPlanRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityText)
-    }
-
-    private var yearlyEmphasisText: String {
-        hasFreeTrial ? "\(trialText). Economize no plano anual." : "Economize no plano anual."
     }
 
     private var accessibilityText: String {

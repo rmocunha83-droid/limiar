@@ -64,7 +64,7 @@ Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele p
 
 ## Estado de distribuição
 
-Build `1.0 (22)` foi exportada e enviada ao App Store Connect com sucesso. O pacote de distribuição inclui `com.apple.developer.family-controls` no app principal.
+Build `1.0 (23)` foi enviada ao App Store Connect com sucesso. O pacote de distribuição inclui `com.apple.developer.family-controls` no app principal.
 
 O app usa recursos nativos do Tempo de Uso para criar pausas escolhidas pelo usuário antes dos apps selecionados. As reflexões são para meditação pessoal e não substituem aconselhamento religioso, pastoral, rabínico, psicológico ou médico.
 
