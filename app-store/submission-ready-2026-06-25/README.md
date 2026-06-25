@@ -21,6 +21,10 @@ Arquivos:
 - `04-app-privacy.md`: respostas sugeridas para privacidade.
 - `05-checklist-final.md`: conferência final antes de enviar para revisão.
 
+Roteiro tela por tela:
+
+- `docs/APP_STORE_CONNECT_SCREEN_BY_SCREEN.md`
+
 Screenshots:
 
 - iPhone 6.7": `app-store/upload-ready/`

@@ -25,6 +25,8 @@ Atualizado em 25/06/2026, após o envio da build `1.0 (23)`.
 
 ## O que fazer agora na Apple
 
+Para um passo a passo por tela, use também `docs/APP_STORE_CONNECT_SCREEN_BY_SCREEN.md`.
+
 ### 1. Confirmar processamento da build
 
 1. Abra o App Store Connect.
