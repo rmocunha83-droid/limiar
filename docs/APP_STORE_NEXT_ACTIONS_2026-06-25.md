@@ -35,6 +35,8 @@ Atualizado em 25/06/2026, após o envio da build `1.0 (23)`.
 
 Se a build `1.0 (23)` ainda não aparecer, aguarde mais alguns minutos e atualize a página.
 
+Opcionalmente, se houver App Store Connect API Key disponível, use `scripts/check_app_store_build_status.sh` seguindo `docs/APP_STORE_BUILD_STATUS_CHECK.md` para consultar esse status pelo terminal.
+
 ### 2. Conferir contrato para vender
 
 1. Abra `Business` ou `Agreements, Tax, and Banking`.
