@@ -23,13 +23,13 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: UIColor(red: 0.02, green: 0.05, blue: 0.06, alpha: 1),
-            icon: UIImage(named: "ShieldIcon") ?? UIImage(systemName: "lock.fill"),
+            icon: Self.shieldIcon(),
             title: ShieldConfiguration.Label(
                 text: "Seu acesso está em pausa",
                 color: UIColor(red: 0.94, green: 0.91, blue: 0.84, alpha: 1)
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "Antes de voltar às distrações, reserve alguns minutos para uma leitura que fortaleça sua fé. Clique no botão abaixo para abrir o app Limiar.",
+                text: "\nAntes de voltar às distrações, reserve alguns minutos para uma leitura que fortaleça sua fé. Clique no botão abaixo para abrir o app Limiar.",
                 color: UIColor(red: 0.74, green: 0.75, blue: 0.75, alpha: 1)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
@@ -39,5 +39,10 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             primaryButtonBackgroundColor: UIColor(red: 0.70, green: 0.81, blue: 0.72, alpha: 1),
             secondaryButtonLabel: nil
         )
+    }
+
+    private static func shieldIcon() -> UIImage? {
+        let image = UIImage(named: "ShieldIcon") ?? UIImage(systemName: "lock.fill")
+        return image?.withAlignmentRectInsets(UIEdgeInsets(top: -18, left: -18, bottom: -18, right: -18))
     }
 }

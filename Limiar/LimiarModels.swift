@@ -669,6 +669,7 @@ final class LimiarAppModel {
     var recentPassageIDs: [String] = []
     var recentAIReflections: [RecentAIReflectionDigest] = []
     var aiContentState = AIContentState.localReady
+    var readingTopResetID = UUID()
 
     private let recommender = PassageRecommendationService()
     private let policyStore = ScreenTimePolicyStore()
@@ -896,6 +897,7 @@ final class LimiarAppModel {
     func prepareFreshPassageForForeground() {
         reapplyBlockIfNeeded()
         guard hasCompletedOnboarding else { return }
+        readingTopResetID = UUID()
         guard Date().timeIntervalSince(lastForegroundRefreshAt) > 2 else { return }
         lastForegroundRefreshAt = Date()
         beginNewReading(avoidingCurrent: true)

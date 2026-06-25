@@ -287,45 +287,59 @@ private struct DashboardView: View {
         ZStack {
             LimiarBackground()
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Limiar")
-                                .font(.system(size: 48, weight: .regular, design: .serif))
-                                .foregroundStyle(Color.ivory)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 26) {
+                        Color.clear
+                            .frame(height: 1)
+                            .id("readingTop")
 
-                            Text("Reserve alguns minutos para iluminar sua mente.")
-                                .font(.system(size: 18, weight: .regular))
-                                .foregroundStyle(Color.softText)
-                                .lineSpacing(4)
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Limiar")
+                                    .font(.system(size: 48, weight: .regular, design: .serif))
+                                    .foregroundStyle(Color.ivory)
+
+                                Text("Reserve alguns minutos para iluminar sua mente.")
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundStyle(Color.softText)
+                                    .lineSpacing(4)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Image(systemName: "person")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .frame(width: 46, height: 46)
+                                    .glassCircle()
+                            }
+                            .accessibilityLabel("Abrir configurações")
                         }
 
-                        Spacer()
-
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "person")
-                                .font(.system(size: 18, weight: .medium))
-                                .frame(width: 46, height: 46)
-                                .glassCircle()
-                        }
-                        .accessibilityLabel("Abrir configurações")
+                        blockedAppsStrip
+                        trialStatusBadge
+                        readingRequirementHeader
+                        readingItemsList
+                        chooseAppsButton
+                        completionExplanation
+                        unlockButton
+                        footer
                     }
-
-                    blockedAppsStrip
-                    trialStatusBadge
-                    readingRequirementHeader
-                    readingItemsList
-                    chooseAppsButton
-                    completionExplanation
-                    unlockButton
-                    footer
+                    .padding(.horizontal, 24)
+                    .padding(.top, 58)
+                    .padding(.bottom, 30)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 58)
-                .padding(.bottom, 30)
+                .onAppear {
+                    proxy.scrollTo("readingTop", anchor: .top)
+                }
+                .onChange(of: model.readingTopResetID) { _, _ in
+                    withAnimation(.easeOut(duration: 0.28)) {
+                        proxy.scrollTo("readingTop", anchor: .top)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
