@@ -15,6 +15,11 @@
 - Categoria secundária: Estilo de vida
 - Faixa etária: responder sem conteúdo adulto, violência, jogos de azar, acesso irrestrito à web ou conteúdo médico.
 - Preço do app: gratuito
+- Distribuição: pública
+- Disponibilidade do app: somente Brasil
+- Disponibilidade das assinaturas: somente Brasil
+- Não selecionar disponibilidade automática em novos países/regiões
+- Comercialização: pessoa física do Account Holder
 
 ## URLs
 
@@ -79,6 +84,7 @@ Grupo de assinatura:
 
 - Nome de referência: Limiar Premium
 - Nome exibido: Limiar Premium
+- Disponibilidade: Brasil
 
 Produto mensal:
 
@@ -87,6 +93,7 @@ Produto mensal:
 - Nome exibido: `Limiar Premium Mensal`
 - Duração: 1 mês
 - Preço: R$ 9,90
+- Disponibilidade: Brasil
 - Oferta introdutória: não configurada por padrão
 - Descrição: Acesso completo ao Limiar Premium com cobrança mensal.
 
@@ -97,8 +104,11 @@ Produto anual:
 - Nome exibido: `Limiar Premium Anual`
 - Duração: 1 ano
 - Preço: R$ 79,90
+- Disponibilidade: Brasil
 - Oferta introdutória: não configurada por padrão
 - Descrição: Acesso completo ao Limiar Premium com cobrança anual.
+
+Observação comercial: se o lançamento inicial for apenas mensal, envie somente `limiar_premium_monthly` para revisão agora e mantenha o anual preparado para ativação futura.
 
 ## Notas para revisão
 

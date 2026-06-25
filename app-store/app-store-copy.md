@@ -48,6 +48,8 @@ Grupo de assinatura: Limiar Premium
 - `limiar_premium_monthly`: assinatura mensal, R$ 9,90/mês.
 - `limiar_premium_yearly`: assinatura anual, R$ 79,90/ano. Exibir como melhor oferta.
 
+Disponibilidade comercial inicial: Brasil. App gratuito para baixar, com vendas apenas por assinatura dentro do app. Comercialização pela pessoa física do Account Holder no App Store Connect.
+
 ## Observações de revisão
 O app usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 

@@ -5,7 +5,10 @@
 - App gratuito para baixar.
 - Assinatura auto-renovável em um único grupo chamado `Limiar Premium`.
 - Sem plano semanal.
-- Oferta introdutória opcional: o app só mostra teste grátis quando o StoreKit retornar essa oferta como configurada no App Store Connect.
+- Comercialização inicial somente no Brasil.
+- Conta comercial como pessoa física do Account Holder.
+- Teste gratuito de 7 dias liberado pelo próprio app antes de qualquer compra.
+- Oferta introdutória StoreKit opcional: não configurada por padrão. Se for criada no App Store Connect, o app só deve mostrar essa oferta quando o StoreKit retornar a informação.
 
 ## Produtos
 
@@ -14,19 +17,26 @@
 | `limiar_premium_monthly` | Mensal | R$ 9,90/mês | Não configurada por padrão |
 | `limiar_premium_yearly` | Anual | R$ 79,90/ano | Não configurada por padrão |
 
-O app destaca o anual como melhor oferta e mantém o mensal visível.
+Para o lançamento comercial simples, o produto mensal pode ser enviado primeiro. O produto anual pode permanecer preparado e ser ativado depois, se a estratégia comercial pedir uma oferta de melhor valor.
 
 Na primeira submissão, inclua as duas assinaturas junto com uma nova versão do app em App Store Connect. A Apple revisa o app e as assinaturas como parte da mesma submissão inicial.
+
+Disponibilidade dos produtos:
+
+- País/região: Brasil.
+- Não disponibilizar em outros países/regiões neste lançamento.
 
 ## Fluxo no app
 
 1. Usuário abre o app.
 2. Passa pelo onboarding.
-3. Escolhe tradição espiritual, preferências, APPs protegidos e tempo de liberação.
-4. Vê uma primeira leitura demonstrativa gratuita.
-5. Toca em `Ver Limiar Premium`.
-6. Vê o paywall com mensal, anual, restauração, termos e privacidade. Se houver oferta introdutória configurada, o teste grátis aparece automaticamente.
-7. Ao assinar, o app libera recursos Premium.
+3. Escolhe tradição espiritual, preferências e apps que ativam o Limiar.
+4. Inicia 7 dias grátis com experiência completa.
+5. Durante o teste, usa IA, narração e maior variedade de trechos.
+6. Depois do teste, se não assinar, entra no Modo Essencial.
+7. Toca em `Ver planos` ou `Assinar Premium`.
+8. Vê o paywall com mensal, restauração, termos e privacidade. Se o anual estiver ativo, ele também aparece.
+9. Ao assinar, o app libera recursos Premium.
 
 ## Recursos Premium
 
@@ -37,8 +47,8 @@ Na primeira submissão, inclua as duas assinaturas junto com uma nova versão do
 - Escolha do tamanho da reflexão.
 - Histórico de leituras.
 - Geração de novas leituras com baixa repetição.
-- Configuração do tempo de liberação dos APPs bloqueados.
-- Uso completo do fluxo de bloqueio/desbloqueio com leitura espiritual.
+- Narração dos trechos.
+- Experiência completa do fluxo de pausa com leitura espiritual.
 
 ## URLs
 
@@ -49,15 +59,13 @@ Na primeira submissão, inclua as duas assinaturas junto com uma nova versão do
 
 ## Notas para revisão
 
-O paywall aparece depois do onboarding e depois de uma primeira leitura demonstrativa. Para testar, conclua o onboarding, veja a primeira pausa, toque em `Ver Limiar Premium` e escolha o plano mensal ou anual.
+Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Para testar a assinatura, toque em `Ver planos` ou `Assinar Premium` e escolha o plano mensal disponível no StoreKit. Se o anual estiver ativo, ele também aparecerá.
 
-Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em `Continuar sem autorizar agora` no onboarding. O paywall continuará acessível depois da primeira leitura demonstrativa, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
+Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em `Fazer isso depois` no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
-## Bloqueio atual de distribuição
+## Estado de distribuição
 
-O app compila e arquiva, mas a exportação para App Store falha enquanto a Apple não conceder Family Controls para distribuição. Ver:
-
-- `docs/FAMILY_CONTROLS_DISTRIBUTION_REQUEST.md`
+Build `1.0 (22)` foi exportada e enviada ao App Store Connect com sucesso. O pacote de distribuição inclui `com.apple.developer.family-controls` no app principal.
 
 O app usa recursos nativos do Tempo de Uso para aplicar bloqueios escolhidos pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso, pastoral, rabínico, psicológico ou médico.
 
@@ -68,7 +76,7 @@ Antes de enviar para revisão, confirme no Sandbox e no TestFlight:
 - Alterações de metadados dos produtos já propagaram para o Sandbox.
 - Compra libera Premium imediatamente.
 - Restauração funciona.
-- Cancelamento/expiração bloqueia recursos Premium.
+- Cancelamento/expiração leva o usuário ao Modo Essencial.
 - Links de Termos, Privacidade e Suporte estão publicados e acessíveis.
 
 ## Teste local no Xcode

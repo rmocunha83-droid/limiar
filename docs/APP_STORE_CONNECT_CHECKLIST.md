@@ -5,20 +5,33 @@
 - App compila em Debug.
 - App compila em Release para iOS.
 - Archive foi criado com sucesso.
-- Export para App Store está bloqueado até a Apple liberar `com.apple.developer.family-controls` para distribuição.
+- Export para App Store foi concluído com assinatura de distribuição.
+- Upload para App Store Connect/TestFlight concluído com sucesso na build `1.0 (22)`.
+- O entitlement `com.apple.developer.family-controls` aparece no pacote exportado de distribuição.
 - Conta do Xcode em uso: `Romeu Cunha - L38WCHAWJ9`.
 - Bundle ID principal: `com.romeucunha.Limiar`.
 - App limitado a iPhone (`TARGETED_DEVICE_FAMILY = 1`).
 - Screenshots disponíveis em `app-store/`, tamanho `1290x2796`, aceito pela Apple para iPhone 6.9".
 - Ícone disponível em `Limiar/Assets.xcassets/AppIcon.appiconset/app-icon.png`, tamanho `1024x1024`.
 
-## Bloqueio externo
+## Distribuição e vendas
 
-Enviar e aguardar aprovação do pedido:
+- Método de distribuição: pública na App Store.
+- Países/regiões: selecionar somente `Brasil`.
+- Não marcar a opção para disponibilizar automaticamente em novos países/regiões.
+- O app em si deve continuar gratuito para baixar.
+- As vendas acontecem por assinatura dentro do app.
+- As assinaturas também devem ficar disponíveis somente no Brasil.
+- Comercialização pela pessoa física do Account Holder, usando os dados bancários e fiscais pessoais exigidos no App Store Connect.
 
-https://developer.apple.com/contact/request/family-controls-distribution
+Referências oficiais da Apple:
 
-Na tela atual da Apple, não há campo de justificativa. O fluxo simplificado mostra dados da conta, termos e botão `Get Entitlement`. A justificativa em `docs/FAMILY_CONTROLS_DISTRIBUTION_REQUEST.md` fica pronta para eventual follow-up da Apple.
+- Distribuição pública: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/set-distribution-methods/
+- Disponibilidade do app por país/região: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store/
+- Disponibilidade de compras dentro do app: https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/set-availability-for-in-app-purchases/
+- Paid Apps Agreement: https://developer.apple.com/help/app-store-connect/manage-agreements/sign-and-update-agreements/
+- Informações bancárias: https://developer.apple.com/help/app-store-connect/manage-banking-information/enter-banking-information/
+- Acordos, impostos e banco: https://developer.apple.com/help/app-store-connect/manage-tax-information/provide-tax-information/
 
 ## App record
 
@@ -29,7 +42,7 @@ Na tela atual da Apple, não há campo de justificativa. O fluxo simplificado mo
 - Categoria primária: `Productivity`
 - Categoria secundária sugerida: `Lifestyle`
 - Preço do app: gratuito
-- Disponibilidade: Brasil primeiro, depois expandir se desejado.
+- Disponibilidade: somente Brasil.
 
 ## Metadados em português
 
@@ -80,20 +93,29 @@ Descrição curta sugerida para os produtos:
 - Mensal: `Acesso completo ao Limiar Premium com cobrança mensal.`
 - Anual: `Acesso completo ao Limiar Premium com cobrança anual.`
 
-Na primeira submissão, adicionar as duas assinaturas junto com a versão inicial do app.
+Na primeira submissão, adicionar as assinaturas junto com a versão inicial do app. Se a estratégia de lançamento for começar apenas com mensal, crie e envie primeiro `limiar_premium_monthly` e mantenha o produto anual fora da revisão até decidir ativá-lo.
+
+Configuração territorial das assinaturas:
+
+- Disponibilidade: somente Brasil.
+- Preço mensal: R$ 9,90.
+- Preço anual, se ativado: R$ 79,90.
+- Oferta introdutória StoreKit: não configurada por padrão. O teste de 7 dias atual é liberado dentro do app antes de qualquer compra.
 
 ## Review notes
 
 Usar este texto em `App Review Notes`:
 
 ```text
-O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para aplicar bloqueios escolhidos pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
+O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário antes de apps selecionados. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-O paywall aparece depois do onboarding e depois de uma primeira leitura demonstrativa. Para testar: conclua o onboarding, veja a primeira pausa demonstrativa, toque em "Ver Limiar Premium" e escolha o plano mensal ou anual.
+Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais e o fluxo de pausa, mas sem narração, reflexões por IA e maior variedade.
 
-Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Continuar sem autorizar agora" no onboarding. O paywall continuará acessível depois da primeira leitura demonstrativa, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
+Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
 
-Recursos pagos: geração completa por IA, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras, configuração completa do tempo de liberação e uso completo do fluxo de bloqueio/desbloqueio.
+Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
+
+Recursos Premium: geração completa por IA, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e experiência completa do Limiar.
 ```
 
 ## App Privacy
@@ -134,24 +156,21 @@ Confirmar no App Store Connect conforme as perguntas exatas exibidas no momento 
 
 Antes de vender assinatura:
 
-- Aceitar o acordo de apps pagos em App Store Connect.
-- Preencher dados bancários.
-- Preencher dados fiscais.
+- Account Holder deve aceitar o acordo de apps pagos em App Store Connect.
+- Preencher dados bancários pessoais.
+- Preencher dados fiscais pessoais exigidos pela Apple para pessoa física.
 - Confirmar que `Paid Apps` está ativo.
+- Confirmar que o banco informado recebe pagamentos da Apple.
 
 Sem isso, o app pode até ser preparado, mas não fica livre para vender assinatura.
 
-## Depois da aprovação de Family Controls
+## Próximos passos no App Store Connect
 
-1. Abrir Certificates, Identifiers & Profiles.
-2. Conferir `com.romeucunha.Limiar`.
-3. Habilitar Family Controls Distribution.
-4. Conferir se as extensões também precisam do entitlement:
-   - `com.romeucunha.Limiar.ShieldConfigurationExtension`
-   - `com.romeucunha.Limiar.ShieldActionExtension`
-   - `com.romeucunha.Limiar.DeviceActivityMonitorExtension`
-5. Regerar perfis de App Store.
-6. Rodar export novamente.
-7. Upload para App Store Connect.
-8. Testar assinaturas no Sandbox/TestFlight.
-9. Enviar app e assinaturas juntos para revisão.
+1. Aguardar a build `1.0 (22)` terminar processamento no App Store Connect.
+2. Selecionar a build `22` na versão iOS `1.0`.
+3. Conferir distribuição pública somente para Brasil.
+4. Conferir disponibilidade das assinaturas somente para Brasil.
+5. Aceitar Paid Apps Agreement e preencher banco/impostos como pessoa física.
+6. Testar assinatura mensal no Sandbox/TestFlight.
+7. Conferir App Privacy, classificação etária, export compliance e review notes.
+8. Enviar app e assinaturas juntos para revisão.
