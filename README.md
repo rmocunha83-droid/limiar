@@ -1,20 +1,20 @@
 # Limiar
 
-Limiar é um app iOS em SwiftUI para criar uma pausa espiritual antes de voltar a APPs de distração. A pessoa escolhe quais APPs quer bloquear, lê uma jornada religiosa diretamente na tela inicial e, depois de concluir com calma, libera um período de uso configurável.
+Limiar é um app iOS em SwiftUI para criar uma pausa espiritual antes de voltar a apps de distração. A pessoa escolhe quais apps deseja proteger, lê uma jornada religiosa e, depois de concluir com calma, libera temporariamente o acesso por 30 minutos.
 
 ## Funcionalidades
 
 - Onboarding com estética visual do Limiar e preferências espirituais.
 - Tradições: católica, evangélica, judaica e espírita.
-- Seleção de APPs bloqueados usando recursos nativos do iOS.
-- Exibição dos APPs bloqueados apenas por ícones originais, sem nome, horário ou descrição.
-- Tela inicial com jornada de leitura e quatro trechos religiosos por sessão.
+- Seleção de apps protegidos usando recursos nativos do iOS.
+- Exibição dos apps protegidos apenas por ícones originais, sem nome, horário ou descrição.
+- Tela inicial com jornada de leitura e três trechos religiosos por sessão.
 - Rotação local de trechos para evitar que o mesmo texto fique preso quando o app permanece aberto.
 - IA generativa via backend próprio, com OpenAI no servidor, cache, histórico antirrepetição e fallback local.
 - Explicação espiritual por trecho, com resumo, aplicação prática e pergunta de meditação.
 - Histórico local de leituras e opção individual de salvar cada trecho.
 - Narração local com voz nativa do iOS em português do Brasil quando disponível, sem uso de API remota de áudio.
-- Botão “Li com calma, liberar acesso” com cadeado animado e liberação temporária pelo período escolhido.
+- Botão “Li com calma, liberar acesso” com cadeado animado e liberação temporária por 30 minutos.
 - Preview web e materiais de marketing/App Store.
 
 ## Requisitos

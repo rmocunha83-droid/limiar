@@ -37,7 +37,11 @@ struct ScreenTimeController {
             repeats: true
         )
 
-        try? center.startMonitoring(.limiarDaily, during: schedule)
+        do {
+            try center.startMonitoring(.limiarDaily, during: schedule)
+        } catch {
+            LimiarAIDiagnostics.log("screen_time_daily_monitor_failed", values: ["error": "\(error)"])
+        }
     }
 
     func scheduleUnlockExpiration(at date: Date) {
@@ -60,7 +64,11 @@ struct ScreenTimeController {
             repeats: false
         )
 
-        try? center.startMonitoring(.limiarUnlockWindow, during: schedule)
+        do {
+            try center.startMonitoring(.limiarUnlockWindow, during: schedule)
+        } catch {
+            LimiarAIDiagnostics.log("screen_time_unlock_monitor_failed", values: ["error": "\(error)"])
+        }
     }
 }
 

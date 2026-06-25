@@ -29,7 +29,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor(red: 0.94, green: 0.91, blue: 0.84, alpha: 1)
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "\nAbra o app Limiar, leia a jornada de hoje e toque em “Li com calma, liberar acesso”. Depois disso, estes APPs ficam liberados pelo tempo escolhido.",
+                text: "Antes de voltar às distrações, reserve alguns minutos para uma leitura que fortaleça sua fé. Clique no botão abaixo para abrir o app Limiar.",
                 color: UIColor(red: 0.74, green: 0.75, blue: 0.75, alpha: 1)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
@@ -37,10 +37,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor(red: 0.03, green: 0.06, blue: 0.07, alpha: 1)
             ),
             primaryButtonBackgroundColor: UIColor(red: 0.70, green: 0.81, blue: 0.72, alpha: 1),
-            secondaryButtonLabel: ShieldConfiguration.Label(
-                text: "Agora não",
-                color: UIColor(red: 0.69, green: 0.78, blue: 0.70, alpha: 0.58)
-            )
+            secondaryButtonLabel: nil
         )
     }
 }

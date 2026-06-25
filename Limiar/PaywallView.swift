@@ -91,7 +91,7 @@ struct PaywallView: View {
             PaywallBenefit(icon: "slider.horizontal.3", text: "Reflexões curtas, médias ou longas")
             PaywallBenefit(icon: "arrow.triangle.2.circlepath", text: "Novas mensagens com menos repetição")
             PaywallBenefit(icon: "clock.arrow.circlepath", text: "Histórico de leituras")
-            PaywallBenefit(icon: "lock.open", text: "Tempo de liberação dos APPs bloqueados")
+            PaywallBenefit(icon: "lock.open", text: "Liberação temporária dos apps protegidos")
         }
         .padding(16)
         .limiarPanel()

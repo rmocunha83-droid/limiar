@@ -258,7 +258,6 @@ extension FaithTradition {
             [
                 ReadingPreferenceSection(
                     title: "Tipos de leitura",
-                    subtitle: "Categorias de conteúdo para orientar o estilo da leitura.",
                     options: [
                         .section(.gospels, tradition: self),
                         .section(.psalms, title: "Salmos e Orações", tradition: self),
@@ -273,7 +272,6 @@ extension FaithTradition {
                 ),
                 ReadingPreferenceSection(
                     title: "Livros que mais inspiram você",
-                    subtitle: "Livros específicos que você quer ver com mais frequência.",
                     options: [
                         .book(.genesis, tradition: self),
                         .book(.exodus, tradition: self),
@@ -296,7 +294,6 @@ extension FaithTradition {
             [
                 ReadingPreferenceSection(
                     title: "Tipos de leitura",
-                    subtitle: "Categorias de conteúdo para orientar o estilo da leitura.",
                     options: [
                         .section(.gospels, tradition: self),
                         .section(.psalms, title: "Salmos e Orações", tradition: self),
@@ -310,7 +307,6 @@ extension FaithTradition {
                 ),
                 ReadingPreferenceSection(
                     title: "Livros que mais inspiram você",
-                    subtitle: "Livros específicos que você quer ver com mais frequência.",
                     options: [
                         .book(.genesis, tradition: self),
                         .book(.exodus, tradition: self),
@@ -330,7 +326,6 @@ extension FaithTradition {
             [
                 ReadingPreferenceSection(
                     title: "Tipos de leitura",
-                    subtitle: "Categorias do Tanakh para orientar o tipo de leitura.",
                     options: [
                         .section(.torah, title: "Torá — Leis e origens", tradition: self),
                         .section(.prophets, title: "Profetas — Nevi’im", tradition: self),
@@ -342,7 +337,6 @@ extension FaithTradition {
                 ),
                 ReadingPreferenceSection(
                     title: "Livros que mais inspiram você",
-                    subtitle: "Livros específicos do Tanakh que você quer priorizar.",
                     options: [
                         .book(.genesis, title: "Gênesis / Bereshit", tradition: self),
                         .book(.exodus, title: "Êxodo / Shemot", tradition: self),
@@ -635,11 +629,13 @@ enum AIContentState: Equatable {
 @MainActor
 @Observable
 final class LimiarAppModel {
+    static let defaultUnlockDurationMinutes = 30
+
     var hasCompletedOnboarding = false
     var hasSeenValueDemo = false
     var hasActiveSubscription = false
     var faithProfile = UserFaithProfile.starter
-    var unlockDurationMinutes = 30
+    var unlockDurationMinutes = LimiarAppModel.defaultUnlockDurationMinutes
     var blockingEnabled = true
     var selection = FamilyActivitySelection()
     var currentReadingPlan: [ScripturePassage] = []
@@ -692,7 +688,8 @@ final class LimiarAppModel {
         faithProfile = savedProfile
         hasCompletedOnboarding = policyStore.loadOnboardingState()
         hasSeenValueDemo = policyStore.loadValueDemoSeen()
-        unlockDurationMinutes = policyStore.loadUnlockDuration()
+        unlockDurationMinutes = Self.defaultUnlockDurationMinutes
+        policyStore.saveUnlockDuration(Self.defaultUnlockDurationMinutes)
         blockingEnabled = policyStore.loadBlockingEnabled()
         selection = policyStore.loadSelection()
         unlockedUntil = policyStore.loadUnlockedUntil()
@@ -838,11 +835,12 @@ final class LimiarAppModel {
         faithProfile.normalizeReadingPreferencesForTradition()
         faithProfile.normalizeStandaloneThemesForCurrentTradition()
         policyStore.saveFaithProfile(faithProfile)
-        policyStore.saveUnlockDuration(unlockDurationMinutes)
+        unlockDurationMinutes = Self.defaultUnlockDurationMinutes
+        policyStore.saveUnlockDuration(Self.defaultUnlockDurationMinutes)
         policyStore.saveBlockingEnabled(blockingEnabled)
         policyStore.saveSelection(selection)
         var values = LimiarAIDiagnostics.profileSnapshot(faithProfile)
-        values["unlockDurationMinutes"] = "\(unlockDurationMinutes)"
+        values["unlockDurationMinutes"] = "\(Self.defaultUnlockDurationMinutes)"
         values["blockingEnabled"] = "\(blockingEnabled)"
         values["hasBlockedAppsSelection"] = "\(hasBlockedAppsSelection)"
         LimiarAIDiagnostics.log("preferences_saved", values: values)
@@ -879,11 +877,6 @@ final class LimiarAppModel {
 
     func selectExplanationDepth(_ depth: ExplanationDepth) {
         faithProfile.explanationDepth = depth
-        saveProfile()
-    }
-
-    func selectUnlockDuration(minutes: Int) {
-        unlockDurationMinutes = minutes
         saveProfile()
     }
 
@@ -1135,7 +1128,7 @@ final class LimiarAppModel {
         self.unlockedUntil = nil
         policyStore.saveUnlockedUntil(nil)
         screenTimeController.applyShield(selection: selection)
-        unlockNote = "O tempo liberado terminou. Faça uma nova leitura para liberar mais tempo."
+        unlockNote = "O período liberado terminou. Faça uma nova leitura para liberar temporariamente os apps protegidos."
         cancelLocalUnlockExpiration()
     }
 

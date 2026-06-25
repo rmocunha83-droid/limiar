@@ -234,7 +234,7 @@ struct TrialMetricsPanel: View {
             TrialMetricRow(
                 icon: "clock",
                 value: model.estimatedFocusTimeText,
-                label: "longe dos APPs bloqueados"
+                label: "longe dos apps protegidos"
             )
             TrialMetricRow(
                 icon: "lock.open",
@@ -277,6 +277,7 @@ private struct DashboardView: View {
     @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
+    @State private var showingAccessReleasedGuide = false
     @State private var unlockPhase = UnlockButtonPhase.locked
     @State private var unlockAnimationTick = 0
 
@@ -331,6 +332,12 @@ private struct DashboardView: View {
         .navigationDestination(isPresented: $showingSettings) {
             SettingsView()
         }
+        .fullScreenCover(isPresented: $showingAccessReleasedGuide) {
+            AccessReleasedView(
+                duration: model.unlockDurationDescription,
+                unlockedUntil: model.unlockedUntil
+            )
+        }
         .familyActivityPicker(
             headerText: "Escolha apps, categorias ou sites que o Limiar deve proteger.",
             footerText: "Você pode alterar isso depois em Preferências.",
@@ -373,7 +380,7 @@ private struct DashboardView: View {
 
     private var blockedAppsStrip: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("APPS BLOQUEADOS")
+            Text("APPS PROTEGIDOS")
                 .font(.system(size: 13, weight: .bold))
                 .tracking(1.5)
                 .foregroundStyle(Color.warmGold)
@@ -411,7 +418,7 @@ private struct DashboardView: View {
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Leia com calma e conclua para liberar seus APPs pelo tempo escolhido.")
+            Text("Leia com calma e conclua para liberar temporariamente os apps protegidos.")
                 .font(.system(size: 18))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(5)
@@ -457,10 +464,10 @@ private struct DashboardView: View {
                     .glassCircle()
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ajustar APPs bloqueados")
+                    Text("Ajustar apps protegidos")
                         .font(.system(size: 19, weight: .regular, design: .serif))
                         .foregroundStyle(Color.ivory)
-                    Text("Escolha quais APPs você quer bloquear")
+                    Text("Escolha quais apps você quer proteger")
                         .font(.system(size: 15))
                         .foregroundStyle(Color.softText)
                 }
@@ -479,7 +486,7 @@ private struct DashboardView: View {
     }
 
     private var completionExplanation: some View {
-        Text("Após concluir a leitura, seus APPs bloqueados serão liberados por \(model.unlockDurationDescription). Quando esse tempo terminar, será necessário fazer uma nova leitura para liberar o acesso novamente.")
+        Text("Após concluir a leitura, seus apps protegidos serão liberados por \(model.unlockDurationDescription). Quando esse período terminar, será necessário fazer uma nova leitura para liberar o acesso novamente.")
             .font(.system(size: 14))
             .foregroundStyle(Color.softText)
             .lineSpacing(5)
@@ -550,8 +557,139 @@ private struct DashboardView: View {
             unlockAnimationTick += 1
         }
 
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
+            showingAccessReleasedGuide = true
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
             unlockPhase = .locked
+        }
+    }
+}
+
+private struct AccessReleasedView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let duration: String
+    let unlockedUntil: Date?
+
+    var body: some View {
+        ZStack {
+            LimiarBackground()
+
+            VStack(spacing: 28) {
+                Spacer(minLength: 24)
+
+                VStack(spacing: 18) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.sageButton.opacity(0.20))
+                            .frame(width: 96, height: 96)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.sageButton.opacity(0.48), lineWidth: 1)
+                            )
+
+                        Image(systemName: "lock.open.fill")
+                            .font(.system(size: 36, weight: .semibold))
+                            .foregroundStyle(Color.sageButton)
+                    }
+                    .shadow(color: Color.sageButton.opacity(0.24), radius: 24, x: 0, y: 12)
+
+                    VStack(spacing: 12) {
+                        Text("Acesso liberado")
+                            .font(.system(size: 44, weight: .regular, design: .serif))
+                            .foregroundStyle(Color.ivory)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Seus apps protegidos foram liberados por \(duration).")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(Color.sageButton)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 14) {
+                    AccessReleasedInstructionRow(
+                        icon: "checkmark.shield.fill",
+                        title: "Leitura concluída",
+                        text: "O Limiar confirmou sua pausa e retirou o bloqueio temporariamente."
+                    )
+
+                    AccessReleasedInstructionRow(
+                        icon: "iphone.homebutton",
+                        title: "Volte para a Tela de Início",
+                        text: "Use o gesto do iPhone ou o botão Início e abra o aplicativo que deseja usar."
+                    )
+
+                    AccessReleasedInstructionRow(
+                        icon: "clock.arrow.circlepath",
+                        title: "O bloqueio volta depois",
+                        text: "Quando o período terminar, será necessária uma nova leitura para liberar mais acesso."
+                    )
+                }
+                .padding(18)
+                .limiarPanel()
+
+                if let unlockedUntil {
+                    Text("Liberado até \(unlockedUntil.formatted(date: .omitted, time: .shortened)).")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .multilineTextAlignment(.center)
+                }
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Continuar no Limiar")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 18))
+                        .foregroundStyle(Color.deepInk)
+                }
+
+                Text("Por segurança, o iOS não permite que o app feche sozinho. O acesso já está liberado.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.softText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 8)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 32)
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+private struct AccessReleasedInstructionRow: View {
+    let icon: String
+    let title: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 13) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.sageButton)
+                .frame(width: 28, height: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+
+                Text(text)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
@@ -587,8 +725,8 @@ private enum UnlockButtonPhase: Equatable {
     func subtitle(duration: String) -> String {
         switch self {
         case .locked: "Libera por \(duration)"
-        case .opening: "Abrindo seus APPs bloqueados"
-        case .unlocked: "APPs liberados por \(duration)"
+        case .opening: "Abrindo seus apps protegidos"
+        case .unlocked: "Apps liberados por \(duration)"
         }
     }
 
@@ -735,6 +873,7 @@ private struct ReadingView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var narration = PassageNarrationService()
     @State private var now = Date()
+    @State private var showingAccessReleasedGuide = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -778,6 +917,14 @@ private struct ReadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showingAccessReleasedGuide, onDismiss: {
+            dismiss()
+        }) {
+            AccessReleasedView(
+                duration: model.unlockDurationDescription,
+                unlockedUntil: model.unlockedUntil
+            )
+        }
         .onReceive(timer) { date in
             now = date
             model.updateReadingProgress(at: date)
@@ -882,7 +1029,7 @@ private struct ReadingView: View {
     private var completionButton: some View {
         Button {
             model.finishReading()
-            dismiss()
+            showingAccessReleasedGuide = true
         } label: {
             Text(model.canCompleteReading ? "Concluir leitura" : "Siga no seu tempo")
                 .font(.system(size: 18, weight: .semibold))
@@ -909,7 +1056,7 @@ private struct OnboardingView: View {
         if let stepFlagIndex = arguments.firstIndex(of: "-LimiarOnboardingStep"),
            arguments.indices.contains(stepFlagIndex + 1),
            let debugStep = Int(arguments[stepFlagIndex + 1]) {
-            _step = State(initialValue: min(max(debugStep, 0), 6))
+            _step = State(initialValue: min(max(debugStep, 0), 5))
             return
         }
         #endif
@@ -944,7 +1091,7 @@ private struct OnboardingView: View {
                         case 5:
                             screenTime
                         default:
-                            unlockTime
+                            screenTime
                         }
                     }
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -977,10 +1124,10 @@ private struct OnboardingView: View {
                             advance()
                         } label: {
                             HStack(spacing: 10) {
-                                Text(step == 6 ? "Ver teste grátis" : "Continuar")
+                                Text(displayedStep == finalOnboardingStep ? "Ver teste grátis" : "Continuar")
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.72)
-                                if step != 6 {
+                                if displayedStep != finalOnboardingStep {
                                     Image(systemName: "arrow.right")
                                         .font(.system(size: 18, weight: .regular))
                                 }
@@ -995,7 +1142,7 @@ private struct OnboardingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .familyActivityPicker(
-            headerText: "Escolha quais APPs você quer bloquear.",
+            headerText: "Escolha quais apps você quer proteger.",
             footerText: "O Limiar usa o seletor nativo do Tempo de Uso.",
             isPresented: $showingPicker,
             selection: $model.selection
@@ -1016,8 +1163,10 @@ private struct OnboardingView: View {
         model.faithProfile.tradition == .spiritist
     }
 
+    private var finalOnboardingStep: Int { 5 }
+
     private var visibleSteps: [Int] {
-        shouldSkipStandaloneThemes ? [0, 1, 2, 4, 5, 6] : [0, 1, 2, 3, 4, 5, 6]
+        shouldSkipStandaloneThemes ? [0, 1, 2, 4, 5] : [0, 1, 2, 3, 4, 5]
     }
 
     private var displayedStep: Int {
@@ -1083,11 +1232,11 @@ private struct OnboardingView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
                 OnboardingTitle(
-                    eyebrow: "LIVROS E TEMAS",
+                    eyebrow: "LIVROS",
                     title: "Quais textos você quer priorizar nas suas leituras?"
                 )
 
-                Text("Vamos usar isso para criar leituras mais próximas da sua tradição. Você pode mudar depois.")
+                Text("Vamos criar leituras mais próximas da sua tradição. Você pode mudar depois.")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
@@ -1172,38 +1321,14 @@ private struct OnboardingView: View {
 
                 Button {
                     status = "Você poderá autorizar o Tempo de Uso depois em Configurações."
-                    withAnimation { step = 6 }
+                    model.saveProfile()
+                    model.completeOnboarding()
                 } label: {
                     Text("Fazer isso depois")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.sageButton)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
-        }
-    }
-
-    private var unlockTime: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                OnboardingTitle(eyebrow: "LIBERAÇÃO", title: "Defina o tempo de liberação do app após a leitura religiosa.")
-
-                Text("Depois desse período, será necessário fazer uma nova leitura para liberar mais tempo de uso dos apps bloqueados.")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.softText)
-                    .lineSpacing(5)
-
-                ForEach([15, 30, 60], id: \.self) { minutes in
-                    SelectableRow(
-                        title: "\(minutes) minutos",
-                        subtitle: minutes == 30 ? "Equilíbrio recomendado para começar." : "Pode ser alterado depois.",
-                        isSelected: model.unlockDurationMinutes == minutes
-                    ) {
-                        model.selectUnlockDuration(minutes: minutes)
-                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1280,12 +1405,12 @@ private struct OnboardingView: View {
         }
 
         if !model.hasBlockedAppsSelection {
-            status = "Agora escolha os APPs ou categorias que deseja limitar."
+            status = "Agora escolha os apps ou categorias que deseja proteger."
             showingPicker = true
             return
         }
 
-        withAnimation { step = 6 }
+        model.completeOnboarding()
     }
 
     private func moveToPreviousStep() {
@@ -1745,13 +1870,11 @@ struct SettingsView: View {
                 Section("Bloqueio") {
                     Toggle("Bloqueio ativo", isOn: $model.blockingEnabled)
                         .disabled(!subscription.hasPremiumAccess)
-                    Picker("Tempo liberado", selection: $model.unlockDurationMinutes) {
-                        Text("15 min").tag(15)
-                        Text("30 min").tag(30)
-                        Text("1 hora").tag(60)
+                    LabeledContent("Liberação temporária") {
+                        Text(model.unlockDurationDescription)
+                            .foregroundStyle(.secondary)
                     }
-                    .disabled(!subscription.hasPremiumAccess)
-                    Button("Ajustar APPs bloqueados") {
+                    Button("Ajustar apps protegidos") {
                         showingPicker = true
                     }
                     .disabled(!subscription.hasPremiumAccess)
@@ -1854,7 +1977,6 @@ struct SettingsView: View {
         .onChange(of: model.faithProfile.tradition) { _, newValue in
             model.selectTradition(newValue)
         }
-        .onChange(of: model.unlockDurationMinutes) { _, _ in model.saveProfile() }
         .onChange(of: model.faithProfile) { _, _ in model.saveProfile() }
         .familyActivityPicker(isPresented: $showingPicker, selection: $model.selection)
         .sheet(isPresented: $showingPaywall) {
@@ -2024,7 +2146,26 @@ struct LimiarBackground: View {
 }
 
 private struct WelcomeHeroScreen: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     let action: () -> Void
+
+    @State private var showLight = false
+    @State private var showLogo = false
+    @State private var showWelcome = false
+    @State private var showTitle = false
+    @State private var visibleBodyLineCount = 0
+    @State private var showButton = false
+    @State private var backgroundZoom = false
+    @State private var logoBreathing = false
+    @State private var didStartEntrance = false
+
+    private let bodyLines = [
+        "Antes de voltar às distrações,",
+        "reserve alguns minutos",
+        "para uma",
+        "leitura que fortaleça sua fé."
+    ]
 
     var body: some View {
         GeometryReader { proxy in
@@ -2033,6 +2174,26 @@ private struct WelcomeHeroScreen: View {
 
             ZStack {
                 LimiarBackground()
+                    .scaleEffect(reduceMotion ? 1 : (backgroundZoom ? 1.03 : 1))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 8), value: backgroundZoom)
+                    .overlay {
+                        Rectangle()
+                            .fill(Color.deepInk.opacity(showLight ? 0.03 : 0.28))
+                            .ignoresSafeArea()
+                    }
+                    .overlay(alignment: .trailing) {
+                        RadialGradient(
+                            colors: [
+                                Color.warmGold.opacity(showLight ? 0.18 : 0.04),
+                                Color.clear
+                            ],
+                            center: .trailing,
+                            startRadius: 18,
+                            endRadius: proxy.size.width * 0.72
+                        )
+                        .blur(radius: 18)
+                        .ignoresSafeArea()
+                    }
 
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer()
@@ -2042,11 +2203,14 @@ private struct WelcomeHeroScreen: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 84, height: 84, alignment: .leading)
+                        .opacity(showLogo ? 1 : 0)
+                        .scaleEffect(showLogo ? (logoBreathing && !reduceMotion ? 1.015 : 1) : 0.95)
 
                     Text("B E M - V I N D O")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.warmGold)
                         .padding(.top, 14)
+                        .opacity(showWelcome ? 1 : 0)
 
                     Text("Limiar")
                         .font(.system(size: 76, weight: .regular, design: .serif))
@@ -2054,12 +2218,18 @@ private struct WelcomeHeroScreen: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
                         .padding(.top, 16)
+                        .opacity(showTitle ? 1 : 0)
+                        .offset(y: reduceMotion ? 0 : (showTitle ? 0 : 12))
 
-                    Text("Antes de voltar às distrações,\nreserve alguns minutos para uma\nleitura que fortaleça sua fé.")
-                        .font(.system(size: 27, weight: .regular))
-                        .foregroundStyle(Color.softText)
-                        .lineSpacing(14)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(bodyLines.enumerated()), id: \.offset) { index, line in
+                            Text(line)
+                                .font(.system(size: 27, weight: .regular))
+                                .foregroundStyle(Color.softText)
+                                .opacity(visibleBodyLineCount > index ? 1 : 0)
+                                .offset(y: reduceMotion ? 0 : (visibleBodyLineCount > index ? 0 : 8))
+                        }
+                    }
                         .padding(.top, 26)
 
                     Spacer()
@@ -2089,10 +2259,71 @@ private struct WelcomeHeroScreen: View {
                     }
                     .frame(width: contentWidth, alignment: .leading)
                     .padding(.bottom, 42)
+                    .opacity(showButton ? 1 : 0)
+                    .offset(y: reduceMotion ? 0 : (showButton ? 0 : 10))
                 }
                 .frame(width: contentWidth, alignment: .leading)
                 .padding(.horizontal, horizontalInset)
                 .ignoresSafeArea(edges: .top)
+            }
+            .clipped()
+        }
+        .onAppear(perform: startEntranceAnimation)
+    }
+
+    private func startEntranceAnimation() {
+        guard !didStartEntrance else { return }
+        didStartEntrance = true
+
+        if reduceMotion || UIAccessibility.isReduceMotionEnabled {
+            withAnimation(.easeOut(duration: 0.45)) {
+                showLight = true
+                showLogo = true
+                showWelcome = true
+                showTitle = true
+                visibleBodyLineCount = bodyLines.count
+                showButton = true
+            }
+            return
+        }
+
+        backgroundZoom = true
+
+        withAnimation(.easeInOut(duration: 2.6)) {
+            showLight = true
+        }
+
+        animate(after: 0.65, duration: 0.72) {
+            showLogo = true
+        }
+        animate(after: 1.18, duration: 0.62) {
+            showWelcome = true
+        }
+        animate(after: 1.68, duration: 0.72) {
+            showTitle = true
+        }
+
+        for index in bodyLines.indices {
+            animate(after: 2.14 + (Double(index) * 0.22), duration: 0.58) {
+                visibleBodyLineCount = index + 1
+            }
+        }
+
+        animate(after: 3.25, duration: 0.72) {
+            showButton = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.85) {
+            withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
+                logoBreathing = true
+            }
+        }
+    }
+
+    private func animate(after delay: TimeInterval, duration: TimeInterval, changes: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation(.easeOut(duration: duration)) {
+                changes()
             }
         }
     }

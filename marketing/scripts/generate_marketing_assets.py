@@ -384,7 +384,7 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
 
     y = 442
     panel((x, y, 1092, y + 220))
-    draw.text((x + 28, y + 26), "APPs BLOQUEADOS", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
+    draw.text((x + 28, y + 26), "APPS PROTEGIDOS", font=font(ARIAL_BOLD, 27), fill=COLORS["gold"] + (255,))
     icon_x = x + 30
     for icon_drawer in (draw_instagram_icon, draw_tiktok_icon, draw_youtube_icon, draw_x_icon):
         icon_drawer(draw, (icon_x, y + 86, icon_x + 98, y + 184))
@@ -396,7 +396,7 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
     y += 54
     draw_wrapped(draw, "Caminho de leitura", (x, y), font(GEORGIA, 78), COLORS["ivory"] + (255,), 940, 10)
     y += 120
-    draw_wrapped(draw, "Leia com calma e conclua para liberar seus APPs pelo tempo escolhido.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 920, 12)
+    draw_wrapped(draw, "Leia com calma e conclua para liberar temporariamente os apps protegidos.", (x, y), font(ARIAL, 38), COLORS["soft_text"] + (255,), 920, 12)
 
     y += 132
     panel((x, y, 1092, y + 680))
@@ -411,8 +411,8 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
 
     y += 740
     panel((x, y, 1092, y + 172))
-    draw.text((x + 34, y + 38), "Ajustar APPs bloqueados", font=font(GEORGIA, 43), fill=COLORS["ivory"] + (255,))
-    draw.text((x + 34, y + 96), "Escolha quais APPs você quer bloquear", font=font(ARIAL, 30), fill=COLORS["soft_text"] + (255,))
+    draw.text((x + 34, y + 38), "Ajustar apps protegidos", font=font(GEORGIA, 43), fill=COLORS["ivory"] + (255,))
+    draw.text((x + 34, y + 96), "Escolha quais apps você quer proteger", font=font(ARIAL, 30), fill=COLORS["soft_text"] + (255,))
     draw.text((1046, y + 58), "›", font=font(ARIAL_BOLD, 64), fill=COLORS["sage"] + (255,))
 
     y += 230
@@ -482,8 +482,8 @@ def make_card(
     else:
         panel_x1, panel_y1, panel_x2, panel_y2 = 118, 760, 1172, 2246
         draw.rounded_rectangle((panel_x1, panel_y1, panel_x2, panel_y2), radius=58, fill=(5, 10, 11, 184), outline=COLORS["sage"] + (88,), width=2)
-        draw.text((panel_x1 + 64, panel_y1 + 68), "APPs bloqueados", font=font(GEORGIA_BOLD, 62), fill=COLORS["ivory"] + (255,))
-        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha quais APPs você quer bloquear.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
+        draw.text((panel_x1 + 64, panel_y1 + 68), "Apps protegidos", font=font(GEORGIA_BOLD, 62), fill=COLORS["ivory"] + (255,))
+        draw.text((panel_x1 + 66, panel_y1 + 142), "Escolha quais apps deseja proteger.", font=font(ARIAL, 34), fill=COLORS["soft_text"] + (255,))
 
         app_y = panel_y1 + 260
         social_icons = [
@@ -500,13 +500,13 @@ def make_card(
             draw.rounded_rectangle((x1, y1, x1 + 412, y1 + 142), radius=34, fill=(255, 255, 255, 22), outline=COLORS["sage"] + (70,), width=2)
             icon_drawer(draw, (x1 + 28, y1 + 29, x1 + 112, y1 + 113))
             draw.text((x1 + 138, y1 + 36), label, font=font(ARIAL_BOLD, 35), fill=COLORS["deep_ink"] + (245,))
-            draw.text((x1 + 138, y1 + 82), "bloquear", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
+            draw.text((x1 + 138, y1 + 82), "proteger", font=font(ARIAL, 26), fill=COLORS["stone"] + (225,))
 
         chip_y = panel_y1 + 716
         features = [
             ("Tempo de Uso", "Permissões nativas do iPhone.", draw_screen_time_icon),
-            ("Leitura na home", "Cinco trechos com explicação.", draw_book_icon),
-            ("Cadeado aberto", "Libere pelo tempo escolhido.", draw_return_icon),
+            ("Leitura com IA", "Três trechos com explicação.", draw_book_icon),
+            ("Cadeado aberto", "Libera por 30 minutos.", draw_return_icon),
         ]
         for label, detail, icon_drawer in features:
             draw.rounded_rectangle((panel_x1 + 64, chip_y, panel_x2 - 64, chip_y + 210), radius=40, fill=(5, 10, 11, 214), outline=accent + (108,), width=2)
@@ -529,14 +529,14 @@ def make_app_store_cards() -> None:
             "01-pausa-antes-do-impulso.png",
             "Foco com sentido",
             "Uma pausa antes de voltar para as distrações.",
-            "APPs bloqueados aparecem só pelos ícones, sem nomes, horários ou descrições.",
+            "Apps protegidos aparecem pelos ícones, sem nomes, horários ou descrições de uso.",
             onboarding,
             COLORS["sage"],
         ),
         (
             "02-leitura-com-proposito.png",
             "Seu limiar",
-            "Cinco trechos na tela inicial.",
+            "Três trechos para uma pausa real.",
             "Cada trecho vem com texto, explicação espiritual e botão próprio para salvar.",
             dashboard,
             COLORS["gold"],
@@ -544,8 +544,8 @@ def make_app_store_cards() -> None:
         (
             "03-protecao-nativa.png",
             "Tempo de Uso",
-            "Escolha os APPs que precisam de um limiar.",
-            "O bloqueio usa recursos nativos do iPhone e libera por 15, 30 ou 60 minutos.",
+            "Escolha os apps que precisam de um limiar.",
+            "A proteção usa recursos nativos do iPhone e libera por 30 minutos após a leitura.",
             None,
             COLORS["sage"],
         ),
@@ -561,7 +561,7 @@ def make_app_store_cards() -> None:
             "05-retome-consciente.png",
             "Volte melhor",
             "Cadeado aberto, acesso liberado.",
-            "Ao concluir a leitura, o botão muda de estado e os APPs voltam pelo tempo escolhido.",
+            "Ao concluir a leitura, o botão muda de estado e os apps ficam livres por 30 minutos.",
             dashboard,
             COLORS["sage"],
         ),
@@ -583,7 +583,7 @@ def make_hero_exports() -> None:
 def make_manifest(generated_visual: Path) -> None:
     manifest = {
         "brand": "Limiar",
-        "positioning": "Jornada espiritual na home antes de liberar APPs bloqueados.",
+        "positioning": "Jornada espiritual antes de liberar apps protegidos.",
         "source_imagegen_asset": str(GENERATED_FALLBACK),
         "workspace_visual": str(generated_visual.relative_to(ROOT)),
         "assets": {
