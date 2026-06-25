@@ -633,7 +633,7 @@ final class LimiarAppModel {
 
     var hasCompletedOnboarding = false
     var hasSeenValueDemo = false
-    var hasActiveSubscription = false
+    var hasPremiumAccess = false
     var faithProfile = UserFaithProfile.starter
     var unlockDurationMinutes = LimiarAppModel.defaultUnlockDurationMinutes
     var blockingEnabled = true
@@ -808,7 +808,7 @@ final class LimiarAppModel {
         policyStore.saveOnboardingState(true)
         saveProfile()
         beginNewReading(avoidingCurrent: true)
-        if hasActiveSubscription {
+        if hasPremiumAccess {
             applyBlocking()
         }
     }
@@ -819,11 +819,13 @@ final class LimiarAppModel {
     }
 
     func updatePremiumAccess(_ isActive: Bool) {
-        guard hasActiveSubscription != isActive else { return }
-        hasActiveSubscription = isActive
+        let hadPremiumAccess = hasPremiumAccess
+        hasPremiumAccess = isActive
 
         if isActive {
-            beginNewReading(avoidingCurrent: true)
+            if !hadPremiumAccess || currentSpiritualReadingItems.isEmpty {
+                beginNewReading(avoidingCurrent: true)
+            }
             applyBlocking()
         } else {
             aiContentState = .localReady
@@ -957,7 +959,7 @@ final class LimiarAppModel {
     }
 
     func finishReading() {
-        guard hasActiveSubscription else {
+        guard hasPremiumAccess else {
             isReadingSessionActive = false
             unlockNote = "O desbloqueio completo exige o Limiar Premium."
             screenTimeController.clearShield()
@@ -987,7 +989,7 @@ final class LimiarAppModel {
     }
 
     func applyBlocking() {
-        guard hasActiveSubscription else {
+        guard hasPremiumAccess else {
             screenTimeController.clearShield()
             return
         }
@@ -1007,7 +1009,7 @@ final class LimiarAppModel {
     }
 
     func reapplyBlockIfNeeded() {
-        guard hasActiveSubscription else {
+        guard hasPremiumAccess else {
             screenTimeController.clearShield()
             cancelLocalUnlockExpiration()
             return
@@ -1056,13 +1058,18 @@ final class LimiarAppModel {
         aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
-        currentSpiritualReadingItems = []
-        currentReflection = AIReflection(
-            summary: "A IA está preparando uma nova leitura para este momento.",
-            spiritualMeaning: "Os trechos e a explicação espiritual serão atualizados em instantes.",
-            practicalApplication: "Aguarde a nova reflexão antes de liberar mais tempo de uso.",
-            conclusion: "Respire com calma enquanto o Limiar prepara a próxima pausa.",
-            meditationQuestion: "O que você quer atravessar com mais presença agora?"
+        let spiritualReadingService = AISpiritualReadingService()
+        let reflectionService = AIReflectionService()
+        currentSpiritualReadingItems = spiritualReadingService.readingItems(
+            for: resolvedPlan,
+            profile: profile,
+            recentPassageIDs: recentPassageIDs,
+            recentReflections: recentAIReflections
+        )
+        currentReflection = reflectionService.reflection(
+            for: resolvedPlan,
+            profile: profile,
+            recentReflections: recentAIReflections
         )
         var planValues = LimiarAIDiagnostics.profileSnapshot(profile)
         planValues["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
@@ -1070,7 +1077,7 @@ final class LimiarAppModel {
         planValues["recentReflections"] = "\(recentAIReflections.count)"
         LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
         rememberShownPassages(resolvedPlan)
-        guard hasActiveSubscription else {
+        guard hasPremiumAccess else {
             aiContentState = .localReady
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "none"

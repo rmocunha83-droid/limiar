@@ -418,7 +418,7 @@ private struct DashboardView: View {
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Leia com calma e conclua para liberar temporariamente os apps protegidos.")
+            Text("Leia com calma e conclua para liberar os apps protegidos por 30 minutos.")
                 .font(.system(size: 18))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(5)
@@ -577,91 +577,100 @@ private struct AccessReleasedView: View {
         ZStack {
             LimiarBackground()
 
-            VStack(spacing: 28) {
-                Spacer(minLength: 24)
+            GeometryReader { geometry in
+                let contentWidth = min(max(geometry.size.width - 48, 0), 560)
 
-                VStack(spacing: 18) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.sageButton.opacity(0.20))
-                            .frame(width: 96, height: 96)
-                            .overlay(
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 28) {
+                        Spacer(minLength: 24)
+
+                        VStack(spacing: 18) {
+                            ZStack {
                                 Circle()
-                                    .stroke(Color.sageButton.opacity(0.48), lineWidth: 1)
+                                    .fill(Color.sageButton.opacity(0.20))
+                                    .frame(width: 96, height: 96)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.sageButton.opacity(0.48), lineWidth: 1)
+                                    )
+
+                                Image(systemName: "lock.open.fill")
+                                    .font(.system(size: 36, weight: .semibold))
+                                    .foregroundStyle(Color.sageButton)
+                            }
+                            .shadow(color: Color.sageButton.opacity(0.24), radius: 24, x: 0, y: 12)
+
+                            VStack(spacing: 12) {
+                                Text("Acesso liberado")
+                                    .font(.system(size: 44, weight: .regular, design: .serif))
+                                    .foregroundStyle(Color.ivory)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                Text("Seus apps protegidos foram liberados por \(duration).")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(Color.sageButton)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(4)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+
+                        VStack(alignment: .leading, spacing: 14) {
+                            AccessReleasedInstructionRow(
+                                icon: "checkmark.shield.fill",
+                                title: "Leitura concluída",
+                                text: "O Limiar confirmou sua pausa e retirou o bloqueio temporariamente."
                             )
 
-                        Image(systemName: "lock.open.fill")
-                            .font(.system(size: 36, weight: .semibold))
-                            .foregroundStyle(Color.sageButton)
-                    }
-                    .shadow(color: Color.sageButton.opacity(0.24), radius: 24, x: 0, y: 12)
+                            AccessReleasedInstructionRow(
+                                icon: "iphone.homebutton",
+                                title: "Volte para a Tela de Início",
+                                text: "Use o gesto do iPhone ou o botão Início e abra o aplicativo que deseja usar."
+                            )
 
-                    VStack(spacing: 12) {
-                        Text("Acesso liberado")
-                            .font(.system(size: 44, weight: .regular, design: .serif))
-                            .foregroundStyle(Color.ivory)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
+                            AccessReleasedInstructionRow(
+                                icon: "clock.arrow.circlepath",
+                                title: "O bloqueio volta depois",
+                                text: "Quando o período terminar, será necessária uma nova leitura para liberar mais acesso."
+                            )
+                        }
+                        .padding(18)
+                        .limiarPanel()
 
-                        Text("Seus apps protegidos foram liberados por \(duration).")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(Color.sageButton)
+                        if let unlockedUntil {
+                            Text("Liberado até \(unlockedUntil.formatted(date: .omitted, time: .shortened)).")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.softText)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        Spacer(minLength: 20)
+
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Continuar no Limiar")
+                                .font(.system(size: 18, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 60)
+                                .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 18))
+                                .foregroundStyle(Color.deepInk)
+                        }
+
+                        Text("Por segurança, o iOS não permite que o app feche sozinho. O acesso já está liberado.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.softText)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
+                            .padding(.horizontal, 8)
                     }
+                    .frame(width: contentWidth)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
                 }
-
-                VStack(alignment: .leading, spacing: 14) {
-                    AccessReleasedInstructionRow(
-                        icon: "checkmark.shield.fill",
-                        title: "Leitura concluída",
-                        text: "O Limiar confirmou sua pausa e retirou o bloqueio temporariamente."
-                    )
-
-                    AccessReleasedInstructionRow(
-                        icon: "iphone.homebutton",
-                        title: "Volte para a Tela de Início",
-                        text: "Use o gesto do iPhone ou o botão Início e abra o aplicativo que deseja usar."
-                    )
-
-                    AccessReleasedInstructionRow(
-                        icon: "clock.arrow.circlepath",
-                        title: "O bloqueio volta depois",
-                        text: "Quando o período terminar, será necessária uma nova leitura para liberar mais acesso."
-                    )
-                }
-                .padding(18)
-                .limiarPanel()
-
-                if let unlockedUntil {
-                    Text("Liberado até \(unlockedUntil.formatted(date: .omitted, time: .shortened)).")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.softText)
-                        .multilineTextAlignment(.center)
-                }
-
-                Spacer()
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Continuar no Limiar")
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 18))
-                        .foregroundStyle(Color.deepInk)
-                }
-
-                Text("Por segurança, o iOS não permite que o app feche sozinho. O acesso já está liberado.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.softText)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 8)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 32)
         }
         .preferredColorScheme(.dark)
     }
@@ -1011,7 +1020,7 @@ private struct ReadingView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.ivory)
 
-            Text(model.canCompleteReading ? "Você já pode concluir e liberar o tempo de uso." : "A barra avança enquanto você lê ou escuta. O objetivo é atravessar com calma.")
+            Text(model.canCompleteReading ? "Você já pode concluir e liberar os apps protegidos por 30 minutos." : "A barra avança enquanto você lê ou escuta. O objetivo é atravessar com calma.")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(4)
