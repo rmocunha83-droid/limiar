@@ -15,11 +15,10 @@
 | Produto | Tipo | Preço | Oferta introdutória |
 | --- | --- | --- | --- |
 | `limiar_premium_monthly` | Mensal | R$ 9,90/mês | Não configurada por padrão |
-| `limiar_premium_yearly` | Anual | R$ 79,90/ano | Não configurada por padrão |
 
-Para o lançamento comercial simples, o produto mensal pode ser enviado primeiro. O produto anual pode permanecer preparado e ser ativado depois, se a estratégia comercial pedir uma oferta de melhor valor.
+Para o lançamento comercial simples, envie somente o produto mensal. Um produto anual pode ser criado depois, se a estratégia comercial pedir uma oferta de melhor valor.
 
-Na primeira submissão, inclua as duas assinaturas junto com uma nova versão do app em App Store Connect. A Apple revisa o app e as assinaturas como parte da mesma submissão inicial.
+Na primeira submissão, inclua a assinatura mensal junto com uma nova versão do app em App Store Connect. A Apple revisa o app e a assinatura como parte da mesma submissão inicial.
 
 Disponibilidade dos produtos:
 
@@ -35,7 +34,7 @@ Disponibilidade dos produtos:
 5. Durante o teste, usa IA, narração e maior variedade de trechos.
 6. Depois do teste, se não assinar, entra no Modo Essencial.
 7. Toca em `Ver planos` ou `Assinar Premium`.
-8. Vê o paywall com mensal, restauração, termos e privacidade. Se o anual estiver ativo, ele também aparece.
+8. Vê o paywall com mensal, restauração, termos e privacidade.
 9. Ao assinar, o app libera recursos Premium.
 
 ## Recursos Premium
@@ -59,7 +58,7 @@ Disponibilidade dos produtos:
 
 ## Notas para revisão
 
-Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Para testar a assinatura, toque em `Ver planos` ou `Assinar Premium` e escolha o plano mensal disponível no StoreKit. Se o anual estiver ativo, ele também aparecerá.
+Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Para testar a assinatura, toque em `Ver planos` ou `Assinar Premium` e escolha o plano mensal disponível no StoreKit.
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em `Fazer isso depois` no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
@@ -88,8 +87,7 @@ Crie uma configuração StoreKit local pelo Xcode:
 3. Nomeie como `Limiar.storekit`.
 4. Adicione um grupo `Limiar Premium`.
 5. Adicione `limiar_premium_monthly` como assinatura mensal.
-6. Adicione `limiar_premium_yearly` como assinatura anual.
-7. Opcionalmente, configure oferta introdutória gratuita de 7 dias nos dois produtos.
-8. No scheme `Limiar`, vá em Run > Options > StoreKit Configuration e selecione `Limiar.storekit`.
+6. Opcionalmente, configure oferta introdutória gratuita de 7 dias no produto mensal.
+7. No scheme `Limiar`, vá em Run > Options > StoreKit Configuration e selecione `Limiar.storekit`.
 
 Depois disso, rode no simulador e teste compra, restauração, expiração e renovação acelerada pelo Transaction Manager do Xcode.

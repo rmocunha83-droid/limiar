@@ -86,20 +86,17 @@ Produtos:
 | Product ID | Nome de referência | Nome exibido | Duração | Preço | Oferta introdutória |
 | --- | --- | --- | --- | --- | --- |
 | `limiar_premium_monthly` | `Limiar Premium Monthly` | `Limiar Premium Mensal` | 1 mês | R$ 9,90 | Não configurada por padrão |
-| `limiar_premium_yearly` | `Limiar Premium Yearly` | `Limiar Premium Anual` | 1 ano | R$ 79,90 | Não configurada por padrão |
 
 Descrição curta sugerida para os produtos:
 
 - Mensal: `Acesso completo ao Limiar Premium com cobrança mensal.`
-- Anual: `Acesso completo ao Limiar Premium com cobrança anual.`
 
-Na primeira submissão, adicionar as assinaturas junto com a versão inicial do app. Se a estratégia de lançamento for começar apenas com mensal, crie e envie primeiro `limiar_premium_monthly` e mantenha o produto anual fora da revisão até decidir ativá-lo.
+Na primeira submissão, adicionar a assinatura mensal junto com a versão inicial do app. Um produto anual pode ser criado depois, se a estratégia comercial mudar.
 
 Configuração territorial das assinaturas:
 
 - Disponibilidade: somente Brasil.
 - Preço mensal: R$ 9,90.
-- Preço anual, se ativado: R$ 79,90.
 - Oferta introdutória StoreKit: não configurada por padrão. O teste de 7 dias atual é liberado dentro do app antes de qualquer compra.
 
 ## Review notes
@@ -111,7 +108,7 @@ O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pau
 
 Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais e o fluxo de pausa, mas sem narração, reflexões por IA e maior variedade.
 
-Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
+Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal disponível no StoreKit.
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 

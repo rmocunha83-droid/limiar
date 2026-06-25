@@ -45,7 +45,7 @@ Estas etapas dependem da interface do App Store Connect ou de uma chave App Stor
 6. Confirmar disponibilidade das assinaturas somente para o Brasil.
 7. Como pessoa física, aceitar o Paid Apps Agreement.
 8. Como pessoa física, preencher dados bancários e fiscais do Account Holder.
-9. Configurar/submeter o produto mensal `Limiar Premium Mensal` por `R$ 9,90/mês`.
+9. Configurar/submeter somente o produto mensal `Limiar Premium Mensal` por `R$ 9,90/mês`.
 10. Testar assinatura no Sandbox/TestFlight.
 11. Revisar App Privacy, classificação etária, export compliance e notas para revisão.
 12. Enviar app e assinatura para revisão juntos.
