@@ -604,57 +604,31 @@ enum AIContentState: Equatable {
     case generating
     case remoteReady
     case fallback
-    case dailyLimitReached
 
     var title: String {
         switch self {
         case .localReady:
-            "Reflexão local pronta"
+            "Preparando leitura"
         case .generating:
             "Gerando reflexão com IA"
         case .remoteReady:
             "Reflexão gerada por IA"
         case .fallback:
-            "Reflexão local disponível"
-        case .dailyLimitReached:
-            "Leitura local para continuar"
+            "Atualização indisponível"
         }
     }
 
     var subtitle: String {
         switch self {
         case .localReady:
-            "Leitura preparada no app."
+            "A leitura será atualizada pela IA assim que você começar."
         case .generating:
-            "A leitura já pode começar enquanto a IA trabalha."
+            "O ChatGPT está preparando novos trechos e explicações para este momento."
         case .remoteReady:
-            "Texto atualizado com uma reflexão nova."
+            "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
-            "Não foi possível gerar uma nova reflexão com IA agora, então preparamos uma leitura local para você continuar."
-        case .dailyLimitReached:
-            "Você já completou as leituras com IA disponíveis por hoje. Para continuar, vamos usar uma leitura local até amanhã."
+            "Não foi possível buscar uma nova leitura agora. Tente novamente em instantes."
         }
-    }
-}
-
-struct RemoteAIDailyUsage: Codable, Equatable {
-    var dayKey: String
-    var generationCount: Int
-}
-
-enum RemoteAIUsagePolicy {
-    static let defaultDailyGenerationLimit = 6
-
-    static var dailyGenerationLimit: Int {
-        defaultDailyGenerationLimit
-    }
-
-    static func dayKey(for date: Date = Date(), calendar: Calendar = .current) -> String {
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
-        let year = components.year ?? 0
-        let month = components.month ?? 0
-        let day = components.day ?? 0
-        return String(format: "%04d-%02d-%02d", year, month, day)
     }
 }
 
@@ -699,11 +673,8 @@ final class LimiarAppModel {
     var recentPassageIDs: [String] = []
     var recentAIReflections: [RecentAIReflectionDigest] = []
     var aiContentState = AIContentState.localReady
-    var remoteAIUsage = RemoteAIDailyUsage(dayKey: RemoteAIUsagePolicy.dayKey(), generationCount: 0)
 
     private let recommender = PassageRecommendationService()
-    private let reflectionService = AIReflectionService()
-    private let spiritualReadingService = AISpiritualReadingService()
     private let policyStore = ScreenTimePolicyStore()
     private let screenTimeController = ScreenTimeController()
     private var lastForegroundRefreshAt = Date.distantPast
@@ -711,6 +682,7 @@ final class LimiarAppModel {
     private var aiGenerationID = UUID()
     private var lastRemoteAIRequestKey = ""
     private var lastRemoteAIRequestAt = Date.distantPast
+    @ObservationIgnored private var unlockExpirationTask: Task<Void, Never>?
 
     init() {
         var savedProfile = policyStore.loadFaithProfile() ?? .starter
@@ -729,7 +701,6 @@ final class LimiarAppModel {
         hasAuthorizedScreenTime = policyStore.loadScreenTimeAuthorized()
         recentPassageIDs = policyStore.loadRecentPassageIDs()
         recentAIReflections = policyStore.loadRecentAIReflections()
-        remoteAIUsage = normalizedRemoteAIUsage(policyStore.loadRemoteAIUsage())
 
         setReadingPlan(
             recommender.readingPlan(
@@ -932,6 +903,7 @@ final class LimiarAppModel {
         guard hasCompletedOnboarding else { return }
         guard Date().timeIntervalSince(lastForegroundRefreshAt) > 2 else { return }
         lastForegroundRefreshAt = Date()
+        beginNewReading(avoidingCurrent: true)
     }
 
     func startReadingSession() {
@@ -1016,6 +988,7 @@ final class LimiarAppModel {
         policyStore.saveUnlockedUntil(until)
         screenTimeController.clearShield()
         screenTimeController.scheduleUnlockExpiration(at: until)
+        scheduleLocalUnlockExpiration(at: until)
         unlockNote = "Liberado até \(until.formatted(date: .omitted, time: .shortened))."
         beginNewReading()
     }
@@ -1033,24 +1006,33 @@ final class LimiarAppModel {
         if let unlockedUntil, unlockedUntil > Date() {
             screenTimeController.clearShield()
             screenTimeController.scheduleUnlockExpiration(at: unlockedUntil)
+            scheduleLocalUnlockExpiration(at: unlockedUntil)
             return
         }
+        cancelLocalUnlockExpiration()
         screenTimeController.applyShield(selection: selection)
     }
 
     func reapplyBlockIfNeeded() {
         guard hasActiveSubscription else {
             screenTimeController.clearShield()
+            cancelLocalUnlockExpiration()
             return
         }
 
-        guard blockingEnabled else { return }
+        guard blockingEnabled else {
+            screenTimeController.clearShield()
+            cancelLocalUnlockExpiration()
+            return
+        }
         if let unlockedUntil, unlockedUntil > Date() {
             screenTimeController.clearShield()
             screenTimeController.scheduleUnlockExpiration(at: unlockedUntil)
+            scheduleLocalUnlockExpiration(at: unlockedUntil)
         } else {
             self.unlockedUntil = nil
             policyStore.saveUnlockedUntil(nil)
+            cancelLocalUnlockExpiration()
             screenTimeController.applyShield(selection: selection)
         }
     }
@@ -1081,16 +1063,13 @@ final class LimiarAppModel {
         aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
-        currentSpiritualReadingItems = spiritualReadingService.readingItems(
-            for: resolvedPlan,
-            profile: profile,
-            recentPassageIDs: recentPassageIDs,
-            recentReflections: recentAIReflections
-        )
-        currentReflection = reflectionService.reflection(
-            for: resolvedPlan,
-            profile: profile,
-            recentReflections: recentAIReflections
+        currentSpiritualReadingItems = []
+        currentReflection = AIReflection(
+            summary: "A IA está preparando uma nova leitura para este momento.",
+            spiritualMeaning: "Os trechos e a explicação espiritual serão atualizados em instantes.",
+            practicalApplication: "Aguarde a nova reflexão antes de liberar mais tempo de uso.",
+            conclusion: "Respire com calma enquanto o Limiar prepara a próxima pausa.",
+            meditationQuestion: "O que você quer atravessar com mais presença agora?"
         )
         var planValues = LimiarAIDiagnostics.profileSnapshot(profile)
         planValues["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
@@ -1098,36 +1077,16 @@ final class LimiarAppModel {
         planValues["recentReflections"] = "\(recentAIReflections.count)"
         LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
         rememberShownPassages(resolvedPlan)
-        rememberReflection(reference: currentReadingReference, reflection: currentReflection)
         guard hasActiveSubscription else {
             aiContentState = .localReady
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
-            values["source"] = "local"
+            values["source"] = "none"
             values["reason"] = "no_active_subscription"
             LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
             return
         }
 
         let remoteRequestKey = remoteAIRequestKey(for: resolvedPlan, profile: profile)
-        let isDuplicateRemoteRequest = remoteRequestKey == lastRemoteAIRequestKey
-            && Date().timeIntervalSince(lastRemoteAIRequestAt) < 90
-        guard !isDuplicateRemoteRequest else {
-            var values = LimiarAIDiagnostics.profileSnapshot(profile)
-            values["source"] = "cache_or_current_cycle"
-            values["reason"] = "duplicate_remote_request"
-            LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
-            return
-        }
-
-        guard registerRemoteAIGenerationIfAllowed() else {
-            aiContentState = .dailyLimitReached
-            var values = LimiarAIDiagnostics.profileSnapshot(profile)
-            values["source"] = "local"
-            values["reason"] = "daily_limit_reached"
-            LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
-            return
-        }
-
         lastRemoteAIRequestKey = remoteRequestKey
         lastRemoteAIRequestAt = Date()
         aiContentState = .generating
@@ -1149,24 +1108,35 @@ final class LimiarAppModel {
         ].joined(separator: "|")
     }
 
-    private func normalizedRemoteAIUsage(_ savedUsage: RemoteAIDailyUsage?) -> RemoteAIDailyUsage {
-        let today = RemoteAIUsagePolicy.dayKey()
-        guard let savedUsage, savedUsage.dayKey == today else {
-            return RemoteAIDailyUsage(dayKey: today, generationCount: 0)
+    private func scheduleLocalUnlockExpiration(at date: Date) {
+        cancelLocalUnlockExpiration()
+        let seconds = date.timeIntervalSinceNow
+        guard seconds > 0 else {
+            expireUnlockIfNeeded()
+            return
         }
-        return savedUsage
+
+        let nanoseconds = UInt64(min(seconds, 86_400) * 1_000_000_000)
+        unlockExpirationTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: nanoseconds)
+            await MainActor.run {
+                self?.expireUnlockIfNeeded()
+            }
+        }
     }
 
-    private func registerRemoteAIGenerationIfAllowed() -> Bool {
-        remoteAIUsage = normalizedRemoteAIUsage(remoteAIUsage)
-        guard remoteAIUsage.generationCount < RemoteAIUsagePolicy.dailyGenerationLimit else {
-            policyStore.saveRemoteAIUsage(remoteAIUsage)
-            return false
-        }
+    private func cancelLocalUnlockExpiration() {
+        unlockExpirationTask?.cancel()
+        unlockExpirationTask = nil
+    }
 
-        remoteAIUsage.generationCount += 1
-        policyStore.saveRemoteAIUsage(remoteAIUsage)
-        return true
+    private func expireUnlockIfNeeded() {
+        guard let unlockedUntil, unlockedUntil <= Date() else { return }
+        self.unlockedUntil = nil
+        policyStore.saveUnlockedUntil(nil)
+        screenTimeController.applyShield(selection: selection)
+        unlockNote = "O tempo liberado terminou. Faça uma nova leitura para liberar mais tempo."
+        cancelLocalUnlockExpiration()
     }
 
     private func rememberShownPassages(_ passages: [ScripturePassage]) {

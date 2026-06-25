@@ -3,7 +3,6 @@ const {
   buildContextPrompt,
   callOpenAI,
   depthOutputTokenLimit,
-  enforceAIDailyLimit,
   enforceAIRateLimit,
   logAIDiagnostic,
   logAIError,
@@ -21,8 +20,6 @@ module.exports = async function handler(req, res) {
   if (!requirePost(req, res)) return;
   const rateLimit = enforceAIRateLimit(req, res, "spiritual-reading");
   if (!rateLimit.allowed) return;
-  const dailyLimit = enforceAIDailyLimit(req, res, "spiritual-reading");
-  if (!dailyLimit.allowed) return;
 
   try {
     const body = parseBody(req);
@@ -40,18 +37,18 @@ module.exports = async function handler(req, res) {
     const prompt = [
       buildContextPrompt({ profile, passages, recentPassageIDs, recentReflections }),
       "",
-      "Gere exatamente 4 itens de leitura, um para cada um dos 4 trechos enviados.",
+      "Gere exatamente 3 itens de leitura, um para cada um dos 3 trechos enviados.",
       "Cada item deve usar os campos reference, passageText, homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion.",
       "Use passageText exatamente baseado no trecho enviado; não invente versículos.",
       "A homily deve variar de tamanho conforme a profundidade escolhida.",
       "O spiritualMeaning deve explicar o sentido espiritual do trecho e se conectar aos temas preferidos.",
-      "A practicalApplication e a conclusion devem ser concretas, específicas e diferentes entre os 4 itens."
+      "A practicalApplication e a conclusion devem ser concretas, específicas e diferentes entre os 3 itens."
     ].join("\n");
 
     logAIDiagnostic("spiritual_reading_preferences_loaded", {
       endpoint: "spiritual-reading",
-      requestID: dailyLimit.context.requestID,
-      clientID: dailyLimit.context.clientID,
+      requestID: rateLimit.context.requestID,
+      clientID: rateLimit.context.clientID,
       tradition: profile.tradition,
       depth: profile.explanationDepth,
       favoriteThemes: profile.favoriteThemes.join(", "),
@@ -67,8 +64,8 @@ module.exports = async function handler(req, res) {
       maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "spiritual-reading"),
       debugContext: {
         endpoint: "spiritual-reading",
-        requestID: dailyLimit.context.requestID,
-        clientID: dailyLimit.context.clientID,
+        requestID: rateLimit.context.requestID,
+        clientID: rateLimit.context.clientID,
         depth: profile.explanationDepth,
         tradition: profile.tradition,
         favoriteThemesCount: profile.favoriteThemes.length,
@@ -79,9 +76,9 @@ module.exports = async function handler(req, res) {
     });
 
     res.statusCode = 200;
-    res.end(JSON.stringify(validateSpiritualReading(result, 4)));
+    res.end(JSON.stringify(validateSpiritualReading(result, 3)));
   } catch (error) {
-    logAIError("spiritual-reading", error, dailyLimit.context);
+    logAIError("spiritual-reading", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_spiritual_reading_failed" }));
   }

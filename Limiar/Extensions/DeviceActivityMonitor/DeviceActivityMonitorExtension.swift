@@ -8,6 +8,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let settingsStore = ManagedSettingsStore(named: ManagedSettingsStore.Name("Limiar"))
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
+        if activity == .limiarUnlockWindow {
+            policyStore.saveUnlockedUntil(nil)
+        }
         reapplyShieldIfNeeded()
     }
 
@@ -51,6 +54,10 @@ private struct ExtensionPolicyStore {
         defaults.object(forKey: "unlockedUntil") as? Date
     }
 
+    func saveUnlockedUntil(_ date: Date?) {
+        defaults.set(date, forKey: "unlockedUntil")
+    }
+
     func loadSelection() -> FamilyActivitySelection {
         guard let data = defaults.data(forKey: "familySelection"),
               let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
@@ -59,4 +66,8 @@ private struct ExtensionPolicyStore {
         }
         return selection
     }
+}
+
+private extension DeviceActivityName {
+    static var limiarUnlockWindow: Self { Self("limiar.unlockWindow") }
 }

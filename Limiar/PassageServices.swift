@@ -1,7 +1,7 @@
 import Foundation
 
 enum LimiarReadingConstants {
-    static let targetItemCount = 4
+    static let targetItemCount = 3
 }
 
 enum LimiarAIDiagnostics {
@@ -1378,6 +1378,29 @@ struct RemoteAIBackendClient {
 
         return try JSONDecoder().decode(Response.self, from: data)
     }
+
+    func postData<Request: Encodable>(_ path: String, body: Request, accept: String) async throws -> Data {
+        guard let url = URL(string: path, relativeTo: baseURL) else {
+            throw RemoteAIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = timeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(accept, forHTTPHeaderField: "Accept")
+        request.setValue(Self.clientID, forHTTPHeaderField: "X-Limiar-Client-ID")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode),
+              !data.isEmpty else {
+            throw RemoteAIError.invalidResponse
+        }
+
+        return data
+    }
 }
 
 struct RemotePassagePayload: Codable {
@@ -1455,6 +1478,12 @@ struct RemoteReflectionRequestPayload: Codable {
     let passageText: String
     let passages: [RemotePassagePayload]
     let recentReflections: [RemoteAIReflectionDigestPayload]
+}
+
+struct RemoteSpeechRequestPayload: Codable {
+    let text: String
+    let voice: String?
+    let instructions: String
 }
 
 struct RemoteSpiritualReadingResponse: Codable {
@@ -1603,6 +1632,26 @@ struct RemoteAIReflectionService {
             responseType: RemoteReflectionResponse.self
         )
         return try response.validatedReflection()
+    }
+}
+
+struct RemoteAISpeechService {
+    private let client: RemoteAIBackendClient
+
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 22)) {
+        self.client = client
+    }
+
+    func audioData(for text: String) async throws -> Data {
+        let payload = RemoteSpeechRequestPayload(
+            text: text,
+            voice: nil,
+            instructions: """
+            Narre em português do Brasil com voz calma, natural e acolhedora. Use ritmo contemplativo, pausas discretas entre referência, trecho, explicação e aplicação prática. Não soe apressado nem dramático.
+            """
+        )
+
+        return try await client.postData("/api/speech", body: payload, accept: "audio/mpeg")
     }
 }
 

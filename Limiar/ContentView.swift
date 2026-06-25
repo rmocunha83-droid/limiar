@@ -2341,20 +2341,16 @@ private struct ReadingActionButtonStyle: ButtonStyle {
 }
 
 @MainActor
-private final class PassageNarrationService: NSObject, ObservableObject, @preconcurrency AVSpeechSynthesizerDelegate {
+private final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isSpeaking = false
 
-    private let synthesizer = AVSpeechSynthesizer()
-    private var pendingUtteranceCount = 0
+    private let speechService = RemoteAISpeechService()
+    private var player: AVAudioPlayer?
+    private var playbackTask: Task<Void, Never>?
     private var activeSpeechText = ""
 
-    override init() {
-        super.init()
-        synthesizer.delegate = self
-    }
-
     func toggle(text: String) {
-        if (synthesizer.isSpeaking || isSpeaking), activeSpeechText == text {
+        if isSpeaking, activeSpeechText == text {
             stop()
         } else {
             speak(text)
@@ -2362,42 +2358,55 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
     }
 
     func stop() {
-        synthesizer.stopSpeaking(at: .immediate)
-        pendingUtteranceCount = 0
+        playbackTask?.cancel()
+        playbackTask = nil
+        player?.stop()
+        player = nil
         activeSpeechText = ""
         isSpeaking = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     private func speak(_ text: String) {
-        if synthesizer.isSpeaking || isSpeaking {
-            synthesizer.stopSpeaking(at: .immediate)
-        }
+        stop()
 
-        let blocks = speechBlocks(from: text)
-        guard !blocks.isEmpty else { return }
-
-        pendingUtteranceCount = blocks.count
+        let prepared = preparedSpeechText(text)
+        guard !prepared.isEmpty else { return }
         activeSpeechText = text
         isSpeaking = true
+        let service = speechService
 
-        for (index, block) in blocks.enumerated() {
-            let utterance = AVSpeechUtterance(string: block)
-            utterance.voice = preferredVoice
-            utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.72
-            utterance.pitchMultiplier = 0.96
-            utterance.volume = 1
-            utterance.preUtteranceDelay = index == 0 ? 0.08 : 0.2
-            utterance.postUtteranceDelay = blockPostDelay(block, isLast: index == blocks.count - 1)
-            synthesizer.speak(utterance)
+        playbackTask = Task { [weak self] in
+            do {
+                let audio = try await service.audioData(for: prepared)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self?.play(audio)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.activeSpeechText = ""
+                    self?.isSpeaking = false
+                }
+            }
         }
     }
 
-    private func speechBlocks(from text: String) -> [String] {
-        preparedSpeechText(text)
-            .components(separatedBy: "\n\n")
-            .flatMap(splitLongSpeechBlock)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+    private func play(_ data: Data) {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try session.setActive(true)
+
+            let audioPlayer = try AVAudioPlayer(data: data)
+            audioPlayer.delegate = self
+            audioPlayer.prepareToPlay()
+            player = audioPlayer
+            audioPlayer.play()
+        } catch {
+            activeSpeechText = ""
+            isSpeaking = false
+        }
     }
 
     private func preparedSpeechText(_ text: String) -> String {
@@ -2458,62 +2467,27 @@ private final class PassageNarrationService: NSObject, ObservableObject, @precon
         return prepared.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func splitLongSpeechBlock(_ block: String) -> [String] {
-        let cleaned = block.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard cleaned.count > 520 else { return [cleaned] }
-
-        var result: [String] = []
-        var current = ""
-        let sentences = cleaned.components(separatedBy: ". ")
-        for sentence in sentences {
-            let normalizedSentence = sentence.hasSuffix(".") ? sentence : sentence + "."
-            if current.count + normalizedSentence.count > 520, !current.isEmpty {
-                result.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
-                current = normalizedSentence
-            } else {
-                current = current.isEmpty ? normalizedSentence : current + " " + normalizedSentence
-            }
-        }
-        if !current.isEmpty {
-            result.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
-        }
-        return result
-    }
-
-    private func blockPostDelay(_ block: String, isLast: Bool) -> TimeInterval {
-        if isLast { return 0.08 }
-        if block.localizedCaseInsensitiveContains("explicação espiritual")
-            || block.localizedCaseInsensitiveContains("aplicação prática")
-            || block.localizedCaseInsensitiveContains("texto ") {
-            return 0.35
-        }
-        return 0.24
-    }
-
-    private var preferredVoice: AVSpeechSynthesisVoice? {
-        AVSpeechSynthesisVoice.speechVoices().first {
-            $0.language == "pt-BR" && $0.quality == .enhanced
-        } ?? AVSpeechSynthesisVoice.speechVoices().first {
-            $0.language == "pt-BR"
-        } ?? AVSpeechSynthesisVoice.speechVoices().first {
-            $0.language.hasPrefix("pt") && $0.quality == .enhanced
-        } ?? AVSpeechSynthesisVoice.speechVoices().first {
-            $0.language.hasPrefix("pt")
-        } ?? AVSpeechSynthesisVoice(language: "pt-BR")
-    }
-
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        pendingUtteranceCount = max(0, pendingUtteranceCount - 1)
-        if pendingUtteranceCount == 0 {
-            activeSpeechText = ""
-            isSpeaking = false
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor [weak self] in
+            self?.activeSpeechText = ""
+            self?.isSpeaking = false
+            self?.player = nil
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
     }
 
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        pendingUtteranceCount = 0
+    nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        Task { @MainActor [weak self] in
+            self?.player = nil
+            self?.activeSpeechText = ""
+            self?.isSpeaking = false
+        }
+    }
+
+    deinit {
+        playbackTask?.cancel()
+        player?.stop()
         activeSpeechText = ""
-        isSpeaking = false
     }
 }
 

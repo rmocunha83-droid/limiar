@@ -2,14 +2,15 @@
 
 ## Fluxo
 
-1. O app iOS monta uma leitura local imediatamente usando os geradores locais.
+1. O app iOS prepara candidatos de leitura conforme as preferências do usuário.
 2. Para usuários no teste gratuito ativo ou com assinatura ativa, o app chama o backend:
    - `POST /api/spiritual-reading`
    - `POST /api/reflection`
+   - `POST /api/speech`, quando o usuário toca para ouvir a leitura.
 3. O backend chama a OpenAI API usando `OPENAI_API_KEY` em variável de ambiente.
 4. O backend exige JSON estruturado e valida o resultado.
 5. O app valida novamente o JSON recebido.
-6. Se qualquer etapa falhar, o app mantém a reflexão local sem mostrar erro técnico ao usuário.
+6. Se qualquer etapa falhar, o app mostra uma mensagem simples de indisponibilidade sem expor erro técnico.
 
 Usuários sem teste ativo e sem assinatura ativa não devem acionar chamadas remotas de IA.
 
@@ -17,12 +18,13 @@ Usuários sem teste ativo e sem assinatura ativa não devem acionar chamadas rem
 
 - Modelo padrão: `gpt-4.1-mini`.
 - O modelo só deve ser alterado via `OPENAI_MODEL` no Vercel.
-- A leitura principal usa 4 textos espirituais/religiosos e uma reflexão final.
-- Usuários em teste gratuito ativo e assinantes podem usar até 6 gerações remotas por dia.
-- A partir do limite diário, o app usa leitura local até o dia seguinte.
-- O app evita gerar nova leitura remota quando o usuário apenas sai e volta para a mesma tela.
-- O backend aplica rate limit por janela e limite diário por instalação/IP para reduzir chamadas duplicadas e proteger custo.
-- O GPT é usado apenas para conteúdo textual. A narração usa voz nativa do iOS no aparelho.
+- Modelo de voz padrão: `gpt-4o-mini-tts`.
+- O modelo de voz só deve ser alterado via `OPENAI_TTS_MODEL` no Vercel.
+- A leitura principal usa 3 textos espirituais/religiosos e uma reflexão final.
+- Usuários em teste gratuito ativo e assinantes geram conteúdo remoto sempre que o app entra em primeiro plano.
+- Não há limite diário de geração remota no produto.
+- O backend mantém apenas rate limit por janela para proteção básica contra abuso ou loops.
+- A narração usa áudio gerado no backend, sem expor a chave no app iOS.
 
 ## Segurança
 
@@ -35,26 +37,17 @@ Usuários sem teste ativo e sem assinatura ativa não devem acionar chamadas rem
 
 - `OPENAI_API_KEY`: chave da OpenAI usada somente no backend.
 - `OPENAI_MODEL`: modelo leve configurável. Padrão: `gpt-4.1-mini`.
+- `OPENAI_TTS_MODEL`: modelo econômico de voz. Padrão: `gpt-4o-mini-tts`.
+- `OPENAI_TTS_VOICE`: voz da narração. Padrão: `coral`.
 - `OPENAI_TIMEOUT_MS`: timeout do backend. Padrão: `12000`.
-- `LIMIAR_AI_DAILY_GENERATION_LIMIT`: limite diário por endpoint/instalação. Padrão: `6`.
 - `LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS`: limite por janela. Padrão: `24`.
 - `LIMIAR_AI_RATE_LIMIT_WINDOW_MS`: janela do limite. Padrão: `900000`.
 
-## Fallback
-
-Os geradores abaixo continuam como plano B:
-
-- `LocalSpiritualReadingGenerator`
-- `LocalLightweightReflectionGenerator`
-
-Eles são usados quando o backend falha, quando não há internet, quando a OpenAI retorna erro ou quando o JSON é inválido.
-O fallback não é a experiência principal para usuários pagantes ou em teste gratuito; ele existe para manter o app fluido.
-
 ## Narração
 
-A leitura em voz alta é feita localmente com `AVSpeechSynthesizer` e `AVSpeechUtterance`.
-O app não usa OpenAI TTS, não gera áudio remoto e não consome tokens para voz.
-Quando disponível, a voz preferida é `pt-BR`; se ela não existir no aparelho, o app usa outra voz em português ou a voz padrão do sistema.
+A leitura em voz alta é feita com áudio remoto gerado por `POST /api/speech`.
+O app iOS envia apenas o texto limpo para o backend e recebe MP3.
+A chave da OpenAI fica somente no Vercel.
 
 ## Testes
 
@@ -65,10 +58,11 @@ npm run test:ai-backend
 Esse teste valida o contrato JSON do backend. Para QA no app, testar:
 
 - geração remota com `OPENAI_API_KEY` configurada;
-- limite diário na 7ª tentativa;
-- fallback sem internet;
+- ausência de limite diário na 7ª tentativa;
+- mensagem simples sem internet;
 - backend retornando erro;
 - JSON inválido;
 - profundidades curta, média e grande;
 - retorno ao app depois de bloqueio;
-- repetição reduzida com histórico recente.
+- repetição reduzida com histórico recente;
+- voz remota por `/api/speech`.

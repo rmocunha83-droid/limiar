@@ -1,12 +1,11 @@
 const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
+const DEFAULT_TTS_VOICE = "coral";
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
-const DEFAULT_DAILY_GENERATION_LIMIT = 6;
 const rateLimitBuckets = globalThis.__limiarAIRateLimitBuckets || new Map();
-const dailyLimitBuckets = globalThis.__limiarAIDailyLimitBuckets || new Map();
 globalThis.__limiarAIRateLimitBuckets = rateLimitBuckets;
-globalThis.__limiarAIDailyLimitBuckets = dailyLimitBuckets;
 
 const reflectionSchema = {
   type: "object",
@@ -51,6 +50,12 @@ function applyCommonHeaders(res) {
   res.setHeader("X-Content-Type-Options", "nosniff");
 }
 
+function applyAudioHeaders(res) {
+  res.setHeader("Content-Type", "audio/mpeg");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+}
+
 function requirePost(req, res) {
   if (req.method === "POST") return true;
   res.statusCode = 405;
@@ -72,7 +77,6 @@ function requestContext(req, endpoint) {
     endpoint,
     clientID: clientID || undefined,
     rateLimitKey: `${endpoint}:${key}`,
-    dailyLimitKey: `${endpoint}:${key}`,
     requestID: trimText(req.headers?.["x-vercel-id"] || req.headers?.["x-request-id"] || "", 160) || undefined
   };
 }
@@ -106,33 +110,6 @@ function enforceAIRateLimit(req, res, endpoint) {
   res.statusCode = 429;
   res.setHeader("Retry-After", String(retryAfter));
   res.end(JSON.stringify({ error: "ai_rate_limited" }));
-  return { allowed: false, context };
-}
-
-function enforceAIDailyLimit(req, res, endpoint) {
-  const context = requestContext(req, endpoint);
-  const now = new Date();
-  const dayKey = now.toISOString().slice(0, 10);
-  const maxGenerations = Number(process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT || DEFAULT_DAILY_GENERATION_LIMIT);
-  const bucketKey = `${context.dailyLimitKey}:${dayKey}`;
-  const bucket = dailyLimitBuckets.get(bucketKey) || { count: 0, dayKey };
-
-  bucket.count += 1;
-  dailyLimitBuckets.set(bucketKey, bucket);
-
-  if (bucket.count <= maxGenerations) {
-    return { allowed: true, context };
-  }
-
-  console.warn("limiar_ai_daily_limit_reached", {
-    endpoint,
-    requestID: context.requestID,
-    clientID: context.clientID,
-    dayKey,
-    limit: maxGenerations
-  });
-  res.statusCode = 429;
-  res.end(JSON.stringify({ error: "ai_daily_limit_reached" }));
   return { allowed: false, context };
 }
 
@@ -436,6 +413,108 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugCo
   }
 }
 
+async function callOpenAISpeech({ input, voice, instructions, debugContext = {} }) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    const error = new Error("OPENAI_API_KEY is not configured");
+    error.code = "missing_openai_api_key";
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const cleanInput = normalizeSpeechInput(input);
+  if (!cleanInput) {
+    const error = new Error("Speech input is empty");
+    error.code = "empty_speech_input";
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    Number(process.env.OPENAI_TTS_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
+  );
+
+  try {
+    logAIDiagnostic("openai_tts_request_start", {
+      endpoint: debugContext.endpoint,
+      requestID: debugContext.requestID,
+      clientID: debugContext.clientID,
+      inputLength: cleanInput.length,
+      ttsModel: process.env.OPENAI_TTS_MODEL || DEFAULT_TTS_MODEL,
+      voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE
+    });
+
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_TTS_MODEL || DEFAULT_TTS_MODEL,
+          voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE,
+          input: cleanInput,
+          instructions: trimText(instructions, 900)
+            || "Narre em português do Brasil com voz calma, natural, acolhedora e ritmo contemplativo.",
+          response_format: "mp3"
+        }),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        const timeoutError = new Error("OpenAI TTS request timed out");
+        timeoutError.code = "openai_tts_timeout";
+        timeoutError.statusCode = 504;
+        throw timeoutError;
+      }
+      error.code = error.code || "openai_tts_network_error";
+      error.statusCode = error.statusCode || 502;
+      throw error;
+    }
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      const error = new Error(data?.error?.message || `OpenAI TTS request failed with ${response.status}`);
+      error.code = classifyOpenAIError(response.status, data);
+      error.statusCode = response.status;
+      throw error;
+    }
+
+    const audio = Buffer.from(await response.arrayBuffer());
+    if (!audio.length) {
+      const error = new Error("OpenAI TTS response was empty");
+      error.code = "openai_tts_empty_output";
+      error.statusCode = 502;
+      throw error;
+    }
+
+    logAIDiagnostic("openai_tts_request_success", {
+      endpoint: debugContext.endpoint,
+      requestID: debugContext.requestID,
+      outputBytes: audio.length
+    });
+    return audio;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function normalizeSpeechInput(value) {
+  return trimText(value, 12000)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[`*_#>{}\[\]]/g, " ")
+    .replace(/\b[a-zA-Z]+_[a-zA-Z0-9_]+\b/g, " ")
+    .replace(/^\s*[-•]\s*/gm, "")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function classifyOpenAIError(status, data) {
   const message = String(data?.error?.message || "").toLowerCase();
   const type = String(data?.error?.type || "").toLowerCase();
@@ -497,16 +576,19 @@ function validateSpiritualReading(value, expectedItemCount) {
 
 module.exports = {
   DEFAULT_MODEL,
-  DEFAULT_DAILY_GENERATION_LIMIT,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
+  applyAudioHeaders,
   applyCommonHeaders,
   buildContextPrompt,
   callOpenAI,
+  callOpenAISpeech,
   depthGuidance,
   depthOutputTokenLimit,
-  enforceAIDailyLimit,
   enforceAIRateLimit,
   logAIDiagnostic,
   logAIError,
+  normalizeSpeechInput,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,

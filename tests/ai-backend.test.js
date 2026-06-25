@@ -2,13 +2,14 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  DEFAULT_DAILY_GENERATION_LIMIT,
   DEFAULT_MODEL,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
   buildContextPrompt,
   depthGuidance,
   depthOutputTokenLimit,
-  enforceAIDailyLimit,
   enforceAIRateLimit,
+  normalizeSpeechInput,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
@@ -20,8 +21,9 @@ test("keeps GPT-4.1 mini as the default commercial model", () => {
   assert.equal(DEFAULT_MODEL, "gpt-4.1-mini");
 });
 
-test("keeps six remote generations as the default daily limit", () => {
-  assert.equal(DEFAULT_DAILY_GENERATION_LIMIT, 6);
+test("keeps GPT-4o mini TTS as the economical default voice model", () => {
+  assert.equal(DEFAULT_TTS_MODEL, "gpt-4o-mini-tts");
+  assert.equal(DEFAULT_TTS_VOICE, "coral");
 });
 
 test("validates a complete reflection payload", () => {
@@ -109,38 +111,10 @@ test("can enforce a simple per-client AI rate limit", () => {
   }
 });
 
-test("can enforce a daily remote AI generation limit", () => {
-  const previousLimit = process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT;
-  process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT = "2";
-
-  const req = {
-    headers: {
-      "x-limiar-client-id": `daily-${Date.now()}-${Math.random()}`
-    }
-  };
-  const res = {
-    statusCode: 200,
-    headers: {},
-    body: "",
-    setHeader(key, value) {
-      this.headers[key] = value;
-    },
-    end(value) {
-      this.body = value;
-    }
-  };
-
-  assert.equal(enforceAIDailyLimit(req, res, "spiritual-reading").allowed, true);
-  assert.equal(enforceAIDailyLimit(req, res, "spiritual-reading").allowed, true);
-  assert.equal(enforceAIDailyLimit(req, res, "spiritual-reading").allowed, false);
-  assert.equal(res.statusCode, 429);
-  assert.match(res.body, /ai_daily_limit_reached/);
-
-  if (previousLimit === undefined) {
-    delete process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT;
-  } else {
-    process.env.LIMIAR_AI_DAILY_GENERATION_LIMIT = previousLimit;
-  }
+test("prepares speech text without technical markup", () => {
+  const text = normalizeSpeechInput("### Título\n- Item com `json_key` e {marcação}\n\nTexto final.");
+  assert.doesNotMatch(text, /###|`|json_key|\{|\}/);
+  assert.match(text, /Texto final/);
 });
 
 test("normalizes request context without personal identifiers", () => {

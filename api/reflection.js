@@ -3,7 +3,6 @@ const {
   buildContextPrompt,
   callOpenAI,
   depthOutputTokenLimit,
-  enforceAIDailyLimit,
   enforceAIRateLimit,
   logAIDiagnostic,
   logAIError,
@@ -21,8 +20,6 @@ module.exports = async function handler(req, res) {
   if (!requirePost(req, res)) return;
   const rateLimit = enforceAIRateLimit(req, res, "reflection");
   if (!rateLimit.allowed) return;
-  const dailyLimit = enforceAIDailyLimit(req, res, "reflection");
-  if (!dailyLimit.allowed) return;
 
   try {
     const body = parseBody(req);
@@ -50,8 +47,8 @@ module.exports = async function handler(req, res) {
 
     logAIDiagnostic("reflection_preferences_loaded", {
       endpoint: "reflection",
-      requestID: dailyLimit.context.requestID,
-      clientID: dailyLimit.context.clientID,
+      requestID: rateLimit.context.requestID,
+      clientID: rateLimit.context.clientID,
       tradition: profile.tradition,
       depth: profile.explanationDepth,
       favoriteThemes: profile.favoriteThemes.join(", "),
@@ -67,8 +64,8 @@ module.exports = async function handler(req, res) {
       maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "reflection"),
       debugContext: {
         endpoint: "reflection",
-        requestID: dailyLimit.context.requestID,
-        clientID: dailyLimit.context.clientID,
+        requestID: rateLimit.context.requestID,
+        clientID: rateLimit.context.clientID,
         depth: profile.explanationDepth,
         tradition: profile.tradition,
         favoriteThemesCount: profile.favoriteThemes.length,
@@ -81,7 +78,7 @@ module.exports = async function handler(req, res) {
     res.statusCode = 200;
     res.end(JSON.stringify(validateReflection(result)));
   } catch (error) {
-    logAIError("reflection", error, dailyLimit.context);
+    logAIError("reflection", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_reflection_failed" }));
   }

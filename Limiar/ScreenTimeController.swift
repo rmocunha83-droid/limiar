@@ -45,12 +45,12 @@ struct ScreenTimeController {
         let calendar = Calendar.current
         let now = Date()
         guard date > now else {
-            try? center.stopMonitoring([.limiarUnlockWindow])
+            center.stopMonitoring([.limiarUnlockWindow])
             applyShield(selection: ScreenTimePolicyStore().loadSelection())
             return
         }
 
-        try? center.stopMonitoring([.limiarUnlockWindow])
+        center.stopMonitoring([.limiarUnlockWindow])
 
         let start = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now)
         let end = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
