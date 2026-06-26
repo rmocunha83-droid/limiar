@@ -66,11 +66,11 @@ Campos:
 
 Usar os arquivos:
 
-1. `app-store/01-pausa-antes-do-impulso.png`
-2. `app-store/02-leitura-com-proposito.png`
-3. `app-store/03-protecao-nativa.png`
-4. `app-store/04-tradicao-espiritual.png`
-5. `app-store/05-retome-consciente.png`
+1. Pausa consciente: `app-store/01-pausa-antes-do-impulso.png`
+2. Leitura com IA: `app-store/02-leitura-com-proposito.png`
+3. Tempo de Uso: `app-store/03-protecao-nativa.png`
+4. Leitura pessoal: `app-store/04-tradicao-espiritual.png`
+5. Continue melhor: `app-store/05-retome-consciente.png`
 
 Todos estão em PNG `1290x2796`.
 

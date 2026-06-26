@@ -70,11 +70,11 @@ Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica 
 
 Enviar em ordem:
 
-1. `app-store/upload-ready-6.5/01-pausa-antes-do-impulso.png`
-2. `app-store/upload-ready-6.5/02-leitura-com-proposito.png`
-3. `app-store/upload-ready-6.5/03-protecao-nativa.png`
-4. `app-store/upload-ready-6.5/04-tradicao-espiritual.png`
-5. `app-store/upload-ready-6.5/05-retome-consciente.png`
+1. Pausa consciente: `app-store/upload-ready-6.5/01-pausa-antes-do-impulso.png`
+2. Leitura com IA: `app-store/upload-ready-6.5/02-leitura-com-proposito.png`
+3. Tempo de Uso: `app-store/upload-ready-6.5/03-protecao-nativa.png`
+4. Leitura pessoal: `app-store/upload-ready-6.5/04-tradicao-espiritual.png`
+5. Continue melhor: `app-store/upload-ready-6.5/05-retome-consciente.png`
 
 Observação: `app-store/upload-ready/` contém a versão `1290x2796`. A tela atual do App Store Connect pediu a classe 6,5", então `app-store/upload-ready-6.5/` contém cópias `1284x2778`.
 
