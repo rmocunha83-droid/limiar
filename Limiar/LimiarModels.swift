@@ -569,6 +569,11 @@ struct SpiritualReadingItem: Identifiable, Codable, Equatable {
     let text: String
     let homily: String
     let practicalConclusion: String
+
+    var hasExplanationContent: Bool {
+        !homily.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !practicalConclusion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 }
 
 struct ReadingHistoryItem: Identifiable, Codable, Equatable {
@@ -763,7 +768,7 @@ final class LimiarAppModel {
     }
 
     var currentReadingNarrationText: String {
-        guard hasPremiumAccess, aiContentState == .remoteReady else { return "" }
+        guard hasPremiumAccess else { return "" }
 
         let passageBlocks = currentSpiritualReadingItems.enumerated().map { index, item in
             """
@@ -774,19 +779,51 @@ final class LimiarAppModel {
         }
         .joined(separator: "\n\n")
 
-        let reflectionBlock = """
-        Explicação espiritual.
-        \(currentReflection.summary)
-        \(currentReflection.spiritualMeaning)
+        let explanationText = [
+            currentReflection.summary,
+            currentReflection.spiritualMeaning
+        ]
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n")
 
-        Aplicação prática.
-        \(currentReflection.practicalApplication)
-        \(currentReflection.conclusion)
-        """
+        let practiceText = [
+            currentReflection.practicalApplication,
+            currentReflection.conclusion
+        ]
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n")
+
+        let reflectionBlock = [
+            explanationText.isEmpty ? "" : "Explicação espiritual.\n\(explanationText)",
+            practiceText.isEmpty ? "" : "Aplicação prática.\n\(practiceText)"
+        ]
+        .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        .joined(separator: "\n\n")
 
         return [passageBlocks, reflectionBlock]
             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             .joined(separator: "\n\n")
+    }
+
+    var hasVisibleReadingExplanations: Bool {
+        hasPremiumAccess && currentSpiritualReadingItems.contains { $0.hasExplanationContent }
+    }
+
+    var hasVisibleReflection: Bool {
+        guard hasPremiumAccess else { return false }
+        return [
+            currentReflection.summary,
+            currentReflection.spiritualMeaning,
+            currentReflection.practicalApplication,
+            currentReflection.conclusion,
+            currentReflection.meditationQuestion
+        ].contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    var canNarrateCurrentReading: Bool {
+        hasPremiumAccess && !currentReadingNarrationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var unlockDurationDescription: String {
@@ -1104,9 +1141,9 @@ final class LimiarAppModel {
         planValues["recentReflections"] = "\(recentAIReflections.count)"
         LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
         rememberShownPassages(resolvedPlan)
+        let spiritualReadingService = AISpiritualReadingService()
+        let reflectionService = AIReflectionService()
         guard hasPremiumAccess else {
-            let spiritualReadingService = AISpiritualReadingService()
-            let reflectionService = AIReflectionService()
             currentSpiritualReadingItems = spiritualReadingService.readingItems(
                 for: resolvedPlan,
                 profile: profile,
@@ -1126,13 +1163,16 @@ final class LimiarAppModel {
             return
         }
 
-        currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
-        currentReflection = AIReflection(
-            summary: "",
-            spiritualMeaning: "",
-            practicalApplication: "",
-            conclusion: "",
-            meditationQuestion: ""
+        currentSpiritualReadingItems = spiritualReadingService.readingItems(
+            for: resolvedPlan,
+            profile: profile,
+            recentPassageIDs: recentPassageIDs,
+            recentReflections: recentAIReflections
+        )
+        currentReflection = reflectionService.reflection(
+            for: resolvedPlan,
+            profile: profile,
+            recentReflections: recentAIReflections
         )
         let remoteRequestKey = remoteAIRequestKey(for: resolvedPlan, profile: profile)
         aiContentState = .generating
@@ -1232,11 +1272,19 @@ final class LimiarAppModel {
 
             await MainActor.run {
                 guard aiGenerationID == generationID else { return }
-                if let items = result.0, let reflection = result.1 {
+                if let items = result.0 {
                     currentSpiritualReadingItems = items
+                }
+
+                if let reflection = result.1 {
                     currentReflection = reflection
-                    aiContentState = .remoteReady
                     rememberReflection(reference: currentReadingReference, reflection: reflection)
+                }
+
+                if result.0 != nil, result.1 != nil {
+                    aiContentState = .remoteReady
+                } else if result.0 != nil || result.1 != nil {
+                    aiContentState = .fallback
                 } else {
                     aiContentState = .fallback
                 }

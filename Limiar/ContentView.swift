@@ -522,7 +522,7 @@ private struct DashboardView: View {
 
     private var readingItemsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if model.hasPremiumAccess && model.aiContentState == .remoteReady {
+            if model.canNarrateCurrentReading {
                 HStack(spacing: 12) {
                     Button {
                         narration.toggle(text: model.currentReadingNarrationText)
@@ -545,8 +545,8 @@ private struct DashboardView: View {
                         narration.toggle(text: "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)")
                     },
                     isSpeaking: narration.isSpeaking,
-                    showsReflection: model.hasPremiumAccess && model.aiContentState == .remoteReady,
-                    showsNarration: model.hasPremiumAccess && model.aiContentState == .remoteReady
+                    showsReflection: model.hasPremiumAccess && item.hasExplanationContent,
+                    showsNarration: model.canNarrateCurrentReading
                 )
             }
         }
@@ -896,7 +896,7 @@ private struct ReadingView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.warmGold)
 
-                    if model.hasPremiumAccess {
+                    if model.canNarrateCurrentReading {
                         readingActions
                     }
 
@@ -908,7 +908,7 @@ private struct ReadingView: View {
 
                     if model.hasPremiumAccess {
                         aiStatusBanner
-                        if model.aiContentState == .remoteReady {
+                        if model.hasVisibleReflection {
                             reflectionSection
                         }
                     } else if model.isEssentialMode {
@@ -1965,6 +1965,20 @@ struct SettingsView: View {
                         openURL(subscriptionsURL)
                     }
 
+                    if subscription.canResetTrialForTesting {
+                        Button("Reiniciar teste gratuito de 7 dias") {
+                            subscription.resetFreeTrialForTesting()
+                            model.updateAccess(
+                                hasPremiumAccess: subscription.hasPremiumAccess,
+                                isEssentialMode: subscription.isEssentialMode
+                            )
+                        }
+
+                        Text("Disponível apenas no TestFlight/sandbox para validar o período completo.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
                     if !subscription.statusText.isEmpty {
                         Text(subscription.statusText)
                             .font(.caption)
@@ -2553,19 +2567,25 @@ private struct ReadingBlock: View {
     let title: String
     let text: String
 
+    private var cleanedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 14, weight: .bold))
-                .tracking(0.8)
-                .foregroundStyle(Color.gold)
-            Text(text)
-                .font(.system(size: 17))
-                .foregroundStyle(Color.softText)
-                .lineSpacing(5)
+        if !cleanedText.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.gold)
+                Text(cleanedText)
+                    .font(.system(size: 17))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(5)
+            }
+            .padding(16)
+            .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
         }
-        .padding(16)
-        .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

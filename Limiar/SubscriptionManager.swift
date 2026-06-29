@@ -118,6 +118,10 @@ final class SubscriptionManager {
         displayPrice(for: .monthly)
     }
 
+    var canResetTrialForTesting: Bool {
+        Self.isTestEnvironment
+    }
+
     var trialRemainingText: String {
         guard let days = trialDaysRemaining else { return "" }
         return days == 1 ? "1 dia restante" : "\(days) dias restantes"
@@ -199,13 +203,23 @@ final class SubscriptionManager {
         refreshAccessState()
     }
 
+    func resetFreeTrialForTesting() {
+        guard Self.isTestEnvironment else { return }
+
+        let now = Date()
+        trialStartedAt = now
+        TrialStartStore.save(now)
+        defaults.set(now, forKey: Constants.trialStartDefaultsKey)
+        message = "Teste gratuito reiniciado para 7 dias neste aparelho."
+        refreshAccessState(now: now)
+    }
+
     func product(for plan: SubscriptionPlan) -> Product? {
         products.first { $0.id == plan.productID }
     }
 
     func displayPrice(for plan: SubscriptionPlan) -> String {
-        guard let product = product(for: plan) else { return plan.fallbackPrice }
-        return "\(product.displayPrice)/mês"
+        plan.fallbackPrice
     }
 
     func hasConfirmedFreeTrial(for plan: SubscriptionPlan) -> Bool {
@@ -407,6 +421,14 @@ final class SubscriptionManager {
         @unknown default:
             return "período inicial"
         }
+    }
+
+    private static var isTestEnvironment: Bool {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
     }
 }
 
