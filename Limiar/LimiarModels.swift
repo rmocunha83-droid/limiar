@@ -620,7 +620,7 @@ enum AIContentState: Equatable {
         case .localReady:
             "A leitura será atualizada pela IA assim que você começar."
         case .generating:
-            "O ChatGPT está preparando novos trechos e explicações para este momento."
+            "A IA está preparando novos trechos e explicações para este momento."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
@@ -683,8 +683,6 @@ final class LimiarAppModel {
     private var lastForegroundRefreshAt = Date.distantPast
     private var aiGenerationTask: Task<Void, Never>?
     private var aiGenerationID = UUID()
-    private var lastRemoteAIRequestKey = ""
-    private var lastRemoteAIRequestAt = Date.distantPast
     @ObservationIgnored private var unlockExpirationTask: Task<Void, Never>?
 
     init() {
@@ -765,7 +763,7 @@ final class LimiarAppModel {
     }
 
     var currentReadingNarrationText: String {
-        guard hasPremiumAccess else { return "" }
+        guard hasPremiumAccess, aiContentState == .remoteReady else { return "" }
 
         let passageBlocks = currentSpiritualReadingItems.enumerated().map { index, item in
             """
@@ -1100,19 +1098,6 @@ final class LimiarAppModel {
             return
         }
 
-        let spiritualReadingService = AISpiritualReadingService()
-        let reflectionService = AIReflectionService()
-        currentSpiritualReadingItems = spiritualReadingService.readingItems(
-            for: resolvedPlan,
-            profile: profile,
-            recentPassageIDs: recentPassageIDs,
-            recentReflections: recentAIReflections
-        )
-        currentReflection = reflectionService.reflection(
-            for: resolvedPlan,
-            profile: profile,
-            recentReflections: recentAIReflections
-        )
         var planValues = LimiarAIDiagnostics.profileSnapshot(profile)
         planValues["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
         planValues["passages"] = resolvedPlan.map(\.id).joined(separator: ",")
@@ -1120,6 +1105,19 @@ final class LimiarAppModel {
         LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
         rememberShownPassages(resolvedPlan)
         guard hasPremiumAccess else {
+            let spiritualReadingService = AISpiritualReadingService()
+            let reflectionService = AIReflectionService()
+            currentSpiritualReadingItems = spiritualReadingService.readingItems(
+                for: resolvedPlan,
+                profile: profile,
+                recentPassageIDs: recentPassageIDs,
+                recentReflections: recentAIReflections
+            )
+            currentReflection = reflectionService.reflection(
+                for: resolvedPlan,
+                profile: profile,
+                recentReflections: recentAIReflections
+            )
             aiContentState = .localReady
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "none"
@@ -1128,9 +1126,15 @@ final class LimiarAppModel {
             return
         }
 
+        currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
+        currentReflection = AIReflection(
+            summary: "",
+            spiritualMeaning: "",
+            practicalApplication: "",
+            conclusion: "",
+            meditationQuestion: ""
+        )
         let remoteRequestKey = remoteAIRequestKey(for: resolvedPlan, profile: profile)
-        lastRemoteAIRequestKey = remoteRequestKey
-        lastRemoteAIRequestAt = Date()
         aiContentState = .generating
         var values = LimiarAIDiagnostics.profileSnapshot(profile)
         values["source"] = "remote"

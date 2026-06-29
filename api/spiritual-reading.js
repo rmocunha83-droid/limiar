@@ -1,7 +1,7 @@
 const {
   applyCommonHeaders,
   buildContextPrompt,
-  callOpenAI,
+  callGLM,
   depthOutputTokenLimit,
   enforceAIRateLimit,
   logAIDiagnostic,
@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
       passagesCount: passages.length
     });
 
-    const result = await callOpenAI({
+    const result = await callGLM({
       schema: spiritualReadingSchema,
       schemaName: "limiar_spiritual_reading",
       prompt,

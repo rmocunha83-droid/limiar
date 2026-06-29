@@ -1,7 +1,7 @@
 const {
   applyAudioHeaders,
   applyCommonHeaders,
-  callOpenAISpeech,
+  callElevenLabsSpeech,
   enforceAIRateLimit,
   logAIError,
   parseBody,
@@ -16,11 +16,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = parseBody(req);
-    const audio = await callOpenAISpeech({
+    const audio = await callElevenLabsSpeech({
       input: body.text,
       voice: body.voice,
       speed: body.speed,
-      instructions: body.instructions,
       debugContext: {
         endpoint: "speech",
         requestID: rateLimit.context.requestID,

@@ -1,6 +1,7 @@
-const DEFAULT_MODEL = "gpt-4.1-mini";
-const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
-const DEFAULT_TTS_VOICE = "coral";
+const DEFAULT_MODEL = "glm-4.5-air";
+const DEFAULT_TEXT_BASE_URL = "https://api.z.ai/api/paas/v4";
+const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
+const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_TTS_SPEED = 0.92;
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
@@ -210,7 +211,8 @@ function logAIDiagnostic(event, details = {}) {
   console.info("limiar_ai_diagnostic", {
     event,
     ...details,
-    model: process.env.OPENAI_MODEL || DEFAULT_MODEL
+    provider: "zai",
+    model: process.env.GLM_MODEL || process.env.ZAI_MODEL || DEFAULT_MODEL
   });
 }
 
@@ -310,11 +312,11 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
   ].join("\n");
 }
 
-async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugContext = {} }) {
-  const apiKey = process.env.OPENAI_API_KEY;
+async function callGLM({ schema, schemaName, prompt, maxOutputTokens, debugContext = {} }) {
+  const apiKey = process.env.GLM_API_KEY || process.env.ZAI_API_KEY;
   if (!apiKey) {
-    const error = new Error("OPENAI_API_KEY is not configured");
-    error.code = "missing_openai_api_key";
+    const error = new Error("GLM_API_KEY is not configured");
+    error.code = "missing_glm_api_key";
     error.statusCode = 503;
     throw error;
   }
@@ -322,11 +324,13 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugCo
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
-    Number(process.env.OPENAI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
+    Number(process.env.GLM_TIMEOUT_MS || process.env.ZAI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
   );
+  const baseURL = (process.env.GLM_BASE_URL || process.env.ZAI_BASE_URL || DEFAULT_TEXT_BASE_URL).replace(/\/$/, "");
+  const model = process.env.GLM_MODEL || process.env.ZAI_MODEL || DEFAULT_MODEL;
 
   try {
-    logAIDiagnostic("openai_request_start", {
+    logAIDiagnostic("glm_request_start", {
       endpoint: debugContext.endpoint,
       requestID: debugContext.requestID,
       clientID: debugContext.clientID,
@@ -342,62 +346,70 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugCo
     });
     let response;
     try {
-      response = await fetch("https://api.openai.com/v1/responses", {
+      response = await fetch(`${baseURL}/chat/completions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
-          store: false,
-          max_output_tokens: maxOutputTokens,
-          input: [
-            { role: "system", content: buildSystemPrompt() },
-            { role: "user", content: prompt }
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: schemaName,
-              schema,
-              strict: true
+          model,
+          temperature: 1.0,
+          max_tokens: maxOutputTokens,
+          messages: [
+            {
+              role: "system",
+              content: [
+                buildSystemPrompt(),
+                `Retorne somente JSON válido compatível com o schema ${schemaName}.`,
+                "Não use markdown, comentários ou texto fora do JSON."
+              ].join("\n")
+            },
+            {
+              role: "user",
+              content: [
+                prompt,
+                "",
+                `Schema esperado (${schemaName}):`,
+                JSON.stringify(schema)
+              ].join("\n")
             }
-          }
+          ],
+          response_format: { type: "json_object" }
         }),
         signal: controller.signal
       });
     } catch (error) {
       if (error?.name === "AbortError") {
-        const timeoutError = new Error("OpenAI request timed out");
-        timeoutError.code = "openai_timeout";
+        const timeoutError = new Error("GLM request timed out");
+        timeoutError.code = "glm_timeout";
         timeoutError.statusCode = 504;
         throw timeoutError;
       }
-      error.code = error.code || "openai_network_error";
+      error.code = error.code || "glm_network_error";
       error.statusCode = error.statusCode || 502;
       throw error;
     }
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = new Error(data?.error?.message || `OpenAI request failed with ${response.status}`);
-      error.code = classifyOpenAIError(response.status, data);
+      const error = new Error(data?.error?.message || `GLM request failed with ${response.status}`);
+      error.code = classifyProviderError("glm", response.status, data);
       error.statusCode = response.status;
       throw error;
     }
 
-    const outputText = extractOutputText(data);
+    const outputText = extractChatCompletionText(data);
     if (!outputText) {
-      const error = new Error("OpenAI response did not include output text");
-      error.code = "openai_empty_output";
+      const error = new Error("GLM response did not include output text");
+      error.code = "glm_empty_output";
       error.statusCode = 502;
       throw error;
     }
 
     try {
       const parsed = JSON.parse(outputText);
-      logAIDiagnostic("openai_request_success", {
+      logAIDiagnostic("glm_request_success", {
         endpoint: debugContext.endpoint,
         requestID: debugContext.requestID,
         depth: debugContext.depth,
@@ -405,7 +417,7 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugCo
       });
       return parsed;
     } catch (error) {
-      error.code = "openai_json_parse_error";
+      error.code = "glm_json_parse_error";
       error.statusCode = 502;
       throw error;
     }
@@ -414,11 +426,11 @@ async function callOpenAI({ schema, schemaName, prompt, maxOutputTokens, debugCo
   }
 }
 
-async function callOpenAISpeech({ input, voice, instructions, speed, debugContext = {} }) {
-  const apiKey = process.env.OPENAI_API_KEY;
+async function callElevenLabsSpeech({ input, voice, speed, debugContext = {} }) {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
-    const error = new Error("OPENAI_API_KEY is not configured");
-    error.code = "missing_openai_api_key";
+    const error = new Error("ELEVENLABS_API_KEY is not configured");
+    error.code = "missing_elevenlabs_api_key";
     error.statusCode = 503;
     throw error;
   }
@@ -430,73 +442,79 @@ async function callOpenAISpeech({ input, voice, instructions, speed, debugContex
     error.statusCode = 400;
     throw error;
   }
-  const speechSpeed = normalizeTTSSpeed(speed ?? process.env.OPENAI_TTS_SPEED ?? DEFAULT_TTS_SPEED);
+  const speechSpeed = normalizeTTSSpeed(speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED);
+  const voiceID = trimText(voice || process.env.ELEVENLABS_VOICE_ID || DEFAULT_TTS_VOICE_ID, 160);
+  const model = process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL;
 
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
-    Number(process.env.OPENAI_TTS_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
+    Number(process.env.ELEVENLABS_TTS_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
   );
 
   try {
-    logAIDiagnostic("openai_tts_request_start", {
+    logAIDiagnostic("elevenlabs_tts_request_start", {
       endpoint: debugContext.endpoint,
       requestID: debugContext.requestID,
       clientID: debugContext.clientID,
       inputLength: cleanInput.length,
-      ttsModel: process.env.OPENAI_TTS_MODEL || DEFAULT_TTS_MODEL,
-      voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE,
+      ttsModel: model,
+      voiceID,
       speed: speechSpeed
     });
 
     let response;
     try {
-      response = await fetch("https://api.openai.com/v1/audio/speech", {
+      response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceID)}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg"
         },
         body: JSON.stringify({
-          model: process.env.OPENAI_TTS_MODEL || DEFAULT_TTS_MODEL,
-          voice: voice || process.env.OPENAI_TTS_VOICE || DEFAULT_TTS_VOICE,
-          input: cleanInput,
-          instructions: trimText(instructions, 900)
-            || "Narre em português do Brasil com voz calma, natural, acolhedora e ritmo contemplativo. Faça pausas discretas entre referência, trecho, explicação e aplicação prática.",
-          response_format: "mp3",
-          speed: speechSpeed
+          text: cleanInput,
+          model_id: model,
+          language_code: "pt",
+          voice_settings: {
+            stability: 0.58,
+            similarity_boost: 0.76,
+            style: 0.12,
+            use_speaker_boost: false,
+            speed: speechSpeed
+          }
         }),
         signal: controller.signal
       });
     } catch (error) {
       if (error?.name === "AbortError") {
-        const timeoutError = new Error("OpenAI TTS request timed out");
-        timeoutError.code = "openai_tts_timeout";
+        const timeoutError = new Error("ElevenLabs TTS request timed out");
+        timeoutError.code = "elevenlabs_tts_timeout";
         timeoutError.statusCode = 504;
         throw timeoutError;
       }
-      error.code = error.code || "openai_tts_network_error";
+      error.code = error.code || "elevenlabs_tts_network_error";
       error.statusCode = error.statusCode || 502;
       throw error;
     }
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      const error = new Error(data?.error?.message || `OpenAI TTS request failed with ${response.status}`);
-      error.code = classifyOpenAIError(response.status, data);
+      const error = new Error(data?.detail?.message || data?.error?.message || `ElevenLabs TTS request failed with ${response.status}`);
+      error.code = classifyProviderError("elevenlabs_tts", response.status, data);
       error.statusCode = response.status;
       throw error;
     }
 
     const audio = Buffer.from(await response.arrayBuffer());
     if (!audio.length) {
-      const error = new Error("OpenAI TTS response was empty");
-      error.code = "openai_tts_empty_output";
+      const error = new Error("ElevenLabs TTS response was empty");
+      error.code = "elevenlabs_tts_empty_output";
       error.statusCode = 502;
       throw error;
     }
 
-    logAIDiagnostic("openai_tts_request_success", {
+    logAIDiagnostic("elevenlabs_tts_request_success", {
       endpoint: debugContext.endpoint,
       requestID: debugContext.requestID,
       outputBytes: audio.length
@@ -525,21 +543,22 @@ function normalizeTTSSpeed(value) {
   return Math.min(1.1, Math.max(0.75, parsed));
 }
 
-function classifyOpenAIError(status, data) {
+function classifyProviderError(prefix, status, data) {
   const message = String(data?.error?.message || "").toLowerCase();
   const type = String(data?.error?.type || "").toLowerCase();
   const code = String(data?.error?.code || "").toLowerCase();
 
-  if (status === 401 || status === 403) return "openai_auth_error";
-  if (status === 408 || status === 504) return "openai_timeout";
+  if (status === 401 || status === 403) return `${prefix}_auth_error`;
+  if (status === 408 || status === 504) return `${prefix}_timeout`;
   if (message.includes("model") || type.includes("model") || code.includes("model")) {
-    return "openai_model_error";
+    return `${prefix}_model_error`;
   }
-  if (status === 429) return "openai_rate_limited";
-  return "openai_api_error";
+  if (status === 429) return `${prefix}_rate_limited`;
+  return `${prefix}_api_error`;
 }
 
 function logAIError(endpoint, error, context = {}) {
+  const isSpeech = endpoint === "speech";
   console.error("limiar_ai_error", {
     endpoint,
     code: error.code || "ai_unknown_error",
@@ -547,21 +566,23 @@ function logAIError(endpoint, error, context = {}) {
     message: error.message,
     requestID: context.requestID,
     clientID: context.clientID,
-    model: process.env.OPENAI_MODEL || DEFAULT_MODEL
+    provider: isSpeech ? "elevenlabs" : "zai",
+    model: isSpeech
+      ? process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL
+      : process.env.GLM_MODEL || process.env.ZAI_MODEL || DEFAULT_MODEL
   });
 }
 
-function extractOutputText(response) {
-  if (typeof response.output_text === "string") return response.output_text;
-  const chunks = [];
-  for (const item of response.output || []) {
-    for (const content of item.content || []) {
-      if (content.type === "output_text" && typeof content.text === "string") {
-        chunks.push(content.text);
-      }
-    }
+function extractChatCompletionText(response) {
+  const content = response?.choices?.[0]?.message?.content;
+  if (typeof content === "string") return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (typeof part?.text === "string" ? part.text : ""))
+      .join("")
+      .trim();
   }
-  return chunks.join("").trim();
+  return "";
 }
 
 function validateReflection(value) {
@@ -587,13 +608,13 @@ function validateSpiritualReading(value, expectedItemCount) {
 module.exports = {
   DEFAULT_MODEL,
   DEFAULT_TTS_MODEL,
-  DEFAULT_TTS_VOICE,
+  DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
   applyAudioHeaders,
   applyCommonHeaders,
   buildContextPrompt,
-  callOpenAI,
-  callOpenAISpeech,
+  callGLM,
+  callElevenLabsSpeech,
   depthGuidance,
   depthOutputTokenLimit,
   enforceAIRateLimit,

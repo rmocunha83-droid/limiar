@@ -679,7 +679,12 @@ struct PassageRecommendationService {
             }
         }
 
-        return plan.isEmpty ? Array(passages.prefix(minimumCount)) : plan
+        if plan.isEmpty {
+            let fallback = passages.filter { $0.tradition == profile.tradition }
+            return Array((fallback.isEmpty ? passages : fallback).shuffled().prefix(minimumCount))
+        }
+
+        return plan
     }
 
     private func rankedPassages(
@@ -704,7 +709,12 @@ struct PassageRecommendationService {
             if passage.id == currentPassageID { score -= 8 }
             return (passage, score)
         }
-        let rankedMatches = scored.sorted(by: { $0.score > $1.score }).map(\.passage)
+        let rankedMatches = scored.sorted { lhs, rhs in
+            if lhs.score == rhs.score {
+                return lhs.passage.id < rhs.passage.id
+            }
+            return lhs.score > rhs.score
+        }.map(\.passage)
         let freshMatches = rankedMatches.filter { passage in
             !recentIDs.contains(passage.id) && passage.id != currentPassageID
         }
@@ -712,7 +722,7 @@ struct PassageRecommendationService {
             recentIDs.contains(passage.id) || passage.id == currentPassageID
         }
 
-        return freshMatches + olderMatches
+        return freshMatches.shuffled() + olderMatches.shuffled()
             + passages.filter { passage in
                 !traditionMatches.contains(where: { $0.id == passage.id })
             }
@@ -1065,7 +1075,6 @@ struct AISpiritualReadingService {
                 ])
                 return nil
             }
-            cache.save(items, for: request)
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "remote"
             values["endpoint"] = "spiritual-reading"
@@ -1312,7 +1321,6 @@ struct AIReflectionService {
 
         do {
             let reflection = try await remoteService.reflection(for: request, passages: passages)
-            cache.save(reflection, for: request)
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "remote"
             values["endpoint"] = "reflection"
@@ -1484,7 +1492,6 @@ struct RemoteSpeechRequestPayload: Codable {
     let text: String
     let voice: String?
     let speed: Double?
-    let instructions: String
 }
 
 struct RemoteSpiritualReadingResponse: Codable {
@@ -1647,13 +1654,7 @@ struct RemoteAISpeechService {
         let payload = RemoteSpeechRequestPayload(
             text: text,
             voice: nil,
-            speed: 0.92,
-            instructions: """
-            Narre em português do Brasil com voz calma, natural e acolhedora, como uma leitura espiritual íntima.
-            Use ritmo contemplativo, com pausas discretas entre referência, trecho, explicação espiritual e aplicação prática.
-            Leia números de capítulos e versículos com naturalidade, sem pressa.
-            Evite tom robótico, dramático, publicitário ou acelerado.
-            """
+            speed: 0.92
         )
 
         return try await client.postData("/api/speech", body: payload, accept: "audio/mpeg")

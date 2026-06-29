@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const {
   DEFAULT_MODEL,
   DEFAULT_TTS_MODEL,
-  DEFAULT_TTS_VOICE,
+  DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
   buildContextPrompt,
   depthGuidance,
@@ -18,13 +18,13 @@ const {
   validateSpiritualReading
 } = require("../api/_limiar-ai");
 
-test("keeps GPT-4.1 mini as the default commercial model", () => {
-  assert.equal(DEFAULT_MODEL, "gpt-4.1-mini");
+test("keeps GLM-4.5-Air as the default commercial text model", () => {
+  assert.equal(DEFAULT_MODEL, "glm-4.5-air");
 });
 
-test("keeps GPT-4o mini TTS as the economical default voice model", () => {
-  assert.equal(DEFAULT_TTS_MODEL, "gpt-4o-mini-tts");
-  assert.equal(DEFAULT_TTS_VOICE, "coral");
+test("keeps ElevenLabs Flash as the economical default voice model", () => {
+  assert.equal(DEFAULT_TTS_MODEL, "eleven_flash_v2_5");
+  assert.equal(DEFAULT_TTS_VOICE_ID, "21m00Tcm4TlvDq8ikWAM");
   assert.equal(DEFAULT_TTS_SPEED, 0.92);
 });
 

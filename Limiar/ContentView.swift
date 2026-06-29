@@ -522,7 +522,7 @@ private struct DashboardView: View {
 
     private var readingItemsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if model.hasPremiumAccess {
+            if model.hasPremiumAccess && model.aiContentState == .remoteReady {
                 HStack(spacing: 12) {
                     Button {
                         narration.toggle(text: model.currentReadingNarrationText)
@@ -545,8 +545,8 @@ private struct DashboardView: View {
                         narration.toggle(text: "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)")
                     },
                     isSpeaking: narration.isSpeaking,
-                    showsReflection: model.hasPremiumAccess,
-                    showsNarration: model.hasPremiumAccess
+                    showsReflection: model.hasPremiumAccess && model.aiContentState == .remoteReady,
+                    showsNarration: model.hasPremiumAccess && model.aiContentState == .remoteReady
                 )
             }
         }
@@ -908,7 +908,9 @@ private struct ReadingView: View {
 
                     if model.hasPremiumAccess {
                         aiStatusBanner
-                        reflectionSection
+                        if model.aiContentState == .remoteReady {
+                            reflectionSection
+                        }
                     } else if model.isEssentialMode {
                         essentialModeReadingNotice
                     }
@@ -2599,7 +2601,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
     private var activeSpeechText = ""
 
     func toggle(text: String) {
-        if isSpeaking, activeSpeechText == text {
+        if isSpeaking, activeSpeechText == preparedSpeechText(text) {
             stop()
         } else {
             speak(text)
@@ -2621,7 +2623,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
 
         let prepared = preparedSpeechText(text)
         guard !prepared.isEmpty else { return }
-        activeSpeechText = text
+        activeSpeechText = prepared
         isSpeaking = true
         let service = speechService
 
