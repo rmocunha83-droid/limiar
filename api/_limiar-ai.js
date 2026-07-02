@@ -180,7 +180,7 @@ function depthGuidance(depth) {
       "Profundidade mais profunda:",
       "- homily: 2 a 3 parágrafos desenvolvidos, com contexto do trecho e ligação com a tradição;",
       "- spiritualMeaning: explique com mais densidade espiritual, conectando trecho, tema preferido e vida concreta;",
-      "- practicalApplication: aplicação prática mais elaborada, sem moralismo, com uma decisão clara para o próximo período;",
+      "- practicalApplication: aplicação prática mais elaborada, sem moralismo, com uma decisão clara para o restante do dia;",
       "- conclusion: frase final pastoral e específica, diferente das respostas anteriores;",
       "- meditationQuestion: pergunta mais reflexiva, capaz de sustentar meditação."
     ].join("\n");

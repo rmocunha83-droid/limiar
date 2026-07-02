@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
       "reference, passageText, homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion.",
       "A homily deve resumir o eixo espiritual da leitura.",
       "O spiritualMeaning deve ser o bloco principal e respeitar claramente a profundidade escolhida.",
-      "A practicalApplication deve nascer do trecho e dos temas preferidos, com ação concreta para o próximo período de uso dos apps.",
+      "A practicalApplication deve nascer do trecho e dos temas preferidos, com ação concreta para o restante do dia.",
       "A conclusion deve ser específica, não uma frase fixa reaproveitada.",
       "A pergunta final deve ser nova em relação ao histórico recente."
     ].join("\n");

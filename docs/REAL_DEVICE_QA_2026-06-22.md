@@ -34,7 +34,7 @@ Dispositivo usado: iPhone Romeu (`91B75307-6A73-5D0E-AEF7-D3CC8AB36768`), iPhone
 - Corrigido trecho de Isaías:
   - `Então a tua luz romperá como a aurora, e a tua cura brotará sem demora.`
 - Ajustada a cor do botão do escudo do iOS para a mesma paleta verde suave do botão principal.
-- Implementado agendamento de reaplicação do bloqueio quando o tempo liberado termina. Assim, depois da leitura, o APP bloqueado volta a ser protegido mesmo se o Limiar ficar em segundo plano.
+- Implementado agendamento de reaplicação da pausa diária às 5h. Assim, depois da leitura, os apps selecionados ficam disponíveis pelo restante do dia e voltam a ativar o Limiar na manhã seguinte.
 
 ## Ainda precisa de teste manual no iPhone
 
@@ -44,9 +44,9 @@ Estes pontos dependem de interação com telas nativas protegidas do iOS e preci
 - Abrir o seletor nativo de APPs.
 - Escolher um APP real para bloquear.
 - Confirmar o escudo do iOS ao abrir esse APP.
-- Confirmar o fluxo completo: APP bloqueado -> Limiar -> leitura -> liberação temporária -> bloqueio reaplicado depois do tempo.
+- Confirmar o fluxo completo: app selecionado -> Limiar -> leitura -> apps disponíveis pelo restante do dia -> pausa reaplicada no ciclo das 5h.
 - Confirmar a narração em voz masculina disponível no aparelho.
 
 ## Resultado
 
-A versão instalada no iPhone está pronta para teste real do fluxo completo. O projeto compila, instala e abre no aparelho, e a principal falha encontrada no QA automático, a reaplicação do bloqueio após o tempo liberado, foi corrigida.
+A versão instalada no iPhone está pronta para teste real do fluxo completo. O projeto compila, instala e abre no aparelho, e a principal regra validada é a reaplicação da pausa diária às 5h.

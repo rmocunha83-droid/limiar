@@ -922,7 +922,7 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
         case (.medium, 0):
             return "Para levar este trecho consigo, \(action)."
         case (.medium, 1):
-            return "No próximo período, \(action); deixe o versículo orientar uma escolha pequena."
+            return "No restante do dia, \(action); deixe o versículo orientar uma escolha pequena."
         case (.medium, _):
             return "Transforme esta leitura em um gesto simples: \(action)."
         case (.deep, 0):
@@ -1183,7 +1183,7 @@ struct LocalLightweightReflectionGenerator: AIReflectionGenerating {
                 """,
                 practicalApplication: practical,
                 conclusion: "O Limiar ajuda a transformar o retorno ao celular em uma escolha mais consciente.",
-                meditationQuestion: "Qual atitude pequena pode tornar este próximo período mais fiel ao que você quer cultivar?"
+                meditationQuestion: "Qual atitude pequena pode tornar o restante do dia mais fiel ao que você quer cultivar?"
             )
         case .deep:
             return AIReflection(

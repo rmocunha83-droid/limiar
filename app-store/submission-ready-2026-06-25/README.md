@@ -11,12 +11,12 @@ Estado atual:
 - Build enviada: `1.0 (23)`
 - Distribuição: pública, somente Brasil
 - Comercialização: pessoa física do Account Holder
-- Produto de assinatura inicial: somente mensal
+- Produtos de assinatura inicial: mensal e anual
 
 Arquivos:
 
 - `01-metadados-app.md`: textos principais da página do app.
-- `02-assinatura-mensal.md`: dados da assinatura mensal.
+- `02-assinatura-mensal.md`: dados das assinaturas mensal e anual.
 - `03-review-notes.txt`: texto para colar em App Review Notes.
 - `04-app-privacy.md`: respostas sugeridas para privacidade.
 - `05-checklist-final.md`: conferência final antes de enviar para revisão.

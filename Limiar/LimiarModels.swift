@@ -595,7 +595,7 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
 enum LockState: Equatable {
     case locked
     case readingPause
-    case unlockedUntil(Date)
+    case availableToday
 }
 
 enum AIContentState: Equatable {
@@ -639,14 +639,13 @@ enum AIContentState: Equatable {
 @MainActor
 @Observable
 final class LimiarAppModel {
-    static let defaultUnlockDurationMinutes = 30
+    static let morningPauseHour = 5
 
     var hasCompletedOnboarding = false
     var hasSeenValueDemo = false
     var hasPremiumAccess = false
     var isEssentialMode = false
     var faithProfile = UserFaithProfile.starter
-    var unlockDurationMinutes = LimiarAppModel.defaultUnlockDurationMinutes
     var blockingEnabled = true
     var selection = FamilyActivitySelection()
     var currentReadingPlan: [ScripturePassage] = []
@@ -674,7 +673,6 @@ final class LimiarAppModel {
     var isReadingSessionActive = false
     var history: [ReadingHistoryItem] = []
     var favoritePassages: [FavoritePassageItem] = []
-    var unlockedUntil: Date?
     var unlockNote = ""
     var hasAuthorizedScreenTime = false
     var recentPassageIDs: [String] = []
@@ -688,7 +686,6 @@ final class LimiarAppModel {
     private var lastForegroundRefreshAt = Date.distantPast
     private var aiGenerationTask: Task<Void, Never>?
     private var aiGenerationID = UUID()
-    @ObservationIgnored private var unlockExpirationTask: Task<Void, Never>?
 
     init() {
         var savedProfile = policyStore.loadFaithProfile() ?? .starter
@@ -698,11 +695,8 @@ final class LimiarAppModel {
         faithProfile = savedProfile
         hasCompletedOnboarding = policyStore.loadOnboardingState()
         hasSeenValueDemo = policyStore.loadValueDemoSeen()
-        unlockDurationMinutes = Self.defaultUnlockDurationMinutes
-        policyStore.saveUnlockDuration(Self.defaultUnlockDurationMinutes)
         blockingEnabled = policyStore.loadBlockingEnabled()
         selection = policyStore.loadSelection()
-        unlockedUntil = policyStore.loadUnlockedUntil()
         history = policyStore.loadHistory()
         favoritePassages = policyStore.loadFavorites()
         hasAuthorizedScreenTime = policyStore.loadScreenTimeAuthorized()
@@ -721,9 +715,9 @@ final class LimiarAppModel {
     }
 
     var lockState: LockState {
-        guard blockingEnabled else { return .unlockedUntil(.distantFuture) }
-        if let unlockedUntil, unlockedUntil > Date() {
-            return .unlockedUntil(unlockedUntil)
+        guard blockingEnabled else { return .availableToday }
+        if policyStore.hasCompletedMorningPauseToday() {
+            return .availableToday
         }
         return history.isEmpty ? .readingPause : .locked
     }
@@ -827,7 +821,7 @@ final class LimiarAppModel {
     }
 
     var unlockDurationDescription: String {
-        "\(unlockDurationMinutes) minutos"
+        "Uma pausa por manhã, às 5h"
     }
 
     var hasBlockedAppsSelection: Bool {
@@ -841,14 +835,7 @@ final class LimiarAppModel {
     }
 
     var estimatedFocusTimeText: String {
-        let totalMinutes = max(0, history.count * unlockDurationMinutes)
-        guard totalMinutes >= 60 else {
-            return "\(totalMinutes) min"
-        }
-
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        return minutes == 0 ? "\(hours) h" : "\(hours) h \(minutes) min"
+        "\(history.count)"
     }
 
     func completeOnboarding() {
@@ -887,7 +874,7 @@ final class LimiarAppModel {
             aiContentState = .localReady
             aiGenerationTask?.cancel()
             screenTimeController.clearShield()
-            cancelLocalUnlockExpiration()
+            screenTimeController.stopLegacyUnlockMonitoring()
         }
     }
 
@@ -895,12 +882,10 @@ final class LimiarAppModel {
         faithProfile.normalizeReadingPreferencesForTradition()
         faithProfile.normalizeStandaloneThemesForCurrentTradition()
         policyStore.saveFaithProfile(faithProfile)
-        unlockDurationMinutes = Self.defaultUnlockDurationMinutes
-        policyStore.saveUnlockDuration(Self.defaultUnlockDurationMinutes)
         policyStore.saveBlockingEnabled(blockingEnabled)
         policyStore.saveSelection(selection)
         var values = LimiarAIDiagnostics.profileSnapshot(faithProfile)
-        values["unlockDurationMinutes"] = "\(Self.defaultUnlockDurationMinutes)"
+        values["morningPauseHour"] = "\(Self.morningPauseHour)"
         values["blockingEnabled"] = "\(blockingEnabled)"
         values["hasBlockedAppsSelection"] = "\(hasBlockedAppsSelection)"
         LimiarAIDiagnostics.log("preferences_saved", values: values)
@@ -943,12 +928,18 @@ final class LimiarAppModel {
     func beginNewReading(avoidingCurrent: Bool = false) {
         readingProgress = 0
         readingStartedAt = Date()
-        setReadingPlan(recommender.readingPlan(
+        let candidates = recommender.readingPlan(
             for: faithProfile,
             history: history,
             avoiding: avoidingCurrent ? currentPassage.id : nil,
-            recentlyShownPassageIDs: recentPassageIDs
-        ), profile: faithProfile)
+            recentlyShownPassageIDs: recentPassageIDs,
+            minimumCount: hasPremiumAccess ? 12 : LimiarReadingConstants.targetItemCount
+        )
+        setReadingPlan(
+            Array(candidates.prefix(LimiarReadingConstants.targetItemCount)),
+            profile: faithProfile,
+            remoteCandidatePool: candidates
+        )
     }
 
     func prepareFreshPassageForForeground() {
@@ -1026,67 +1017,64 @@ final class LimiarAppModel {
         }
 
         isReadingSessionActive = false
-        let until = Date().addingTimeInterval(TimeInterval(unlockDurationMinutes * 60))
-        unlockedUntil = until
+        let completedAt = Date()
         history.insert(
             ReadingHistoryItem(
                 id: UUID(),
                 passageID: currentReadingSessionID,
                 passageTitle: currentReadingTitle,
                 reference: currentReadingReference,
-                completedAt: Date()
+                completedAt: completedAt
             ),
             at: 0
         )
         policyStore.saveHistory(history)
-        policyStore.saveUnlockedUntil(until)
+        policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
-        screenTimeController.scheduleUnlockExpiration(at: until)
-        scheduleLocalUnlockExpiration(at: until)
-        unlockNote = "Disponível até \(until.formatted(date: .omitted, time: .shortened))."
+        screenTimeController.stopLegacyUnlockMonitoring()
+        unlockNote = "Travessia de hoje concluída. A pausa volta amanhã às 5h."
         beginNewReading()
     }
 
     func applyBlocking() {
         guard hasPauseAccess else {
             screenTimeController.clearShield()
+            screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
 
         guard blockingEnabled else {
             screenTimeController.clearShield()
+            screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
-        if let unlockedUntil, unlockedUntil > Date() {
+
+        if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
-            screenTimeController.scheduleUnlockExpiration(at: unlockedUntil)
-            scheduleLocalUnlockExpiration(at: unlockedUntil)
+            screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
-        cancelLocalUnlockExpiration()
+
         screenTimeController.applyShield(selection: selection)
     }
 
     func reapplyBlockIfNeeded() {
         guard hasPauseAccess else {
             screenTimeController.clearShield()
-            cancelLocalUnlockExpiration()
+            screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
 
         guard blockingEnabled else {
             screenTimeController.clearShield()
-            cancelLocalUnlockExpiration()
+            screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
-        if let unlockedUntil, unlockedUntil > Date() {
+
+        if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
-            screenTimeController.scheduleUnlockExpiration(at: unlockedUntil)
-            scheduleLocalUnlockExpiration(at: unlockedUntil)
+            screenTimeController.stopLegacyUnlockMonitoring()
         } else {
-            self.unlockedUntil = nil
-            policyStore.saveUnlockedUntil(nil)
-            cancelLocalUnlockExpiration()
             screenTimeController.applyShield(selection: selection)
         }
     }
@@ -1110,8 +1098,13 @@ final class LimiarAppModel {
         beginNewReading()
     }
 
-    private func setReadingPlan(_ plan: [ScripturePassage], profile: UserFaithProfile) {
+    private func setReadingPlan(
+        _ plan: [ScripturePassage],
+        profile: UserFaithProfile,
+        remoteCandidatePool: [ScripturePassage]? = nil
+    ) {
         let resolvedPlan = plan.isEmpty ? [currentPassage] : plan
+        let candidatePool = remoteCandidatePool?.isEmpty == false ? remoteCandidatePool! : resolvedPlan
         aiGenerationTask?.cancel()
         let generationID = UUID()
         aiGenerationID = generationID
@@ -1119,13 +1112,7 @@ final class LimiarAppModel {
         currentPassage = resolvedPlan[0]
         if isEssentialMode {
             currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
-            currentReflection = AIReflection(
-                summary: "",
-                spiritualMeaning: "",
-                practicalApplication: "",
-                conclusion: "",
-                meditationQuestion: ""
-            )
+            currentReflection = emptyReflection()
             aiContentState = .essentialMode
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "essential"
@@ -1163,24 +1150,30 @@ final class LimiarAppModel {
             return
         }
 
-        currentSpiritualReadingItems = spiritualReadingService.readingItems(
-            for: resolvedPlan,
-            profile: profile,
-            recentPassageIDs: recentPassageIDs,
-            recentReflections: recentAIReflections
-        )
-        currentReflection = reflectionService.reflection(
-            for: resolvedPlan,
-            profile: profile,
-            recentReflections: recentAIReflections
-        )
-        let remoteRequestKey = remoteAIRequestKey(for: resolvedPlan, profile: profile)
+        currentSpiritualReadingItems = []
+        currentReflection = emptyReflection()
+        let remoteRequestKey = remoteAIRequestKey(for: candidatePool, profile: profile)
         aiContentState = .generating
         var values = LimiarAIDiagnostics.profileSnapshot(profile)
         values["source"] = "remote"
         values["requestKey"] = remoteRequestKey
         LimiarAIDiagnostics.log("remote_ai_started", values: values)
-        refreshRemoteAIContent(for: resolvedPlan, profile: profile, generationID: generationID)
+        refreshRemoteAIContent(
+            for: Array(candidatePool.prefix(12)),
+            fallbackPlan: resolvedPlan,
+            profile: profile,
+            generationID: generationID
+        )
+    }
+
+    private func emptyReflection() -> AIReflection {
+        AIReflection(
+            summary: "",
+            spiritualMeaning: "",
+            practicalApplication: "",
+            conclusion: "",
+            meditationQuestion: ""
+        )
     }
 
     private func essentialReadingItems(for passages: [ScripturePassage]) -> [SpiritualReadingItem] {
@@ -1206,37 +1199,6 @@ final class LimiarAppModel {
         ].joined(separator: "|")
     }
 
-    private func scheduleLocalUnlockExpiration(at date: Date) {
-        cancelLocalUnlockExpiration()
-        let seconds = date.timeIntervalSinceNow
-        guard seconds > 0 else {
-            expireUnlockIfNeeded()
-            return
-        }
-
-        let nanoseconds = UInt64(min(seconds, 86_400) * 1_000_000_000)
-        unlockExpirationTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: nanoseconds)
-            await MainActor.run {
-                self?.expireUnlockIfNeeded()
-            }
-        }
-    }
-
-    private func cancelLocalUnlockExpiration() {
-        unlockExpirationTask?.cancel()
-        unlockExpirationTask = nil
-    }
-
-    private func expireUnlockIfNeeded() {
-        guard let unlockedUntil, unlockedUntil <= Date() else { return }
-        self.unlockedUntil = nil
-        policyStore.saveUnlockedUntil(nil)
-        screenTimeController.applyShield(selection: selection)
-        unlockNote = "O período de uso terminou. Faça uma nova leitura para retomar os apps selecionados com presença."
-        cancelLocalUnlockExpiration()
-    }
-
     private func rememberShownPassages(_ passages: [ScripturePassage]) {
         let ids = passages.map(\.id)
         recentPassageIDs.removeAll { ids.contains($0) }
@@ -1247,48 +1209,95 @@ final class LimiarAppModel {
 
     private func refreshRemoteAIContent(
         for passages: [ScripturePassage],
+        fallbackPlan: [ScripturePassage],
         profile: UserFaithProfile,
         generationID: UUID
     ) {
         let recentPassageIDs = recentPassageIDs
         let recentReflections = recentAIReflections
-        aiGenerationTask = Task { [passages, profile, recentPassageIDs, recentReflections] in
+        aiGenerationTask = Task { [passages, fallbackPlan, profile, recentPassageIDs, recentReflections] in
             let spiritualReadingService = AISpiritualReadingService()
             let reflectionService = AIReflectionService()
-            async let remoteItems = spiritualReadingService.remoteReadingItems(
+
+            let remoteItems = await spiritualReadingService.remoteReadingItems(
                 for: passages,
                 profile: profile,
                 recentPassageIDs: recentPassageIDs,
                 recentReflections: recentReflections
             )
-            async let remoteReflection = reflectionService.remoteReflection(
-                for: passages,
+
+            let reflectionPassages = remoteItems.map {
+                scripturePassages(from: $0, profile: profile)
+            } ?? fallbackPlan
+
+            let remoteReflection = await reflectionService.remoteReflection(
+                for: reflectionPassages,
                 profile: profile,
                 recentReflections: recentReflections
             )
 
-            let result = await (remoteItems, remoteReflection)
             guard !Task.isCancelled else { return }
 
             await MainActor.run {
                 guard aiGenerationID == generationID else { return }
-                if let items = result.0 {
+                if let items = remoteItems {
                     currentSpiritualReadingItems = items
+                    let selectedPassages = scripturePassages(from: items, profile: profile)
+                    currentReadingPlan = selectedPassages
+                    if let first = selectedPassages.first {
+                        currentPassage = first
+                    }
+                    rememberShownPassages(selectedPassages)
                 }
 
-                if let reflection = result.1 {
+                if let reflection = remoteReflection {
                     currentReflection = reflection
                     rememberReflection(reference: currentReadingReference, reflection: reflection)
                 }
 
-                if result.0 != nil, result.1 != nil {
+                if remoteItems != nil, remoteReflection != nil {
                     aiContentState = .remoteReady
-                } else if result.0 != nil || result.1 != nil {
+                } else if remoteItems != nil || remoteReflection != nil {
                     aiContentState = .fallback
                 } else {
+                    currentReadingPlan = fallbackPlan
+                    if let first = fallbackPlan.first {
+                        currentPassage = first
+                    }
+                    currentSpiritualReadingItems = spiritualReadingService.readingItems(
+                        for: fallbackPlan,
+                        profile: profile,
+                        recentPassageIDs: recentPassageIDs,
+                        recentReflections: recentReflections
+                    )
+                    currentReflection = reflectionService.reflection(
+                        for: fallbackPlan,
+                        profile: profile,
+                        recentReflections: recentReflections
+                    )
                     aiContentState = .fallback
                 }
             }
+        }
+    }
+
+    nonisolated private func scripturePassages(from items: [SpiritualReadingItem], profile: UserFaithProfile) -> [ScripturePassage] {
+        let fallbackTheme = profile.favoriteThemes.first ?? .faith
+        let fallbackSection = profile.favoriteBibleSections.first ?? .gospels
+        let fallbackBook = profile.favoriteBooks.first ?? .psalms
+
+        return items.enumerated().map { index, item in
+            ScripturePassage(
+                id: "remote-\(index)-\(abs(item.id.hashValue))",
+                tradition: profile.tradition,
+                title: item.reference,
+                reference: item.reference,
+                text: item.text,
+                estimatedMinutes: 5,
+                theme: fallbackTheme,
+                section: fallbackSection,
+                book: fallbackBook
+            )
         }
     }
 

@@ -76,7 +76,22 @@ Descrição do produto:
 Acesso completo ao Limiar Premium com cobrança mensal.
 ```
 
-Não criar plano anual no lançamento inicial.
+Criar produto anual no mesmo grupo:
+
+- Product ID: `limiar_premium_yearly`
+- Reference Name: `Limiar Premium Yearly`
+- Display Name: `Limiar Premium Anual`
+- Type: auto-renewable subscription
+- Duration: `1 Year`
+- Price: `R$ 89,90`
+- Availability: somente `Brazil`
+- Review screenshot: usar um print do paywall, se a Apple pedir.
+
+Descrição do produto:
+
+```text
+Acesso completo ao Limiar Premium com cobrança anual e economia em relação ao plano mensal.
+```
 
 ## 4. Apps > Limiar > Pricing and Availability
 

@@ -30,7 +30,7 @@ A venda pública ainda não pode ser considerada concluída porque depende de co
 | Palavras-chave | Pronto | 85 caracteres. |
 | Descrição | Pronto | 1641 caracteres. |
 | Assinatura inicial | Pronto no código | App busca somente `limiar_premium_monthly`. |
-| Plano anual | Removido do app | Busca por `limiar_premium_yearly`, `R$ 79,90`, `Melhor oferta` e `Economize no plano anual` não retornou no app. |
+| Plano anual | Reintroduzido na estratégia atual | O app e os materiais atuais usam `limiar_premium_yearly` com preço anual de R$ 89,90. |
 | Verificação de processamento via terminal | Preparado | `scripts/check_app_store_build_status.sh` permite consultar a build com App Store Connect API Key, sem versionar credenciais. |
 | Distribuição somente Brasil | Preparado | Documentado em `app-store/submission-ready-2026-06-25/` e guias. Precisa ser confirmado na interface da Apple. |
 | Comercialização pessoa física | Preparado | Documentado nos guias. Precisa de Paid Apps Agreement, banco e impostos ativos na conta. |

@@ -8,9 +8,6 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let settingsStore = ManagedSettingsStore(named: ManagedSettingsStore.Name("Limiar"))
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
-        if activity == .limiarUnlockWindow {
-            policyStore.saveUnlockedUntil(nil)
-        }
         reapplyShieldIfNeeded()
     }
 
@@ -24,7 +21,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return
         }
 
-        if let unlockedUntil = policyStore.loadUnlockedUntil(), unlockedUntil > Date() {
+        if policyStore.hasCompletedMorningPauseToday() {
             settingsStore.clearAllSettings()
             return
         }
@@ -50,12 +47,22 @@ private struct ExtensionPolicyStore {
         defaults.object(forKey: "blockingEnabled") as? Bool ?? true
     }
 
-    func loadUnlockedUntil() -> Date? {
-        defaults.object(forKey: "unlockedUntil") as? Date
+    func loadMorningPauseCompletedAt() -> Date? {
+        defaults.object(forKey: "morningPauseCompletedAt") as? Date
     }
 
-    func saveUnlockedUntil(_ date: Date?) {
-        defaults.set(date, forKey: "unlockedUntil")
+    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = .current) -> Bool {
+        guard let completedAt = loadMorningPauseCompletedAt() else { return false }
+        return completedAt >= currentMorningCycleStart(now: now, calendar: calendar)
+    }
+
+    private func currentMorningCycleStart(now: Date, calendar: Calendar) -> Date {
+        let todayStart = calendar.startOfDay(for: now)
+        let fiveToday = calendar.date(byAdding: .hour, value: 5, to: todayStart) ?? todayStart
+        if now >= fiveToday {
+            return fiveToday
+        }
+        return calendar.date(byAdding: .day, value: -1, to: fiveToday) ?? fiveToday
     }
 
     func loadSelection() -> FamilyActivitySelection {

@@ -97,7 +97,18 @@ Produto mensal:
 - Oferta introdutória: não configurada por padrão
 - Descrição: Acesso completo ao Limiar Premium com cobrança mensal.
 
-Observação comercial: para o lançamento inicial, envie somente `limiar_premium_monthly` para revisão. Um plano anual pode ser criado depois, se a estratégia comercial mudar.
+Produto anual:
+
+- Product ID: `limiar_premium_yearly`
+- Nome de referência: `Limiar Premium Yearly`
+- Nome exibido: `Limiar Premium Anual`
+- Duração: 1 ano
+- Preço: R$ 89,90
+- Disponibilidade: Brasil
+- Oferta introdutória: não configurada por padrão
+- Descrição: Acesso completo ao Limiar Premium com cobrança anual e economia em relação ao plano mensal.
+
+Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_yearly` no mesmo grupo de assinatura `Limiar Premium`, somente para o Brasil.
 
 ## Notas para revisão
 
@@ -105,7 +116,7 @@ O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pau
 
 Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais e o fluxo de pausa, mas sem narração, reflexões por IA e maior variedade.
 
-Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal.
+Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual.
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 

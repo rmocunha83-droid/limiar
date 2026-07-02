@@ -46,7 +46,7 @@ Em `Apps > Limiar > Pricing and Availability`:
 - Não ativar outros países/regiões.
 - Se houver opção para novos países adicionados futuramente, manter desativada quando possível.
 
-## 3. Assinatura mensal
+## 3. Assinaturas Premium
 
 Criar apenas um grupo de assinatura para o lançamento:
 
@@ -63,7 +63,17 @@ Produto mensal:
 - Availability: somente `Brazil`
 - Review submission: enviar junto com a versão `1.0`
 
-Não criar nem enviar plano anual no lançamento inicial. O plano anual pode ser criado depois, se a estratégia comercial mudar.
+Produto anual:
+
+- Product ID: `limiar_premium_yearly`
+- Reference Name: `Limiar Premium Yearly`
+- Display Name: `Limiar Premium Anual`
+- Duration: `1 Year`
+- Price: `R$ 89,90`
+- Availability: somente `Brazil`
+- Review submission: enviar junto com a nova versão do app
+
+Os dois produtos devem ficar no mesmo grupo de assinatura `Limiar Premium`.
 
 Sobre teste gratuito: o teste de 7 dias atual é uma experiência interna do app antes da compra. Não configure oferta introdutória StoreKit agora, salvo decisão posterior de produto.
 
@@ -145,7 +155,7 @@ O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pau
 
 Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais e o fluxo de pausa, mas sem narração, reflexões por IA e maior variedade.
 
-Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal disponível no StoreKit.
+Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
@@ -159,7 +169,7 @@ Checklist final:
 - Paid Apps Agreement ativo.
 - Dados bancários e fiscais preenchidos.
 - App disponível somente no Brasil.
-- Assinatura mensal disponível somente no Brasil.
+- Assinaturas mensal e anual disponíveis somente no Brasil.
 - Produto `limiar_premium_monthly` em estado pronto para submissão.
 - Build `1.0 (23)` selecionada.
 - Assinatura mensal selecionada na seção de In-App Purchases/Subscriptions da versão.

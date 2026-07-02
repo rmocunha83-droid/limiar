@@ -7,12 +7,13 @@
    - `POST /api/spiritual-reading`
    - `POST /api/reflection`
    - `POST /api/speech`, somente quando a pessoa toca para ouvir a leitura.
-3. O backend gera texto com GLM-4.5-Air usando `GLM_API_KEY` ou `ZAI_API_KEY` em variável de ambiente.
-4. O backend exige JSON estruturado e valida o resultado.
-5. O app valida novamente o JSON recebido.
-6. Se qualquer etapa falhar, o app mostra uma mensagem simples de indisponibilidade sem expor erro técnico.
+3. O app envia uma lista maior de candidatos para o backend, e o GLM-4.5-Air escolhe 3 trechos para a jornada atual. Isso evita repetir sempre os primeiros trechos locais.
+4. O backend gera texto com GLM-4.5-Air usando `GLM_API_KEY` ou `ZAI_API_KEY` em variável de ambiente.
+5. O backend exige JSON estruturado e valida o resultado.
+6. O app valida novamente o JSON recebido.
+7. Se qualquer etapa falhar, o app mostra uma mensagem simples de indisponibilidade sem expor erro técnico.
 
-Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: continuam vendo 3 trechos religiosos e usando o fluxo de pausa, mas não acionam chamadas remotas de IA nem narração.
+Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: continuam vendo 3 trechos religiosos e usando o fluxo de pausa, mas não acionam chamadas remotas de IA nem narração. Anúncios não fazem parte da versão atual; a integração com Google AdMob deve entrar apenas em uma versão futura, depois da conta e dos IDs de anúncio estarem prontos.
 
 ## Modelo Comercial
 
@@ -28,6 +29,7 @@ Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: co
 - A narração usa áudio gerado no backend por ElevenLabs, sem expor a chave no app iOS.
 - A narração nunca é pré-gerada: `/api/speech` só deve ser chamado quando a pessoa toca no botão de ouvir.
 - No Modo Essencial, a interface oculta áudio e reflexões por IA para evitar custo remoto.
+- No Modo Essencial, o app mantém a experiência reduzida sem narração e sem reflexões por IA. Anúncios ficam fora da versão atual.
 
 ## Segurança
 
@@ -75,3 +77,4 @@ Esse teste valida o contrato JSON do backend. Para QA no app, testar:
 - repetição reduzida com histórico recente;
 - voz remota por `/api/speech` somente após toque no botão de ouvir;
 - Modo Essencial sem chamadas para `/api/spiritual-reading`, `/api/reflection` ou `/api/speech`.
+- Modo Essencial sem chamadas para IA, sem narração e sem anúncios nesta versão.

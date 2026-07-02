@@ -5,6 +5,7 @@ import StoreKit
 
 enum SubscriptionPlan: String, CaseIterable, Identifiable {
     case monthly = "limiar_premium_monthly"
+    case yearly = "limiar_premium_yearly"
 
     var id: String { rawValue }
 
@@ -13,12 +14,28 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .monthly: "Mensal"
+        case .yearly: "Anual"
         }
     }
 
     var fallbackPrice: String {
         switch self {
         case .monthly: "R$ 9,90/mês"
+        case .yearly: "R$ 89,90/ano"
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .yearly: 0
+        case .monthly: 1
+        }
+    }
+
+    var badgeText: String? {
+        switch self {
+        case .monthly: nil
+        case .yearly: "Melhor oferta"
         }
     }
 }
@@ -60,7 +77,9 @@ final class SubscriptionManager {
         static let entitlementCacheKey = "limiar.subscription.hasActiveSubscription"
         static let trialStartDefaultsKey = "limiar.subscription.trialStartedAt"
         static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
-        static let productIDs = [SubscriptionPlan.monthly.productID]
+        static let productIDs = SubscriptionPlan.allCases
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.productID)
     }
 
     private(set) var products: [Product] = []
@@ -116,6 +135,14 @@ final class SubscriptionManager {
 
     var monthlyMarketingPrice: String {
         displayPrice(for: .monthly)
+    }
+
+    var yearlyMarketingPrice: String {
+        displayPrice(for: .yearly)
+    }
+
+    var pricingDisclosureText: String {
+        "Depois dos 7 dias grátis, escolha entre \(monthlyMarketingPrice) ou \(yearlyMarketingPrice). Cancele quando quiser."
     }
 
     var canResetTrialForTesting: Bool {
@@ -219,7 +246,7 @@ final class SubscriptionManager {
     }
 
     func displayPrice(for plan: SubscriptionPlan) -> String {
-        plan.fallbackPrice
+        product(for: plan)?.displayPrice ?? plan.fallbackPrice
     }
 
     func hasConfirmedFreeTrial(for plan: SubscriptionPlan) -> Bool {
@@ -249,7 +276,12 @@ final class SubscriptionManager {
             return trialText(for: plan)
         }
 
-        return "Renovação mensal. Cancele quando quiser."
+        switch plan {
+        case .monthly:
+            return "Renovação mensal. Cancele quando quiser."
+        case .yearly:
+            return "Equivale a R$ 7,49/mês. Economize R$ 28,90 por ano."
+        }
     }
 
     func renewalDisclosure(for plan: SubscriptionPlan) -> String {
@@ -344,6 +376,11 @@ final class SubscriptionManager {
                 let lhsIndex = Constants.productIDs.firstIndex(of: lhs.id) ?? 0
                 let rhsIndex = Constants.productIDs.firstIndex(of: rhs.id) ?? 0
                 return lhsIndex < rhsIndex
+            }
+            if product(for: .yearly) != nil {
+                selectedPlan = .yearly
+            } else if product(for: selectedPlan) == nil, product(for: .monthly) != nil {
+                selectedPlan = .monthly
             }
             state = products.isEmpty ? .productsUnavailable : .idle
             if products.isEmpty {

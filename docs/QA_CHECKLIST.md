@@ -28,7 +28,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Verificar se trechos muito curtos são combinados em uma leitura maior.
 - Finalizar a leitura.
 - Conferir se os apps selecionados ficam disponíveis depois da leitura.
-- Confirmar que, ao final do período interno de continuidade, uma nova pausa é apresentada.
+- Confirmar que a pausa diária volta a ser aplicada no ciclo seguinte, às 5h da manhã.
 
 ## Rotação de trechos
 

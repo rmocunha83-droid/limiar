@@ -80,7 +80,7 @@ struct PaywallView: View {
         if subscription.accessState == .trialExpired {
             return "Seu teste gratuito terminou. O Modo Essencial continua disponível sem chamadas de IA."
         }
-        return "Depois dos 7 dias grátis, R$ 9,90/mês. Cancele quando quiser."
+        return subscription.pricingDisclosureText
     }
 
     private var benefits: some View {
@@ -99,13 +99,14 @@ struct PaywallView: View {
 
     private func planPicker(selection: Binding<SubscriptionPlan>) -> some View {
         VStack(spacing: 12) {
-            ForEach([SubscriptionPlan.monthly]) { plan in
+            ForEach(SubscriptionPlan.allCases.sorted { $0.sortOrder < $1.sortOrder }) { plan in
                 PaywallPlanRow(
                     plan: plan,
                     price: subscription.displayPrice(for: plan),
                     detailText: subscription.planDetailText(for: plan),
                     trialText: subscription.trialText(for: plan),
                     hasFreeTrial: subscription.hasConfirmedFreeTrial(for: plan),
+                    badgeText: plan.badgeText,
                     isSelected: selection.wrappedValue == plan
                 ) {
                     selection.wrappedValue = plan
@@ -126,7 +127,7 @@ struct PaywallView: View {
                         ProgressView()
                             .tint(Color.deepInk)
                     }
-                    Text("Assinar por R$ 9,90/mês")
+                    Text(subscription.primaryButtonTitle(for: subscription.selectedPlan))
                     Image(systemName: "arrow.right")
                 }
                 .font(.system(size: 18, weight: .semibold))
@@ -138,7 +139,7 @@ struct PaywallView: View {
             .disabled(!subscription.canPurchase(subscription.selectedPlan))
             .opacity(subscription.canPurchase(subscription.selectedPlan) ? 1 : 0.62)
 
-            Text("Assinatura mensal de R$ 9,90/mês. Cancele quando quiser.")
+            Text(subscription.renewalDisclosure(for: subscription.selectedPlan))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.softText)
                 .multilineTextAlignment(.center)
@@ -243,6 +244,7 @@ private struct PaywallPlanRow: View {
     let detailText: String
     let trialText: String
     let hasFreeTrial: Bool
+    let badgeText: String?
     let isSelected: Bool
     let action: () -> Void
 
@@ -258,6 +260,15 @@ private struct PaywallPlanRow: View {
                         Text(plan.title)
                             .font(.system(size: 21, weight: .semibold, design: .serif))
                             .foregroundStyle(Color.ivory)
+
+                        if let badgeText {
+                            Text(badgeText)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.deepInk)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.warmGold.opacity(0.95), in: Capsule())
+                        }
                     }
 
                     Text(price)

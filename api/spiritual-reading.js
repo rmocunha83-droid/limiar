@@ -37,9 +37,11 @@ module.exports = async function handler(req, res) {
     const prompt = [
       buildContextPrompt({ profile, passages, recentPassageIDs, recentReflections }),
       "",
-      "Gere exatamente 3 itens de leitura, um para cada um dos 3 trechos enviados.",
+      "Selecione exatamente 3 itens dentre os trechos disponíveis enviados.",
       "Cada item deve usar os campos reference, passageText, homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion.",
-      "Use passageText exatamente baseado no trecho enviado; não invente versículos.",
+      "Use passageText exatamente baseado em um dos trechos enviados; não invente versículos nem altere a tradição.",
+      "Não use sempre os primeiros trechos: escolha os 3 que melhor combinam com a tradição, livros, seções, temas e histórico recente.",
+      "Evite referências presentes em Trechos recentes a evitar, salvo se não houver alternativa coerente.",
       "A homily deve variar de tamanho conforme a profundidade escolhida.",
       "O spiritualMeaning deve explicar o sentido espiritual do trecho e se conectar aos temas preferidos.",
       "A practicalApplication e a conclusion devem ser concretas, específicas e diferentes entre os 3 itens."

@@ -21,7 +21,7 @@
 - [ ] Preço definido como R$ 9,90/mês.
 - [ ] Disponibilidade da assinatura somente Brasil.
 - [ ] Produto mensal incluído na submissão junto com a versão do app.
-- [ ] Nenhum plano anual criado para o lançamento inicial.
+- [ ] Produto anual incluído na submissão junto com a versão do app.
 
 ## Página do app
 

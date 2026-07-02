@@ -7,10 +7,9 @@ struct ScreenTimePolicyStore {
     private enum Key {
         static let onboarding = "onboarding"
         static let profile = "faithProfile"
-        static let unlockDuration = "unlockDuration"
         static let blockingEnabled = "blockingEnabled"
         static let selection = "familySelection"
-        static let unlockedUntil = "unlockedUntil"
+        static let morningPauseCompletedAt = "morningPauseCompletedAt"
         static let history = "readingHistory"
         static let favorites = "favoritePassages"
         static let screenTimeAuthorized = "screenTimeAuthorized"
@@ -39,15 +38,6 @@ struct ScreenTimePolicyStore {
         save(profile, key: Key.profile)
     }
 
-    func loadUnlockDuration() -> Int {
-        let saved = defaults.integer(forKey: Key.unlockDuration)
-        return saved == 0 ? 30 : saved
-    }
-
-    func saveUnlockDuration(_ minutes: Int) {
-        defaults.set(minutes, forKey: Key.unlockDuration)
-    }
-
     func loadBlockingEnabled() -> Bool {
         defaults.object(forKey: Key.blockingEnabled) as? Bool ?? true
     }
@@ -64,12 +54,26 @@ struct ScreenTimePolicyStore {
         save(selection, key: Key.selection)
     }
 
-    func loadUnlockedUntil() -> Date? {
-        defaults.object(forKey: Key.unlockedUntil) as? Date
+    func loadMorningPauseCompletedAt() -> Date? {
+        defaults.object(forKey: Key.morningPauseCompletedAt) as? Date
     }
 
-    func saveUnlockedUntil(_ date: Date?) {
-        defaults.set(date, forKey: Key.unlockedUntil)
+    func saveMorningPauseCompletedAt(_ date: Date?) {
+        defaults.set(date, forKey: Key.morningPauseCompletedAt)
+    }
+
+    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = .current) -> Bool {
+        guard let completedAt = loadMorningPauseCompletedAt() else { return false }
+        return completedAt >= Self.currentMorningCycleStart(now: now, calendar: calendar)
+    }
+
+    static func currentMorningCycleStart(now: Date = Date(), calendar: Calendar = .current) -> Date {
+        let todayStart = calendar.startOfDay(for: now)
+        let fiveToday = calendar.date(byAdding: .hour, value: 5, to: todayStart) ?? todayStart
+        if now >= fiveToday {
+            return fiveToday
+        }
+        return calendar.date(byAdding: .day, value: -1, to: fiveToday) ?? fiveToday
     }
 
     func loadHistory() -> [ReadingHistoryItem] {

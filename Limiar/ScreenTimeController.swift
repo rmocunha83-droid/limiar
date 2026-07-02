@@ -32,7 +32,7 @@ struct ScreenTimeController {
     func scheduleDailyMonitoring() {
         let center = DeviceActivityCenter()
         let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalStart: DateComponents(hour: 5, minute: 0),
             intervalEnd: DateComponents(hour: 23, minute: 59),
             repeats: true
         )
@@ -44,31 +44,8 @@ struct ScreenTimeController {
         }
     }
 
-    func scheduleUnlockExpiration(at date: Date) {
-        let center = DeviceActivityCenter()
-        let calendar = Calendar.current
-        let now = Date()
-        guard date > now else {
-            center.stopMonitoring([.limiarUnlockWindow])
-            applyShield(selection: ScreenTimePolicyStore().loadSelection())
-            return
-        }
-
-        center.stopMonitoring([.limiarUnlockWindow])
-
-        let start = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now)
-        let end = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
-        let schedule = DeviceActivitySchedule(
-            intervalStart: start,
-            intervalEnd: end,
-            repeats: false
-        )
-
-        do {
-            try center.startMonitoring(.limiarUnlockWindow, during: schedule)
-        } catch {
-            LimiarAIDiagnostics.log("screen_time_unlock_monitor_failed", values: ["error": "\(error)"])
-        }
+    func stopLegacyUnlockMonitoring() {
+        DeviceActivityCenter().stopMonitoring([.limiarUnlockWindow])
     }
 }
 

@@ -36,7 +36,7 @@
 - Histórico local está implementado.
 - Narração por voz masculina do iOS está implementada com fallback para voz `pt-BR`.
 - Reflexão com cache local está implementada.
-- Reaplicação do bloqueio após o tempo liberado está implementada.
+- Reaplicação da pausa diária às 5h está implementada.
 
 ## Pontos que ainda exigem toque manual no iPhone
 
@@ -46,7 +46,7 @@ Estas etapas dependem de telas protegidas do iOS e não podem ser concluídas in
 - Autorizar Tempo de Uso no prompt nativo.
 - Selecionar APPs reais no seletor nativo.
 - Abrir um APP bloqueado e confirmar o escudo do iOS.
-- Fazer uma leitura, liberar o APP e esperar o tempo terminar para confirmar a reaplicação real do bloqueio.
+- Fazer uma leitura, confirmar que os apps ficam disponíveis pelo restante do dia e validar a reaplicação no ciclo diário das 5h.
 - Ouvir a narração no alto-falante/fone do iPhone para avaliar naturalidade da voz instalada no aparelho.
 
 ## Resultado final

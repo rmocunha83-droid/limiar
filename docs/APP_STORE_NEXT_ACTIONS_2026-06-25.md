@@ -57,7 +57,7 @@ Em `Apps > Limiar > Pricing and Availability`:
 - Não ativar outros países.
 - Não marcar disponibilidade automática para novos países, se essa opção aparecer.
 
-### 4. Criar assinatura mensal
+### 4. Criar assinaturas Premium
 
 Criar ou revisar o grupo:
 
@@ -73,7 +73,14 @@ Produto mensal:
 - Price: `R$ 9,90`
 - Availability: somente Brasil
 
-Não criar plano anual para o lançamento inicial.
+Produto anual:
+
+- Product ID: `limiar_premium_yearly`
+- Reference Name: `Limiar Premium Yearly`
+- Display Name: `Limiar Premium Anual`
+- Duration: `1 Year`
+- Price: `R$ 89,90`
+- Availability: somente Brasil
 
 ### 5. Preencher metadados
 
@@ -112,7 +119,7 @@ O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pau
 
 Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais e o fluxo de pausa, mas sem narração, reflexões por IA e maior variedade.
 
-Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal disponível no StoreKit.
+Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 

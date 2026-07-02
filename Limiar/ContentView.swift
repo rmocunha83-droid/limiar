@@ -171,7 +171,7 @@ private struct FreeTrialStartView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura de R$ 9,90/mês para continuar usando as pausas, leituras e reflexões personalizadas.")
+                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura mensal ou anual para continuar usando as pausas, leituras e reflexões personalizadas.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -179,7 +179,7 @@ private struct FreeTrialStartView: View {
 
                     VStack(alignment: .leading, spacing: 13) {
                         TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias grátis")
-                        TrialDisclosureRow(icon: "creditcard", text: "Depois R$ 9,90/mês")
+                        TrialDisclosureRow(icon: "creditcard", text: "Depois \(subscription.monthlyMarketingPrice) ou \(subscription.yearlyMarketingPrice)")
                         TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
                         TrialDisclosureRow(icon: "checkmark.shield", text: "Sem cobrança antes do fim do teste")
                         TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária após o teste para continuar usando")
@@ -245,13 +245,11 @@ private struct TrialConversionView: View {
 
                     TrialMetricsPanel()
 
-                    Button {
-                        Task {
-                            await subscription.purchase(.monthly)
-                        }
+                    NavigationLink {
+                        PaywallView()
                     } label: {
                         HStack(spacing: 12) {
-                            Text("Assinar por R$ 9,90/mês")
+                            Text("Ver planos Premium")
                             Image(systemName: "arrow.right")
                         }
                         .font(.system(size: 18, weight: .semibold))
@@ -319,9 +317,9 @@ struct TrialMetricsPanel: View {
                 label: model.history.count == 1 ? "leitura concluída" : "leituras concluídas"
             )
             TrialMetricRow(
-                icon: "clock",
+                icon: "sunrise",
                 value: model.estimatedFocusTimeText,
-                label: "com pausas antes dos apps"
+                label: model.history.count == 1 ? "travessia matinal" : "travessias matinais"
             )
             TrialMetricRow(
                 icon: "lock.open",
@@ -548,6 +546,27 @@ private struct DashboardView: View {
                     showsReflection: model.hasPremiumAccess && item.hasExplanationContent,
                     showsNarration: model.canNarrateCurrentReading
                 )
+
+            }
+
+            if model.hasPremiumAccess && model.currentSpiritualReadingItems.isEmpty {
+                HStack(alignment: .top, spacing: 12) {
+                    ProgressView()
+                        .tint(Color.warmGold)
+                        .padding(.top, 2)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Gerando novos trechos")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Color.ivory)
+                        Text("A IA está preparando a leitura e as explicações espirituais para este momento.")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.softText)
+                            .lineSpacing(4)
+                    }
+                }
+                .padding(16)
+                .limiarPanel()
             }
         }
     }
@@ -622,7 +641,7 @@ private struct DashboardView: View {
     }
 
     private var completionExplanation: some View {
-        Text("Após concluir a leitura, os apps selecionados ficarão disponíveis para uso.")
+        Text("Após concluir a leitura, os apps selecionados ficarão disponíveis até a próxima manhã.")
             .font(.system(size: 14))
             .foregroundStyle(Color.softText)
             .lineSpacing(5)
@@ -900,11 +919,27 @@ private struct ReadingView: View {
                         readingActions
                     }
 
-                    Text(model.currentReadingText)
-                        .font(.system(size: 24, weight: .regular, design: .serif))
-                        .foregroundStyle(Color.ivory)
-                        .lineSpacing(8)
-                        .padding(.vertical, 10)
+                    if model.isEssentialMode {
+                        ForEach(model.currentSpiritualReadingItems) { item in
+                            VStack(alignment: .leading, spacing: 10) {
+                                Label(item.reference, systemImage: "quote.opening")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.warmGold)
+
+                                Text(item.text)
+                                    .font(.system(size: 24, weight: .regular, design: .serif))
+                                    .foregroundStyle(Color.ivory)
+                                    .lineSpacing(8)
+                            }
+                            .padding(.vertical, 10)
+                        }
+                    } else {
+                        Text(model.currentReadingText)
+                            .font(.system(size: 24, weight: .regular, design: .serif))
+                            .foregroundStyle(Color.ivory)
+                            .lineSpacing(8)
+                            .padding(.vertical, 10)
+                    }
 
                     if model.hasPremiumAccess {
                         aiStatusBanner
@@ -1890,7 +1925,7 @@ struct SettingsView: View {
                 Section("Ativação") {
                     Toggle("Limiar ativo", isOn: $model.blockingEnabled)
                         .disabled(!model.hasPauseAccess)
-                    LabeledContent("Período após a leitura") {
+                    LabeledContent("Pausa diária") {
                         Text(model.unlockDurationDescription)
                             .foregroundStyle(.secondary)
                     }
