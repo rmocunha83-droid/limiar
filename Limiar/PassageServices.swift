@@ -1346,7 +1346,7 @@ enum RemoteAIError: Error {
 
 struct RemoteAIBackendClient {
     var baseURL = URL(string: "https://limiar-five.vercel.app")!
-    var timeout: TimeInterval = 14
+    var timeout: TimeInterval = 32
     var session: URLSession = .shared
 
     private static var clientID: String {

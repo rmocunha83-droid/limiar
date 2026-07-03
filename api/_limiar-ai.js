@@ -1,9 +1,9 @@
-const DEFAULT_MODEL = "glm-4.5-air";
-const DEFAULT_TEXT_BASE_URL = "https://api.z.ai/api/paas/v4";
+const DEFAULT_MODEL = "gpt-5.4-mini";
+const DEFAULT_TEXT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
 const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_TTS_SPEED = 0.92;
-const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_TIMEOUT_MS = 25000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
 const rateLimitBuckets = globalThis.__limiarAIRateLimitBuckets || new Map();
@@ -197,9 +197,9 @@ function depthGuidance(depth) {
 
 function depthOutputTokenLimit(depth, endpoint) {
   const isReading = endpoint === "spiritual-reading";
-  if (depth === "curta") return isReading ? 1800 : 700;
-  if (depth === "grande") return isReading ? 4200 : 1800;
-  return isReading ? 2800 : 1100;
+  if (depth === "curta") return isReading ? 900 : 500;
+  if (depth === "grande") return isReading ? 2400 : 1300;
+  return isReading ? 1600 : 850;
 }
 
 function diagnosticEnabled() {
@@ -211,8 +211,8 @@ function logAIDiagnostic(event, details = {}) {
   console.info("limiar_ai_diagnostic", {
     event,
     ...details,
-    provider: "zai",
-    model: process.env.GLM_MODEL || process.env.ZAI_MODEL || DEFAULT_MODEL
+    provider: "openai",
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL
   });
 }
 
@@ -312,11 +312,11 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
   ].join("\n");
 }
 
-async function callGLM({ schema, schemaName, prompt, maxOutputTokens, debugContext = {} }) {
-  const apiKey = process.env.GLM_API_KEY || process.env.ZAI_API_KEY;
+async function callTextModel({ schema, schemaName, prompt, maxOutputTokens, debugContext = {} }) {
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    const error = new Error("GLM_API_KEY is not configured");
-    error.code = "missing_glm_api_key";
+    const error = new Error("OPENAI_API_KEY is not configured");
+    error.code = "missing_openai_api_key";
     error.statusCode = 503;
     throw error;
   }
@@ -324,13 +324,14 @@ async function callGLM({ schema, schemaName, prompt, maxOutputTokens, debugConte
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
-    Number(process.env.GLM_TIMEOUT_MS || process.env.ZAI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
+    Number(process.env.OPENAI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
   );
-  const baseURL = (process.env.GLM_BASE_URL || process.env.ZAI_BASE_URL || DEFAULT_TEXT_BASE_URL).replace(/\/$/, "");
-  const model = process.env.GLM_MODEL || process.env.ZAI_MODEL || DEFAULT_MODEL;
+  const baseURL = (process.env.OPENAI_BASE_URL || DEFAULT_TEXT_BASE_URL).replace(/\/$/, "");
+  const model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
+  const formatName = safeSchemaName(schemaName);
 
   try {
-    logAIDiagnostic("glm_request_start", {
+    logAIDiagnostic("openai_request_start", {
       endpoint: debugContext.endpoint,
       requestID: debugContext.requestID,
       clientID: debugContext.clientID,
@@ -346,7 +347,7 @@ async function callGLM({ schema, schemaName, prompt, maxOutputTokens, debugConte
     });
     let response;
     try {
-      response = await fetch(`${baseURL}/chat/completions`, {
+      response = await fetch(`${baseURL}/responses`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -354,62 +355,60 @@ async function callGLM({ schema, schemaName, prompt, maxOutputTokens, debugConte
         },
         body: JSON.stringify({
           model,
-          temperature: 1.0,
-          max_tokens: maxOutputTokens,
-          messages: [
-            {
-              role: "system",
-              content: [
-                buildSystemPrompt(),
-                `Retorne somente JSON válido compatível com o schema ${schemaName}.`,
-                "Não use markdown, comentários ou texto fora do JSON."
-              ].join("\n")
-            },
-            {
-              role: "user",
-              content: [
-                prompt,
-                "",
-                `Schema esperado (${schemaName}):`,
-                JSON.stringify(schema)
-              ].join("\n")
+          max_output_tokens: maxOutputTokens,
+          instructions: [
+            buildSystemPrompt(),
+            `Retorne somente JSON válido compatível com o schema ${schemaName}.`,
+            "Não use markdown, comentários ou texto fora do JSON."
+          ].join("\n"),
+          input: [
+            prompt,
+            "",
+            `Schema esperado (${schemaName}):`,
+            JSON.stringify(schema)
+          ].join("\n"),
+          text: {
+            format: {
+              type: "json_schema",
+              name: formatName,
+              schema,
+              strict: false
             }
-          ],
-          response_format: { type: "json_object" }
+          }
         }),
         signal: controller.signal
       });
     } catch (error) {
       if (error?.name === "AbortError") {
-        const timeoutError = new Error("GLM request timed out");
-        timeoutError.code = "glm_timeout";
+        const timeoutError = new Error("OpenAI request timed out");
+        timeoutError.code = "openai_timeout";
         timeoutError.statusCode = 504;
         throw timeoutError;
       }
-      error.code = error.code || "glm_network_error";
+      error.code = error.code || "openai_network_error";
       error.statusCode = error.statusCode || 502;
       throw error;
     }
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = new Error(data?.error?.message || `GLM request failed with ${response.status}`);
-      error.code = classifyProviderError("glm", response.status, data);
+      const error = new Error(data?.error?.message || `OpenAI request failed with ${response.status}`);
+      error.code = classifyProviderError("openai", response.status, data);
       error.statusCode = response.status;
       throw error;
     }
 
-    const outputText = extractChatCompletionText(data);
+    const outputText = extractTextModelOutput(data);
     if (!outputText) {
-      const error = new Error("GLM response did not include output text");
-      error.code = "glm_empty_output";
+      const error = new Error("OpenAI response did not include output text");
+      error.code = "openai_empty_output";
       error.statusCode = 502;
       throw error;
     }
 
     try {
-      const parsed = JSON.parse(outputText);
-      logAIDiagnostic("glm_request_success", {
+      const parsed = parseProviderJSON(outputText);
+      logAIDiagnostic("openai_request_success", {
         endpoint: debugContext.endpoint,
         requestID: debugContext.requestID,
         depth: debugContext.depth,
@@ -417,7 +416,7 @@ async function callGLM({ schema, schemaName, prompt, maxOutputTokens, debugConte
       });
       return parsed;
     } catch (error) {
-      error.code = "glm_json_parse_error";
+      error.code = "openai_json_parse_error";
       error.statusCode = 502;
       throw error;
     }
@@ -566,11 +565,34 @@ function logAIError(endpoint, error, context = {}) {
     message: error.message,
     requestID: context.requestID,
     clientID: context.clientID,
-    provider: isSpeech ? "elevenlabs" : "zai",
+    provider: isSpeech ? "elevenlabs" : "openai",
     model: isSpeech
       ? process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL
-      : process.env.GLM_MODEL || process.env.ZAI_MODEL || DEFAULT_MODEL
+      : process.env.OPENAI_MODEL || DEFAULT_MODEL
   });
+}
+
+function safeSchemaName(value) {
+  return trimText(value, 80).replace(/[^a-zA-Z0-9_-]/g, "_") || "limiar_response";
+}
+
+function extractTextModelOutput(response) {
+  if (typeof response?.output_text === "string") return response.output_text.trim();
+  const output = response?.output;
+  if (Array.isArray(output)) {
+    const text = output
+      .flatMap((item) => (Array.isArray(item?.content) ? item.content : []))
+      .map((part) => {
+        if (typeof part?.text === "string") return part.text;
+        if (typeof part?.content === "string") return part.content;
+        if (typeof part?.value === "string") return part.value;
+        return "";
+      })
+      .join("")
+      .trim();
+    if (text) return text;
+  }
+  return extractChatCompletionText(response);
 }
 
 function extractChatCompletionText(response) {
@@ -583,6 +605,24 @@ function extractChatCompletionText(response) {
       .trim();
   }
   return "";
+}
+
+function parseProviderJSON(text) {
+  const raw = trimText(text, 50000);
+  const withoutFence = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  try {
+    return JSON.parse(withoutFence);
+  } catch {
+    const firstBrace = withoutFence.indexOf("{");
+    const lastBrace = withoutFence.lastIndexOf("}");
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      return JSON.parse(withoutFence.slice(firstBrace, lastBrace + 1));
+    }
+    throw new Error("provider_json_parse_failed");
+  }
 }
 
 function validateReflection(value) {
@@ -613,7 +653,7 @@ module.exports = {
   applyAudioHeaders,
   applyCommonHeaders,
   buildContextPrompt,
-  callGLM,
+  callTextModel,
   callElevenLabsSpeech,
   depthGuidance,
   depthOutputTokenLimit,
@@ -624,6 +664,7 @@ module.exports = {
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
+  parseProviderJSON,
   parseBody,
   reflectionSchema,
   requirePost,

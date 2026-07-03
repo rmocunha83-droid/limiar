@@ -96,7 +96,7 @@ private struct EssentialModeIntroView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Seu teste gratuito terminou. Você ainda pode continuar usando o Limiar com os trechos principais, mas sem narração e sem reflexões geradas pela IA.")
+                        Text("Seu teste gratuito terminou. Você ainda pode continuar usando o Limiar com os trechos principais, mas sem narração e sem reflexões personalizadas.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -556,10 +556,10 @@ private struct DashboardView: View {
                         .padding(.top, 2)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Gerando novos trechos")
+                        Text("Preparando novos trechos")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(Color.ivory)
-                        Text("A IA está preparando a leitura e as explicações espirituais para este momento.")
+                        Text("Estamos preparando a leitura e as explicações espirituais para este momento.")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(4)
@@ -1076,7 +1076,7 @@ private struct ReadingView: View {
     }
 
     private var disclaimer: some View {
-        Text("As reflexões são geradas por IA para fins de meditação pessoal e não substituem orientação religiosa, pastoral ou rabínica.")
+        Text("As reflexões são preparadas para fins de meditação pessoal e não substituem orientação religiosa, pastoral ou rabínica.")
             .font(.system(size: 13))
             .foregroundStyle(Color.softText)
             .lineSpacing(4)
@@ -2719,7 +2719,6 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
         var prepared = text
             .replacingOccurrences(of: "APPs", with: "aplicativos")
             .replacingOccurrences(of: "apps", with: "aplicativos")
-            .replacingOccurrences(of: "IA", with: "inteligência artificial")
             .replacingOccurrences(of: " / ", with: ", ")
             .replacingOccurrences(of: "—", with: ", ")
             .replacingOccurrences(of: "–", with: ", ")

@@ -1,4 +1,4 @@
-# Arquitetura de IA do Limiar
+# Arquitetura de geração do Limiar
 
 ## Fluxo
 
@@ -7,18 +7,18 @@
    - `POST /api/spiritual-reading`
    - `POST /api/reflection`
    - `POST /api/speech`, somente quando a pessoa toca para ouvir a leitura.
-3. O app envia uma lista maior de candidatos para o backend, e o GLM-4.5-Air escolhe 3 trechos para a jornada atual. Isso evita repetir sempre os primeiros trechos locais.
-4. O backend gera texto com GLM-4.5-Air usando `GLM_API_KEY` ou `ZAI_API_KEY` em variável de ambiente.
+3. O app envia uma lista maior de candidatos para o backend, e o modelo remoto escolhe 3 trechos para a jornada atual. Isso evita repetir sempre os primeiros trechos locais.
+4. O backend gera texto com GPT-5.4 mini usando `OPENAI_API_KEY` em variável de ambiente.
 5. O backend exige JSON estruturado e valida o resultado.
 6. O app valida novamente o JSON recebido.
 7. Se qualquer etapa falhar, o app mostra uma mensagem simples de indisponibilidade sem expor erro técnico.
 
-Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: continuam vendo 3 trechos religiosos e usando o fluxo de pausa, mas não acionam chamadas remotas de IA nem narração. Anúncios não fazem parte da versão atual; a integração com Google AdMob deve entrar apenas em uma versão futura, depois da conta e dos IDs de anúncio estarem prontos.
+Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: continuam vendo 3 trechos religiosos e usando o fluxo de pausa, mas não acionam chamadas remotas de reflexão nem narração. Anúncios não fazem parte da versão atual; a integração com Google AdMob deve entrar apenas em uma versão futura, depois da conta e dos IDs de anúncio estarem prontos.
 
 ## Modelo Comercial
 
-- Modelo textual padrão: `glm-4.5-air`.
-- O modelo textual só deve ser alterado via `GLM_MODEL` ou `ZAI_MODEL` no Vercel.
+- Modelo textual padrão: `gpt-5.4-mini`.
+- O modelo textual só deve ser alterado via `OPENAI_MODEL` no Vercel.
 - Modelo de voz padrão: `eleven_flash_v2_5`, opção econômica da ElevenLabs.
 - O modelo de voz só deve ser alterado via `ELEVENLABS_TTS_MODEL` no Vercel.
 - Voz padrão: `21m00Tcm4TlvDq8ikWAM`, com velocidade inicial `0.92` para uma narração mais calma.
@@ -28,23 +28,22 @@ Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: co
 - O backend mantém apenas rate limit por janela para proteção básica contra abuso ou loops.
 - A narração usa áudio gerado no backend por ElevenLabs, sem expor a chave no app iOS.
 - A narração nunca é pré-gerada: `/api/speech` só deve ser chamado quando a pessoa toca no botão de ouvir.
-- No Modo Essencial, a interface oculta áudio e reflexões por IA para evitar custo remoto.
-- No Modo Essencial, o app mantém a experiência reduzida sem narração e sem reflexões por IA. Anúncios ficam fora da versão atual.
+- No Modo Essencial, a interface oculta áudio e reflexões personalizadas para evitar custo remoto.
+- No Modo Essencial, o app mantém a experiência reduzida sem narração e sem reflexões personalizadas. Anúncios ficam fora da versão atual.
 
 ## Segurança
 
-- Chaves de IA nunca ficam no app iOS.
+- Chaves de provedores nunca ficam no app iOS.
 - O app não envia seleção dos apps que ativam o Limiar, email, localização, contatos ou identificadores pessoais.
 - O backend recebe apenas tradição, preferências espirituais, profundidade, trechos e histórico recente resumido.
-- O app iOS não deve conter `GLM_API_KEY`, `ZAI_API_KEY` ou `ELEVENLABS_API_KEY`.
+- O app iOS não deve conter `OPENAI_API_KEY` ou `ELEVENLABS_API_KEY`.
 
 ## Variáveis no Vercel
 
-- `GLM_API_KEY`: chave do provedor GLM/Z.ai usada somente no backend.
-- `ZAI_API_KEY`: alternativa para a mesma chave, caso prefira nomear pelo provedor.
-- `GLM_MODEL` ou `ZAI_MODEL`: modelo textual configurável. Padrão: `glm-4.5-air`.
-- `GLM_BASE_URL` ou `ZAI_BASE_URL`: base URL da API. Padrão: `https://api.z.ai/api/paas/v4`.
-- `GLM_TIMEOUT_MS` ou `ZAI_TIMEOUT_MS`: timeout do backend. Padrão: `12000`.
+- `OPENAI_API_KEY`: chave usada somente no backend.
+- `OPENAI_MODEL`: modelo textual configurável. Padrão: `gpt-5.4-mini`.
+- `OPENAI_BASE_URL`: base URL da API. Padrão: `https://api.openai.com/v1`.
+- `OPENAI_TIMEOUT_MS`: timeout do backend. Padrão: `25000`. O app exibe os trechos assim que a primeira resposta remota chega, sem esperar chamadas complementares.
 - `ELEVENLABS_API_KEY`: chave da ElevenLabs usada somente no backend.
 - `ELEVENLABS_TTS_MODEL`: modelo econômico de voz. Padrão: `eleven_flash_v2_5`.
 - `ELEVENLABS_VOICE_ID`: voz da narração. Padrão: `21m00Tcm4TlvDq8ikWAM`.
@@ -67,7 +66,7 @@ npm run test:ai-backend
 
 Esse teste valida o contrato JSON do backend. Para QA no app, testar:
 
-- geração remota com `GLM_API_KEY` ou `ZAI_API_KEY` configurada;
+- geração remota com `OPENAI_API_KEY` configurada;
 - ausência de limite diário na 7ª tentativa;
 - mensagem simples sem internet;
 - backend retornando erro;
@@ -77,4 +76,4 @@ Esse teste valida o contrato JSON do backend. Para QA no app, testar:
 - repetição reduzida com histórico recente;
 - voz remota por `/api/speech` somente após toque no botão de ouvir;
 - Modo Essencial sem chamadas para `/api/spiritual-reading`, `/api/reflection` ou `/api/speech`.
-- Modo Essencial sem chamadas para IA, sem narração e sem anúncios nesta versão.
+- Modo Essencial sem chamadas remotas de reflexão, sem narração e sem anúncios nesta versão.

@@ -1,7 +1,7 @@
 const {
   applyCommonHeaders,
   buildContextPrompt,
-  callGLM,
+  callTextModel,
   depthOutputTokenLimit,
   enforceAIRateLimit,
   logAIDiagnostic,
@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
       passagesCount: passages.length
     });
 
-    const result = await callGLM({
+    const result = await callTextModel({
       schema: reflectionSchema,
       schemaName: "limiar_reflection",
       prompt,

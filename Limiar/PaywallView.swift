@@ -78,7 +78,7 @@ struct PaywallView: View {
 
     private var headerDisclosure: String {
         if subscription.accessState == .trialExpired {
-            return "Seu teste gratuito terminou. O Modo Essencial continua disponível sem chamadas de IA."
+            return "Seu teste gratuito terminou. O Modo Essencial continua disponível com os trechos principais."
         }
         return subscription.pricingDisclosureText
     }
@@ -86,7 +86,7 @@ struct PaywallView: View {
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 12) {
             PaywallBenefit(icon: "sparkles", text: "Leituras e reflexões espirituais personalizadas")
-            PaywallBenefit(icon: "text.bubble", text: "IA com explicações em linguagem simples")
+            PaywallBenefit(icon: "text.bubble", text: "Explicações em linguagem simples")
             PaywallBenefit(icon: "book.closed", text: "Escolha de religião, temas e livros preferidos")
             PaywallBenefit(icon: "slider.horizontal.3", text: "Reflexões curtas, médias ou longas")
             PaywallBenefit(icon: "arrow.triangle.2.circlepath", text: "Novas mensagens com menos repetição")

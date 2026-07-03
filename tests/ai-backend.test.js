@@ -14,12 +14,13 @@ const {
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
+  parseProviderJSON,
   validateReflection,
   validateSpiritualReading
 } = require("../api/_limiar-ai");
 
-test("keeps GLM-4.5-Air as the default commercial text model", () => {
-  assert.equal(DEFAULT_MODEL, "glm-4.5-air");
+test("keeps GPT-5.4 mini as the default commercial text model", () => {
+  assert.equal(DEFAULT_MODEL, "gpt-5.4-mini");
 });
 
 test("keeps ElevenLabs Flash as the economical default voice model", () => {
@@ -71,6 +72,29 @@ test("validates spiritual reading items", () => {
   });
 
   assert.equal(reading.items.length, 1);
+});
+
+test("parses provider JSON even when wrapped in markdown text", () => {
+  const parsed = parseProviderJSON('```json\n{"reference":"João 15","passageText":"Permanecei em mim."}\n```');
+  assert.equal(parsed.reference, "João 15");
+});
+
+test("accepts extra spiritual reading items and keeps the expected first items", () => {
+  const item = (reference) => ({
+    reference,
+    passageText: "Texto do trecho.",
+    homily: "Explicação espiritual do trecho.",
+    spiritualMeaning: "Sentido espiritual do trecho.",
+    practicalApplication: "Aplicação prática para hoje.",
+    conclusion: "Conclusão breve e concreta.",
+    meditationQuestion: "Que passo concreto você escolhe agora?"
+  });
+
+  const reading = validateSpiritualReading({
+    items: [item("João 15"), item("Salmo 23"), item("Mateus 6"), item("Provérbios 3")]
+  }, 3);
+
+  assert.deepEqual(reading.items.map((entry) => entry.reference), ["João 15", "Salmo 23", "Mateus 6"]);
 });
 
 test("can enforce a simple per-client AI rate limit", () => {

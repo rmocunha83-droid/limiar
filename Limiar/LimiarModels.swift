@@ -610,9 +610,9 @@ enum AIContentState: Equatable {
         case .localReady:
             "Preparando leitura"
         case .generating:
-            "Gerando reflexão com IA"
+            "Preparando reflexão"
         case .remoteReady:
-            "Reflexão gerada por IA"
+            "Reflexão personalizada"
         case .fallback:
             "Atualização indisponível"
         case .essentialMode:
@@ -623,9 +623,9 @@ enum AIContentState: Equatable {
     var subtitle: String {
         switch self {
         case .localReady:
-            "A leitura será atualizada pela IA assim que você começar."
+            "A leitura será atualizada assim que você começar."
         case .generating:
-            "A IA está preparando novos trechos e explicações para este momento."
+            "Estamos preparando novos trechos e explicações para este momento."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
@@ -1226,17 +1226,11 @@ final class LimiarAppModel {
                 recentReflections: recentReflections
             )
 
+            guard !Task.isCancelled else { return }
+
             let reflectionPassages = remoteItems.map {
                 scripturePassages(from: $0, profile: profile)
             } ?? fallbackPlan
-
-            let remoteReflection = await reflectionService.remoteReflection(
-                for: reflectionPassages,
-                profile: profile,
-                recentReflections: recentReflections
-            )
-
-            guard !Task.isCancelled else { return }
 
             await MainActor.run {
                 guard aiGenerationID == generationID else { return }
@@ -1248,17 +1242,7 @@ final class LimiarAppModel {
                         currentPassage = first
                     }
                     rememberShownPassages(selectedPassages)
-                }
-
-                if let reflection = remoteReflection {
-                    currentReflection = reflection
-                    rememberReflection(reference: currentReadingReference, reflection: reflection)
-                }
-
-                if remoteItems != nil, remoteReflection != nil {
                     aiContentState = .remoteReady
-                } else if remoteItems != nil || remoteReflection != nil {
-                    aiContentState = .fallback
                 } else {
                     currentReadingPlan = fallbackPlan
                     if let first = fallbackPlan.first {
@@ -1277,6 +1261,25 @@ final class LimiarAppModel {
                     )
                     aiContentState = .fallback
                 }
+            }
+
+            guard remoteItems != nil else { return }
+
+            let remoteReflection = await reflectionService.remoteReflection(
+                for: reflectionPassages,
+                profile: profile,
+                recentReflections: recentReflections
+            )
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                guard aiGenerationID == generationID else { return }
+                if let reflection = remoteReflection {
+                    currentReflection = reflection
+                    rememberReflection(reference: currentReadingReference, reflection: reflection)
+                }
+                aiContentState = .remoteReady
             }
         }
     }
