@@ -1726,7 +1726,7 @@ struct RemoteAIReflectionService {
 }
 
 struct RemoteAISpeechService {
-    private static let limiarMaleVoiceID = "TxGEqnHWrfWFTfGW9XjX"
+    private static let limiarNarrationVoiceID = "21m00Tcm4TlvDq8ikWAM"
     private let client: RemoteAIBackendClient
 
     init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 22)) {
@@ -1736,7 +1736,7 @@ struct RemoteAISpeechService {
     func audioData(for text: String) async throws -> Data {
         let payload = RemoteSpeechRequestPayload(
             text: text,
-            voice: Self.limiarMaleVoiceID,
+            voice: Self.limiarNarrationVoiceID,
             speed: 0.92
         )
 

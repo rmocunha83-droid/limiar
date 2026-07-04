@@ -21,7 +21,7 @@ Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: co
 - O modelo textual só deve ser alterado via `OPENAI_MODEL` no Vercel.
 - Modelo de voz padrão: `eleven_flash_v2_5`, opção econômica da ElevenLabs.
 - O modelo de voz só deve ser alterado via `ELEVENLABS_TTS_MODEL` no Vercel.
-- Voz masculina do app: `TxGEqnHWrfWFTfGW9XjX`, com velocidade inicial `0.92` para uma narração mais calma.
+- Voz feminina do app: `21m00Tcm4TlvDq8ikWAM`, com velocidade inicial `0.92` para uma narração mais calma.
 - A leitura principal usa 3 textos espirituais/religiosos.
 - Usuários em teste gratuito ativo e assinantes geram conteúdo remoto sempre que o app entra em primeiro plano.
 - Não há limite diário de geração remota no produto.
@@ -46,7 +46,7 @@ Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: co
 - `OPENAI_TIMEOUT_MS`: timeout do backend. Padrão: `25000`. O app exibe os trechos assim que a primeira resposta remota chega, sem esperar chamadas complementares.
 - `ELEVENLABS_API_KEY`: chave da ElevenLabs usada somente no backend.
 - `ELEVENLABS_TTS_MODEL`: modelo econômico de voz. Padrão: `eleven_flash_v2_5`.
-- `ELEVENLABS_VOICE_ID`: voz padrão do backend caso o cliente não envie uma voz. O app iOS envia explicitamente a voz masculina `TxGEqnHWrfWFTfGW9XjX`.
+- `ELEVENLABS_VOICE_ID`: voz padrão do backend caso o cliente não envie uma voz. O app iOS envia explicitamente a voz feminina `21m00Tcm4TlvDq8ikWAM`.
 - `ELEVENLABS_TTS_SPEED`: velocidade da narração. Padrão: `0.92`.
 - `ELEVENLABS_TTS_TIMEOUT_MS`: timeout da narração. Padrão: `12000`.
 - `LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS`: limite por janela. Padrão: `24`.
@@ -55,7 +55,7 @@ Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: co
 ## Narração
 
 A leitura em voz alta é feita com áudio remoto gerado por `POST /api/speech`.
-O app iOS envia apenas o texto limpo do trecho escolhido, a voz masculina escolhida e a velocidade para o backend, e recebe MP3.
+O app iOS envia apenas o texto limpo do trecho escolhido, a voz feminina escolhida e a velocidade para o backend, e recebe MP3.
 A chave da ElevenLabs fica somente no Vercel.
 
 ## Testes

@@ -26,7 +26,7 @@ test("keeps GPT-5.4 mini as the default commercial text model", () => {
 
 test("keeps ElevenLabs Flash as the economical default voice model", () => {
   assert.equal(DEFAULT_TTS_MODEL, "eleven_flash_v2_5");
-  assert.equal(DEFAULT_TTS_VOICE_ID, "TxGEqnHWrfWFTfGW9XjX");
+  assert.equal(DEFAULT_TTS_VOICE_ID, "21m00Tcm4TlvDq8ikWAM");
   assert.equal(DEFAULT_TTS_SPEED, 0.92);
 });
 
