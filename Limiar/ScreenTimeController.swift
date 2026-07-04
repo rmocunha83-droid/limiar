@@ -39,6 +39,11 @@ struct ScreenTimeController {
 
         do {
             try center.startMonitoring(.limiarDaily, during: schedule)
+            LimiarAIDiagnostics.log("screen_time_daily_monitor_scheduled", values: [
+                "activity": "limiar.daily",
+                "start": "05:00",
+                "end": "23:59"
+            ])
         } catch {
             LimiarAIDiagnostics.log("screen_time_daily_monitor_failed", values: ["error": "\(error)"])
         }

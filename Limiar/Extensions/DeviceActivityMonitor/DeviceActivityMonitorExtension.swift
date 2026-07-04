@@ -16,6 +16,11 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     }
 
     private func reapplyShieldIfNeeded() {
+        guard policyStore.loadPauseAccessEnabled() else {
+            settingsStore.clearAllSettings()
+            return
+        }
+
         guard policyStore.loadBlockingEnabled() else {
             settingsStore.clearAllSettings()
             return
@@ -45,6 +50,10 @@ private struct ExtensionPolicyStore {
 
     func loadBlockingEnabled() -> Bool {
         defaults.object(forKey: "blockingEnabled") as? Bool ?? true
+    }
+
+    func loadPauseAccessEnabled() -> Bool {
+        defaults.object(forKey: "pauseAccessEnabled") as? Bool ?? false
     }
 
     func loadMorningPauseCompletedAt() -> Date? {

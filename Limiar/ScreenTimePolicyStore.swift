@@ -8,6 +8,7 @@ struct ScreenTimePolicyStore {
         static let onboarding = "onboarding"
         static let profile = "faithProfile"
         static let blockingEnabled = "blockingEnabled"
+        static let pauseAccessEnabled = "pauseAccessEnabled"
         static let selection = "familySelection"
         static let morningPauseCompletedAt = "morningPauseCompletedAt"
         static let history = "readingHistory"
@@ -44,6 +45,14 @@ struct ScreenTimePolicyStore {
 
     func saveBlockingEnabled(_ enabled: Bool) {
         defaults.set(enabled, forKey: Key.blockingEnabled)
+    }
+
+    func loadPauseAccessEnabled() -> Bool {
+        defaults.object(forKey: Key.pauseAccessEnabled) as? Bool ?? false
+    }
+
+    func savePauseAccessEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Key.pauseAccessEnabled)
     }
 
     func loadSelection() -> FamilyActivitySelection {

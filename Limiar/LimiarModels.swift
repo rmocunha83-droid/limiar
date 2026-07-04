@@ -864,6 +864,7 @@ final class LimiarAppModel {
 
         hasPremiumAccess = isActive
         isEssentialMode = essentialMode && !isActive
+        policyStore.savePauseAccessEnabled(hasPauseAccess)
 
         if hasPauseAccess {
             if !hadPauseAccess || currentSpiritualReadingItems.isEmpty || hadFullAccess != isActive || hadEssentialMode != isEssentialMode {
@@ -884,6 +885,7 @@ final class LimiarAppModel {
         policyStore.saveFaithProfile(faithProfile)
         policyStore.saveBlockingEnabled(blockingEnabled)
         policyStore.saveSelection(selection)
+        policyStore.savePauseAccessEnabled(hasPauseAccess)
         var values = LimiarAIDiagnostics.profileSnapshot(faithProfile)
         values["morningPauseHour"] = "\(Self.morningPauseHour)"
         values["blockingEnabled"] = "\(blockingEnabled)"
@@ -1032,6 +1034,9 @@ final class LimiarAppModel {
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
         screenTimeController.stopLegacyUnlockMonitoring()
+        if blockingEnabled && hasBlockedAppsSelection {
+            screenTimeController.scheduleDailyMonitoring()
+        }
         unlockNote = "Travessia de hoje concluída. A pausa volta amanhã às 5h."
         beginNewReading()
     }
@@ -1048,6 +1053,16 @@ final class LimiarAppModel {
             screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
+
+        policyStore.savePauseAccessEnabled(true)
+
+        guard hasBlockedAppsSelection else {
+            screenTimeController.clearShield()
+            screenTimeController.stopLegacyUnlockMonitoring()
+            return
+        }
+
+        screenTimeController.scheduleDailyMonitoring()
 
         if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
@@ -1070,6 +1085,16 @@ final class LimiarAppModel {
             screenTimeController.stopLegacyUnlockMonitoring()
             return
         }
+
+        policyStore.savePauseAccessEnabled(true)
+
+        guard hasBlockedAppsSelection else {
+            screenTimeController.clearShield()
+            screenTimeController.stopLegacyUnlockMonitoring()
+            return
+        }
+
+        screenTimeController.scheduleDailyMonitoring()
 
         if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
