@@ -15,6 +15,7 @@ const {
   normalizeProfile,
   normalizeRecentReflections,
   parseProviderJSON,
+  validateReadingSession,
   validateReflection,
   validateSpiritualReading
 } = require("../api/_limiar-ai");
@@ -72,6 +73,34 @@ test("validates spiritual reading items", () => {
   });
 
   assert.equal(reading.items.length, 1);
+});
+
+test("validates a complete reading session payload", () => {
+  const item = (reference) => ({
+    reference,
+    passageText: "Texto do trecho.",
+    homily: "Explicação espiritual do trecho.",
+    spiritualMeaning: "Sentido espiritual do trecho.",
+    practicalApplication: "Aplicação prática para hoje.",
+    conclusion: "Conclusão breve e concreta.",
+    meditationQuestion: "Que passo concreto você escolhe agora?"
+  });
+
+  const session = validateReadingSession({
+    items: [item("João 15"), item("Salmo 23"), item("Mateus 6")],
+    reflection: {
+      reference: "João 15 + Salmo 23 + Mateus 6",
+      passageText: "Textos selecionados.",
+      homily: "A leitura chama a voltar ao essencial.",
+      spiritualMeaning: "Os trechos formam uma pausa de presença e confiança.",
+      practicalApplication: "Volte ao app com um limite concreto.",
+      conclusion: "Atravesse com intenção.",
+      meditationQuestion: "O que ajuda você a voltar com mais consciência?"
+    }
+  }, 3);
+
+  assert.equal(session.items.length, 3);
+  assert.equal(session.reflection.reference, "João 15 + Salmo 23 + Mateus 6");
 });
 
 test("parses provider JSON even when wrapped in markdown text", () => {

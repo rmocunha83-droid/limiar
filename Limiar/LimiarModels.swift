@@ -1150,7 +1150,7 @@ final class LimiarAppModel {
             return
         }
 
-        currentSpiritualReadingItems = []
+        currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
         currentReflection = emptyReflection()
         let remoteRequestKey = remoteAIRequestKey(for: candidatePool, profile: profile)
         aiContentState = .generating
@@ -1216,10 +1216,11 @@ final class LimiarAppModel {
         let recentPassageIDs = recentPassageIDs
         let recentReflections = recentAIReflections
         aiGenerationTask = Task { [passages, fallbackPlan, profile, recentPassageIDs, recentReflections] in
+            let readingSessionService = RemoteAIReadingSessionService()
             let spiritualReadingService = AISpiritualReadingService()
             let reflectionService = AIReflectionService()
 
-            let remoteItems = await spiritualReadingService.remoteReadingItems(
+            let remoteSession = await readingSessionService.readingSession(
                 for: passages,
                 profile: profile,
                 recentPassageIDs: recentPassageIDs,
@@ -1228,20 +1229,19 @@ final class LimiarAppModel {
 
             guard !Task.isCancelled else { return }
 
-            let reflectionPassages = remoteItems.map {
-                scripturePassages(from: $0, profile: profile)
-            } ?? fallbackPlan
-
             await MainActor.run {
                 guard aiGenerationID == generationID else { return }
-                if let items = remoteItems {
+                if let session = remoteSession {
+                    let items = session.items
                     currentSpiritualReadingItems = items
                     let selectedPassages = scripturePassages(from: items, profile: profile)
                     currentReadingPlan = selectedPassages
                     if let first = selectedPassages.first {
                         currentPassage = first
                     }
+                    currentReflection = session.reflection
                     rememberShownPassages(selectedPassages)
+                    rememberReflection(reference: currentReadingReference, reflection: session.reflection)
                     aiContentState = .remoteReady
                 } else {
                     currentReadingPlan = fallbackPlan
@@ -1261,25 +1261,6 @@ final class LimiarAppModel {
                     )
                     aiContentState = .fallback
                 }
-            }
-
-            guard remoteItems != nil else { return }
-
-            let remoteReflection = await reflectionService.remoteReflection(
-                for: reflectionPassages,
-                profile: profile,
-                recentReflections: recentReflections
-            )
-
-            guard !Task.isCancelled else { return }
-
-            await MainActor.run {
-                guard aiGenerationID == generationID else { return }
-                if let reflection = remoteReflection {
-                    currentReflection = reflection
-                    rememberReflection(reference: currentReadingReference, reflection: reflection)
-                }
-                aiContentState = .remoteReady
             }
         }
     }

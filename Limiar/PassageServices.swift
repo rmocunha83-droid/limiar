@@ -1488,6 +1488,13 @@ struct RemoteReflectionRequestPayload: Codable {
     let recentReflections: [RemoteAIReflectionDigestPayload]
 }
 
+struct RemoteReadingSessionRequestPayload: Codable {
+    let profile: RemoteAIProfilePayload
+    let passages: [RemotePassagePayload]
+    let recentPassageIDs: [String]
+    let recentReflections: [RemoteAIReflectionDigestPayload]
+}
+
 struct RemoteSpeechRequestPayload: Codable {
     let text: String
     let voice: String?
@@ -1568,6 +1575,16 @@ struct RemoteReflectionResponse: Codable {
     }
 }
 
+struct RemoteReadingSessionResponse: Codable {
+    let items: [RemoteSpiritualReadingItemResponse]
+    let reflection: RemoteReflectionResponse
+}
+
+struct RemoteReadingSessionResult {
+    let items: [SpiritualReadingItem]
+    let reflection: AIReflection
+}
+
 struct RemoteAISpiritualReadingService {
     private let client: RemoteAIBackendClient
 
@@ -1604,6 +1621,71 @@ struct RemoteAISpiritualReadingService {
         }
         guard !items.isEmpty else { throw RemoteAIError.emptyContent }
         return items
+    }
+}
+
+struct RemoteAIReadingSessionService {
+    private let client: RemoteAIBackendClient
+
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 24)) {
+        self.client = client
+    }
+
+    func readingSession(
+        for passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        recentPassageIDs: [String],
+        recentReflections: [RecentAIReflectionDigest]
+    ) async -> RemoteReadingSessionResult? {
+        let request = AISpiritualReadingRequest(
+            tradition: profile.tradition,
+            favoriteSections: profile.favoriteBibleSections,
+            favoriteBooks: profile.favoriteBooks,
+            favoriteThemes: profile.favoriteThemes,
+            explanationDepth: profile.explanationDepth,
+            candidateReferences: passages.map(\.reference),
+            recentPassageIDs: recentPassageIDs,
+            recentReflections: recentReflections
+        )
+
+        let payload = RemoteReadingSessionRequestPayload(
+            profile: RemoteAIProfilePayload(profile: profile),
+            passages: passages.map(RemotePassagePayload.init),
+            recentPassageIDs: Array(recentPassageIDs.prefix(20)),
+            recentReflections: recentReflections.prefix(8).map(RemoteAIReflectionDigestPayload.init)
+        )
+
+        do {
+            let response = try await client.post(
+                "/api/reading-session",
+                body: payload,
+                responseType: RemoteReadingSessionResponse.self
+            )
+            let items = try response.items.enumerated().map { index, item in
+                try item.validatedItem(cacheKey: request.cacheKey, index: index)
+            }
+            guard items.count >= min(LimiarReadingConstants.targetItemCount, max(1, passages.count)) else {
+                debugPrint("limiar_ai_fallback_local", [
+                    "endpoint": "reading-session",
+                    "reason": "unexpected_item_count",
+                    "count": "\(items.count)"
+                ])
+                return nil
+            }
+            let reflection = try response.reflection.validatedReflection()
+            var values = LimiarAIDiagnostics.profileSnapshot(profile)
+            values["source"] = "remote"
+            values["endpoint"] = "reading-session"
+            values["items"] = "\(items.count)"
+            LimiarAIDiagnostics.log("ai_reading_session_loaded", values: values)
+            return RemoteReadingSessionResult(items: items, reflection: reflection)
+        } catch {
+            debugPrint("limiar_ai_fallback_local", [
+                "endpoint": "reading-session",
+                "reason": String(describing: error)
+            ])
+            return nil
+        }
     }
 }
 

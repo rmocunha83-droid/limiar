@@ -46,6 +46,16 @@ const spiritualReadingSchema = {
   required: ["items"]
 };
 
+const readingSessionSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    items: spiritualReadingSchema.properties.items,
+    reflection: reflectionSchema
+  },
+  required: ["items", "reflection"]
+};
+
 function applyCommonHeaders(res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -196,6 +206,11 @@ function depthGuidance(depth) {
 }
 
 function depthOutputTokenLimit(depth, endpoint) {
+  if (endpoint === "reading-session") {
+    if (depth === "curta") return 1200;
+    if (depth === "grande") return 3000;
+    return 2100;
+  }
   const isReading = endpoint === "spiritual-reading";
   if (depth === "curta") return isReading ? 900 : 500;
   if (depth === "grande") return isReading ? 2400 : 1300;
@@ -645,6 +660,15 @@ function validateSpiritualReading(value, expectedItemCount) {
   return { items };
 }
 
+function validateReadingSession(value, expectedItemCount) {
+  if (!value || typeof value !== "object") throw new Error("invalid_reading_session");
+  const reading = validateSpiritualReading(value, expectedItemCount);
+  return {
+    items: reading.items,
+    reflection: validateReflection(value.reflection)
+  };
+}
+
 module.exports = {
   DEFAULT_MODEL,
   DEFAULT_TTS_MODEL,
@@ -667,8 +691,10 @@ module.exports = {
   parseProviderJSON,
   parseBody,
   reflectionSchema,
+  readingSessionSchema,
   requirePost,
   spiritualReadingSchema,
   validateReflection,
+  validateReadingSession,
   validateSpiritualReading
 };
