@@ -1,7 +1,7 @@
 const DEFAULT_MODEL = "gpt-5.4-mini";
 const DEFAULT_TEXT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
-const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+const DEFAULT_TTS_VOICE_ID = "TxGEqnHWrfWFTfGW9XjX";
 const DEFAULT_TTS_SPEED = 0.92;
 const DEFAULT_TIMEOUT_MS = 25000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;

@@ -484,6 +484,7 @@ private struct DashboardView: View {
                     if tokens.isEmpty {
                         InstagramIcon()
                             .frame(width: 58, height: 58)
+                            .scaleEffect(1.12)
                             .accessibilityLabel("Instagram")
                     } else {
                         ForEach(tokens, id: \.self) { token in
@@ -496,6 +497,15 @@ private struct DashboardView: View {
         }
         .padding(18)
         .limiarPanel()
+        .contentShape(RoundedRectangle(cornerRadius: 8))
+        .onTapGesture {
+            showingPicker = true
+        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Toque para ajustar os apps que ativam o Limiar.")
+        .accessibilityAction {
+            showingPicker = true
+        }
     }
 
     private var readingRequirementHeader: some View {
@@ -520,19 +530,9 @@ private struct DashboardView: View {
 
     private var readingItemsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if model.canNarrateCurrentReading {
-                HStack(spacing: 12) {
-                    Button {
-                        narration.toggle(text: model.currentReadingNarrationText)
-                    } label: {
-                        Label(narration.isSpeaking ? "Parar narração" : "Ouvir leitura", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
-                            .lineLimit(1)
-                    }
-                    .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
-                }
-            }
-
             ForEach(model.currentSpiritualReadingItems) { item in
+                let narrationText = "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)"
+
                 SpiritualReadingCard(
                     item: item,
                     isSaved: model.isFavorite(item),
@@ -540,9 +540,9 @@ private struct DashboardView: View {
                         model.toggleFavorite(item)
                     },
                     listenAction: {
-                        narration.toggle(text: "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)")
+                        narration.toggle(text: narrationText)
                     },
-                    isSpeaking: narration.isSpeaking,
+                    narrationState: narration.state(for: narrationText),
                     showsReflection: model.hasPremiumAccess && item.hasExplanationContent,
                     showsNarration: model.canNarrateCurrentReading
                 )
@@ -619,10 +619,10 @@ private struct DashboardView: View {
                     .glassCircle()
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ajustar Apps que ativam o Limiar")
+                    Text("Editar apps da pausa")
                         .font(.system(size: 19, weight: .regular, design: .serif))
                         .foregroundStyle(Color.ivory)
-                    Text("Defina quais apps vão acionar essa pausa")
+                    Text("Escolha quais apps vão abrir com a pausa do Limiar.")
                         .font(.system(size: 15))
                         .foregroundStyle(Color.softText)
                 }
@@ -656,8 +656,8 @@ private struct DashboardView: View {
                 Image(systemName: unlockPhase.iconName)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.deepInk.opacity(0.70))
-                    .scaleEffect(unlockPhase == .opening ? 1.18 : 1)
-                    .rotationEffect(.degrees(unlockPhase == .opening ? -8 : 0))
+                    .scaleEffect(unlockPhase == .opening ? 1.10 : 1)
+                    .rotationEffect(.degrees(unlockPhase == .opening ? -4 : 0))
                     .symbolEffect(.bounce, value: unlockAnimationTick)
                     .frame(width: 24)
 
@@ -682,7 +682,7 @@ private struct DashboardView: View {
             .shadow(color: unlockPhase.shadowColor, radius: unlockPhase == .unlocked ? 18 : 8, x: 0, y: 10)
             .animation(.spring(response: 0.38, dampingFraction: 0.78), value: unlockPhase)
         }
-        .disabled(unlockPhase == .opening)
+        .disabled(unlockPhase != .locked)
         .accessibilityLabel(unlockPhase.title)
     }
 
@@ -698,18 +698,18 @@ private struct DashboardView: View {
     }
 
     private func completeReadingWithUnlockAnimation() {
-        guard unlockPhase != .opening else { return }
+        guard unlockPhase == .locked else { return }
 
         unlockPhase = .opening
         unlockAnimationTick += 1
+        model.finishReading()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
-            model.finishReading()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             unlockPhase = .unlocked
             unlockAnimationTick += 1
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
             unlockPhase = .locked
         }
     }
@@ -739,8 +739,8 @@ private enum UnlockButtonPhase: Equatable {
     var title: String {
         switch self {
         case .locked: "Li com calma, continuar"
-        case .opening: "Preparando sua volta"
-        case .unlocked: "Tudo pronto"
+        case .opening: "Travessia concluída"
+        case .unlocked: "Apps disponíveis"
         }
     }
 
@@ -808,6 +808,7 @@ private struct BlockedApplicationIcon: View {
     var body: some View {
         Label(token)
             .labelStyle(.iconOnly)
+            .scaleEffect(1.22)
             .frame(width: 58, height: 58)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
             .overlay(
@@ -823,7 +824,7 @@ private struct SpiritualReadingCard: View {
     let isSaved: Bool
     let saveAction: () -> Void
     let listenAction: () -> Void
-    let isSpeaking: Bool
+    let narrationState: PassageNarrationButtonState
     var showsReflection = true
     var showsNarration = true
 
@@ -856,7 +857,7 @@ private struct SpiritualReadingCard: View {
 
             if showsReflection {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Explicação espiritual")
+                    Text("Explicação espiritual \(item.reference)")
                         .font(.system(size: 13, weight: .bold))
                         .tracking(1.1)
                         .foregroundStyle(Color.warmGold)
@@ -877,10 +878,20 @@ private struct SpiritualReadingCard: View {
 
             if showsNarration {
                 Button(action: listenAction) {
-                    Label(isSpeaking ? "Parar narração" : "Ouvir este trecho", systemImage: isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
-                        .lineLimit(1)
+                    HStack(spacing: 8) {
+                        if narrationState == .generating {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(Color.sageButton)
+                        } else {
+                            Image(systemName: narrationState.systemImage)
+                        }
+
+                        Text(narrationState.title)
+                            .lineLimit(1)
+                    }
                 }
-                .buttonStyle(ReadingActionButtonStyle(isHighlighted: isSpeaking))
+                .buttonStyle(ReadingActionButtonStyle(isHighlighted: narrationState.isHighlighted))
             }
         }
         .padding(18)
@@ -915,9 +926,7 @@ private struct ReadingView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.warmGold)
 
-                    if model.canNarrateCurrentReading {
-                        readingActions
-                    }
+                    readingActions
 
                     if model.isEssentialMode {
                         ForEach(model.currentSpiritualReadingItems) { item in
@@ -976,14 +985,6 @@ private struct ReadingView: View {
 
     private var readingActions: some View {
         HStack(spacing: 12) {
-            Button {
-                narration.toggle(text: model.currentReadingNarrationText)
-            } label: {
-                Label(narration.isSpeaking ? "Parar narração" : "Ouvir trecho", systemImage: narration.isSpeaking ? "stop.circle.fill" : "speaker.wave.2.fill")
-                    .lineLimit(1)
-            }
-            .buttonStyle(ReadingActionButtonStyle(isHighlighted: narration.isSpeaking))
-
             Button {
                 model.toggleFavoriteCurrentPassage()
             } label: {
@@ -2646,9 +2647,42 @@ private struct ReadingActionButtonStyle: ButtonStyle {
     }
 }
 
+private enum PassageNarrationButtonState: Equatable {
+    case idle
+    case generating
+    case playing
+
+    var title: String {
+        switch self {
+        case .idle:
+            "Ouvir este trecho"
+        case .generating:
+            "Gerando narração"
+        case .playing:
+            "Parar narração"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .idle:
+            "speaker.wave.2.fill"
+        case .generating:
+            "waveform"
+        case .playing:
+            "stop.circle.fill"
+        }
+    }
+
+    var isHighlighted: Bool {
+        self != .idle
+    }
+}
+
 @MainActor
 private final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isSpeaking = false
+    @Published var isGenerating = false
 
     private let speechService = RemoteAISpeechService()
     private var player: AVAudioPlayer?
@@ -2656,11 +2690,18 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
     private var activeSpeechText = ""
 
     func toggle(text: String) {
-        if isSpeaking, activeSpeechText == preparedSpeechText(text) {
+        if (isSpeaking || isGenerating), activeSpeechText == preparedSpeechText(text) {
             stop()
         } else {
             speak(text)
         }
+    }
+
+    func state(for text: String) -> PassageNarrationButtonState {
+        guard activeSpeechText == preparedSpeechText(text) else { return .idle }
+        if isGenerating { return .generating }
+        if isSpeaking { return .playing }
+        return .idle
     }
 
     func stop() {
@@ -2670,6 +2711,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
         player = nil
         activeSpeechText = ""
         isSpeaking = false
+        isGenerating = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -2679,7 +2721,8 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
         let prepared = preparedSpeechText(text)
         guard !prepared.isEmpty else { return }
         activeSpeechText = prepared
-        isSpeaking = true
+        isGenerating = true
+        isSpeaking = false
         let service = speechService
 
         playbackTask = Task { [weak self] in
@@ -2692,6 +2735,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
             } catch {
                 await MainActor.run {
                     self?.activeSpeechText = ""
+                    self?.isGenerating = false
                     self?.isSpeaking = false
                 }
             }
@@ -2708,9 +2752,12 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
             audioPlayer.delegate = self
             audioPlayer.prepareToPlay()
             player = audioPlayer
+            isGenerating = false
+            isSpeaking = true
             audioPlayer.play()
         } catch {
             activeSpeechText = ""
+            isGenerating = false
             isSpeaking = false
         }
     }
@@ -2775,6 +2822,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor [weak self] in
             self?.activeSpeechText = ""
+            self?.isGenerating = false
             self?.isSpeaking = false
             self?.player = nil
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -2785,6 +2833,7 @@ private final class PassageNarrationService: NSObject, ObservableObject, AVAudio
         Task { @MainActor [weak self] in
             self?.player = nil
             self?.activeSpeechText = ""
+            self?.isGenerating = false
             self?.isSpeaking = false
         }
     }

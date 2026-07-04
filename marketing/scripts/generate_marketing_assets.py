@@ -4,6 +4,7 @@ import json
 import math
 import shutil
 import textwrap
+import base64
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -16,6 +17,7 @@ BRAND = MARKETING / "brand"
 APP_STORE = MARKETING / "app-store"
 PUBLIC_APP_STORE = ROOT / "app-store"
 SITE_ASSETS = MARKETING / "site" / "assets"
+LOGO_SOURCE = BRAND / "logo-source.png"
 
 GENERATED_SOURCE = Path(
     "/Users/romeucunha/.codex/generated_images/019eed3d-bedf-7aa2-bdb0-3e7cbe0d3fb7/"
@@ -100,6 +102,19 @@ def contain(image: Image.Image, box: tuple[int, int]) -> Image.Image:
     ratio = min(box[0] / image.width, box[1] / image.height)
     size = (int(image.width * ratio), int(image.height * ratio))
     return image.resize(size, Image.Resampling.LANCZOS)
+
+
+def load_logo_mark(size: int = 1024) -> Image.Image:
+    if LOGO_SOURCE.exists():
+        source = Image.open(LOGO_SOURCE).convert("RGB")
+        crop_size = int(min(source.width, source.height) * 0.60)
+        left = (source.width - crop_size) // 2
+        top = int(source.height * 0.18)
+        top = max(0, min(top, source.height - crop_size))
+        mark = source.crop((left, top, left + crop_size, top + crop_size))
+        return mark.resize((size, size), Image.Resampling.LANCZOS).convert("RGBA")
+
+    return Image.open(BRAND / "logo-mark-1024.png").convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
 
 
 def draw_wrapped(
@@ -263,14 +278,11 @@ def draw_sunrise_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int],
 
 
 def make_mark_svg() -> str:
-    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+    encoded = base64.b64encode((BRAND / "logo-mark-1024.png").read_bytes()).decode("ascii")
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
   <title id="title">Limiar logo mark</title>
   <desc id="desc">A calm threshold-shaped mark combining an open doorway and an open book.</desc>
-  <rect width="256" height="256" rx="56" fill="#050A0B"/>
-  <path d="M72 206V57c0-6 5-11 11-11h83c10 0 18 8 18 18v142" fill="none" stroke="#B3CFB8" stroke-width="13" stroke-linecap="round"/>
-  <path d="M100 72h51c6 0 11 5 11 11v96" fill="none" stroke="#EFE9D8" stroke-width="9" stroke-linecap="round" opacity=".82"/>
-  <path d="M57 201c31-16 59-16 84 0 25-16 52-16 83 0" fill="none" stroke="#D49F6E" stroke-width="12" stroke-linecap="round"/>
-  <path d="M141 90v112" fill="none" stroke="#D49F6E" stroke-width="7" stroke-linecap="round"/>
+  <image href="data:image/png;base64,{encoded}" width="256" height="256" preserveAspectRatio="xMidYMid slice"/>
 </svg>
 """
 
@@ -279,19 +291,13 @@ def make_lockup_svg(theme: str = "dark") -> str:
     bg = "#050A0B" if theme == "dark" else "none"
     text = "#EFE9D8" if theme == "dark" else "#050A0B"
     sub = "#BFC2BA" if theme == "dark" else "#5D6D61"
-    mark_bg = "#050A0B"
     bg_rect = f'<rect width="760" height="256" rx="36" fill="{bg}"/>' if bg != "none" else ""
+    encoded = base64.b64encode((BRAND / "logo-mark-1024.png").read_bytes()).decode("ascii")
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 256" role="img" aria-labelledby="title desc">
   <title id="title">Limiar logo lockup</title>
   <desc id="desc">Limiar wordmark with threshold and book symbol.</desc>
   {bg_rect}
-  <g transform="translate(40 40) scale(.6875)">
-    <rect width="256" height="256" rx="56" fill="{mark_bg}"/>
-    <path d="M72 206V57c0-6 5-11 11-11h83c10 0 18 8 18 18v142" fill="none" stroke="#B3CFB8" stroke-width="13" stroke-linecap="round"/>
-    <path d="M100 72h51c6 0 11 5 11 11v96" fill="none" stroke="#EFE9D8" stroke-width="9" stroke-linecap="round" opacity=".82"/>
-    <path d="M57 201c31-16 59-16 84 0 25-16 52-16 83 0" fill="none" stroke="#D49F6E" stroke-width="12" stroke-linecap="round"/>
-    <path d="M141 90v112" fill="none" stroke="#D49F6E" stroke-width="7" stroke-linecap="round"/>
-  </g>
+  <image href="data:image/png;base64,{encoded}" x="40" y="40" width="176" height="176" preserveAspectRatio="xMidYMid slice"/>
   <text x="246" y="119" fill="{text}" font-family="Georgia, serif" font-size="76" letter-spacing="0">Limiar</text>
   <text x="252" y="164" fill="{sub}" font-family="Arial, sans-serif" font-size="23" letter-spacing="1.6">ATRAVESSE COM CALMA</text>
 </svg>
@@ -299,37 +305,14 @@ def make_lockup_svg(theme: str = "dark") -> str:
 
 
 def render_icon_png(path: Path, size: int = 1024) -> None:
-    img = Image.new("RGBA", (size, size), COLORS["deep_ink"] + (255,))
-    draw = ImageDraw.Draw(img)
-    scale = size / 256
-
-    def p(points):
-        return tuple(int(v * scale) for v in points)
-
-    # Subtle inner glow.
-    glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse(p((82, 32, 232, 218)), fill=COLORS["sage"] + (45,))
-    glow = glow.filter(ImageFilter.GaussianBlur(int(24 * scale)))
-    img.alpha_composite(glow)
-
-    draw.line(p((72, 206, 72, 57, 83, 46, 166, 46, 184, 64, 184, 206)), fill=COLORS["sage"] + (255,), width=int(13 * scale), joint="curve")
-    draw.line(p((100, 72, 151, 72, 162, 83, 162, 179)), fill=COLORS["ivory"] + (220,), width=int(9 * scale), joint="curve")
-    draw.arc(p((52, 180, 141, 225)), start=190, end=350, fill=COLORS["gold"] + (255,), width=int(12 * scale))
-    draw.arc(p((141, 180, 230, 225)), start=190, end=350, fill=COLORS["gold"] + (255,), width=int(12 * scale))
-    draw.line(p((141, 90, 141, 202)), fill=COLORS["gold"] + (255,), width=int(7 * scale))
-    img.save(path)
+    load_logo_mark(size).save(path)
 
 
 def render_logo_png(path: Path, theme: str = "dark") -> None:
     size = (1520, 512)
     bg = COLORS["deep_ink"] + (255,) if theme == "dark" else (0, 0, 0, 0)
     img = Image.new("RGBA", size, bg)
-    mark = Image.new("RGBA", (352, 352), (0, 0, 0, 0))
-    tmp = BRAND / "_tmp_mark.png"
-    render_icon_png(tmp, 512)
-    mark = Image.open(tmp).resize((352, 352), Image.Resampling.LANCZOS)
-    tmp.unlink(missing_ok=True)
+    mark = load_logo_mark(352)
     img.alpha_composite(mark, (82, 80))
     draw = ImageDraw.Draw(img)
     text = COLORS["ivory"] if theme == "dark" else COLORS["deep_ink"]
@@ -348,11 +331,11 @@ def copy_generated_visual() -> Path:
 
 
 def make_logo_assets() -> None:
+    render_icon_png(BRAND / "logo-mark-1024.png")
+    render_icon_png(SITE_ASSETS / "logo-mark-1024.png")
     (BRAND / "logo-mark.svg").write_text(make_mark_svg(), encoding="utf-8")
     (BRAND / "logo-lockup-dark.svg").write_text(make_lockup_svg("dark"), encoding="utf-8")
     (BRAND / "logo-lockup-light.svg").write_text(make_lockup_svg("light"), encoding="utf-8")
-    render_icon_png(BRAND / "logo-mark-1024.png")
-    render_icon_png(SITE_ASSETS / "logo-mark-1024.png")
     render_logo_png(BRAND / "logo-lockup-dark.png", "dark")
     render_logo_png(BRAND / "logo-lockup-light.png", "light")
 
