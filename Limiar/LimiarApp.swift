@@ -1,9 +1,14 @@
 import SwiftUI
+@preconcurrency import GoogleMobileAds
 
 @main
 struct LimiarApp: App {
     @State private var model = LimiarAppModel()
     @State private var subscription = SubscriptionManager()
+
+    init() {
+        MobileAds.shared.start()
+    }
 
     var body: some Scene {
         WindowGroup {

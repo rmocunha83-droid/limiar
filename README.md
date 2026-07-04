@@ -15,7 +15,7 @@ Limiar é um app iOS em SwiftUI para criar uma pausa espiritual antes de voltar 
 - Histórico local de leituras e opção individual de salvar cada trecho.
 - Narração premium via ElevenLabs no backend seguro, acionada apenas quando a pessoa toca em ouvir.
 - Botão “Li com calma, continuar” com ícone positivo e retorno temporário aos apps selecionados.
-- Modo Essencial após o teste gratuito: mantém os 3 trechos principais e o fluxo de pausa, sem reflexões personalizadas e sem narração.
+- Modo Essencial após o teste gratuito: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
 - Preview web e materiais de marketing/App Store.
 
 ## Requisitos
@@ -35,4 +35,4 @@ Todos os textos visíveis e textos gerados para o usuário devem usar português
 
 ## Reflexões personalizadas
 
-O app iOS chama os endpoints em `api/` e nunca carrega chaves de provedores no cliente. Configure `OPENAI_API_KEY` no Vercel para geração textual e `ELEVENLABS_API_KEY` para narração. O modelo textual padrão é `gpt-5.4-mini`, e a voz usa o modelo econômico `eleven_flash_v2_5`. Usuários em teste gratuito ativo e assinantes usam a experiência completa; usuários no Modo Essencial não geram chamadas remotas de reflexão nem narração. A arquitetura está detalhada em `docs/AI_ARCHITECTURE.md`.
+O app iOS chama os endpoints em `api/` e nunca carrega chaves de provedores no cliente. Configure `OPENAI_API_KEY` no Vercel para geração textual e `ELEVENLABS_API_KEY` para narração. O modelo textual padrão é `gpt-5.4-mini`, e a voz usa o modelo econômico `eleven_flash_v2_5`. Usuários em teste gratuito ativo e assinantes usam a experiência completa; usuários no Modo Essencial não geram chamadas remotas de reflexão nem narração e veem anúncios do AdMob. A arquitetura está detalhada em `docs/AI_ARCHITECTURE.md`.

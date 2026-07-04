@@ -26,7 +26,7 @@ O app foi pensado para quem quer menos automático e mais presença no celular.
 
 Recursos:
 - Teste gratuito de 7 dias com experiência completa.
-- Modo Essencial após o teste, com trechos principais e sem custo de IA.
+- Modo Essencial após o teste, com trechos principais, explicações essenciais e anúncios.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
 - Três trechos na tela inicial para uma leitura com mais calma.

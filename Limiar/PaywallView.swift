@@ -71,14 +71,14 @@ struct PaywallView: View {
 
     private var headerSubtitle: String {
         if subscription.accessState == .trialExpired {
-            return "Você ainda pode continuar no Modo Essencial com os trechos principais. Para ter reflexões personalizadas, narração e maior variedade, assine o Limiar completo."
+            return "Você ainda pode continuar no Modo Essencial com trechos e explicações essenciais. Para remover anúncios, narrar os textos e ter maior variedade, assine o Limiar completo."
         }
         return "Transforme a pausa antes dos apps selecionados em um momento de reflexão."
     }
 
     private var headerDisclosure: String {
         if subscription.accessState == .trialExpired {
-            return "Seu teste gratuito terminou. O Modo Essencial continua disponível com os trechos principais."
+            return "Seu teste gratuito terminou. O Modo Essencial continua disponível com anúncios e sem narração."
         }
         return subscription.pricingDisclosureText
     }
@@ -86,6 +86,7 @@ struct PaywallView: View {
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 12) {
             PaywallBenefit(icon: "sparkles", text: "Leituras e reflexões espirituais personalizadas")
+            PaywallBenefit(icon: "rectangle.slash", text: "Experiência sem anúncios")
             PaywallBenefit(icon: "text.bubble", text: "Explicações em linguagem simples")
             PaywallBenefit(icon: "book.closed", text: "Escolha de religião, temas e livros preferidos")
             PaywallBenefit(icon: "slider.horizontal.3", text: "Reflexões curtas, médias ou longas")

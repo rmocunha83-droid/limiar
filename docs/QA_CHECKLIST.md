@@ -47,7 +47,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Verificar se o texto não inventa conteúdo bíblico.
 - Reabrir o mesmo trecho com o mesmo perfil e profundidade.
 - Confirmar que usuários em teste gratuito ativo e assinantes recebem a experiência completa com IA.
-- Confirmar que o Modo Essencial mostra apenas os trechos principais, sem narração e sem reflexões por IA.
+- Confirmar que o Modo Essencial mostra os trechos principais com explicações essenciais, anúncios e sem narração.
 
 ## Favoritos e histórico
 
@@ -64,7 +64,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar que a narração usa voz local do iOS em português do Brasil quando disponível.
 - Pausar ou interromper a narração.
 - Sair da tela durante a narração e confirmar que o áudio não fica preso indevidamente.
-- Confirmar que a narração não aparece no Modo Essencial.
+- Confirmar que tocar em “Ouvir este trecho” no Modo Essencial abre o paywall e não chama a narração.
 
 ## Configurações
 

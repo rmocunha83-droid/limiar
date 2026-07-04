@@ -631,7 +631,7 @@ enum AIContentState: Equatable {
         case .fallback:
             "Não foi possível buscar uma nova leitura agora. Tente novamente em instantes."
         case .essentialMode:
-            "Você está lendo os trechos principais. Reflexões, narração e maior variedade estão disponíveis no Limiar completo."
+            "Você está lendo os trechos principais com explicações essenciais. Narração, maior variedade e experiência sem anúncios ficam no Limiar completo."
         }
     }
 }
@@ -802,7 +802,7 @@ final class LimiarAppModel {
     }
 
     var hasVisibleReadingExplanations: Bool {
-        hasPremiumAccess && currentSpiritualReadingItems.contains { $0.hasExplanationContent }
+        (hasPremiumAccess || isEssentialMode) && currentSpiritualReadingItems.contains { $0.hasExplanationContent }
     }
 
     var hasVisibleReflection: Bool {
@@ -832,6 +832,10 @@ final class LimiarAppModel {
 
     var hasPauseAccess: Bool {
         hasPremiumAccess || isEssentialMode
+    }
+
+    var showsAds: Bool {
+        isEssentialMode
     }
 
     var estimatedFocusTimeText: String {
@@ -1135,12 +1139,23 @@ final class LimiarAppModel {
         aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
+        let spiritualReadingService = AISpiritualReadingService()
+        let reflectionService = AIReflectionService()
         if isEssentialMode {
-            currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
-            currentReflection = emptyReflection()
+            currentSpiritualReadingItems = spiritualReadingService.readingItems(
+                for: resolvedPlan,
+                profile: profile,
+                recentPassageIDs: recentPassageIDs,
+                recentReflections: recentAIReflections
+            )
+            currentReflection = reflectionService.reflection(
+                for: resolvedPlan,
+                profile: profile,
+                recentReflections: recentAIReflections
+            )
             aiContentState = .essentialMode
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
-            values["source"] = "essential"
+            values["source"] = "essential_local"
             values["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
             LimiarAIDiagnostics.log("essential_mode_reading_prepared", values: values)
             rememberShownPassages(resolvedPlan)
@@ -1153,8 +1168,6 @@ final class LimiarAppModel {
         planValues["recentReflections"] = "\(recentAIReflections.count)"
         LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
         rememberShownPassages(resolvedPlan)
-        let spiritualReadingService = AISpiritualReadingService()
-        let reflectionService = AIReflectionService()
         guard hasPremiumAccess else {
             currentSpiritualReadingItems = spiritualReadingService.readingItems(
                 for: resolvedPlan,

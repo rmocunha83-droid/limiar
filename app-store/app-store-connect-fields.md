@@ -52,7 +52,7 @@ O app foi pensado para quem quer menos automático e mais presença no celular.
 
 Recursos:
 - Teste gratuito de 7 dias com experiência completa.
-- Modo Essencial após o teste, com trechos principais e sem custo de IA.
+- Modo Essencial após o teste, com trechos principais, explicações essenciais e anúncios.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
 - Três trechos na tela inicial para uma leitura com mais calma.
@@ -114,7 +114,7 @@ Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_yearly`
 
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais e o fluxo de pausa, mas sem narração, reflexões por IA e maior variedade.
+Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
 
 Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual.
 

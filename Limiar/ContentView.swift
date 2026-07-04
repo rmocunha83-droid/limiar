@@ -96,22 +96,22 @@ private struct EssentialModeIntroView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Seu teste gratuito terminou. Você ainda pode continuar usando o Limiar com os trechos principais, mas sem narração e sem reflexões personalizadas.")
+                        Text("Seu teste gratuito terminou. Você ainda pode continuar usando o Limiar com trechos e explicações essenciais. A versão essencial exibe anúncios e não inclui narração.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
 
-                        Text("Para ter reflexões personalizadas, narração dos textos e maior variedade de trechos, assine o Limiar completo.")
+                        Text("Para remover anúncios, narrar os textos e ter maior variedade de trechos, assine o Limiar completo.")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.sageButton)
                             .lineSpacing(4)
                     }
 
                     VStack(alignment: .leading, spacing: 13) {
-                        TrialDisclosureRow(icon: "book.closed", text: "3 trechos principais continuam disponíveis")
-                        TrialDisclosureRow(icon: "sparkles", text: "Reflexões personalizadas na versão completa")
+                        TrialDisclosureRow(icon: "book.closed", text: "3 trechos e explicações essenciais continuam disponíveis")
+                        TrialDisclosureRow(icon: "rectangle.3.group", text: "Anúncios aparecem apenas no Modo Essencial")
                         TrialDisclosureRow(icon: "speaker.wave.2", text: "Narração dos textos na versão completa")
-                        TrialDisclosureRow(icon: "arrow.triangle.2.circlepath", text: "Maior variedade de trechos na versão completa")
+                        TrialDisclosureRow(icon: "arrow.triangle.2.circlepath", text: "Maior variedade e experiência sem anúncios na versão completa")
                     }
                     .padding(16)
                     .limiarPanel()
@@ -362,6 +362,7 @@ private struct DashboardView: View {
     @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
+    @State private var showingPaywall = false
     @State private var unlockPhase = UnlockButtonPhase.locked
     @State private var unlockAnimationTick = 0
 
@@ -411,6 +412,7 @@ private struct DashboardView: View {
                         chooseAppsButton
                         completionExplanation
                         unlockButton
+                        footerAdBanner
                         footer
                     }
                     .padding(.horizontal, 24)
@@ -430,6 +432,9 @@ private struct DashboardView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationDestination(isPresented: $showingSettings) {
             SettingsView()
+        }
+        .navigationDestination(isPresented: $showingPaywall) {
+            PaywallView()
         }
         .familyActivityPicker(
             headerText: "Escolha apps, categorias ou sites que vão ativar o Limiar.",
@@ -530,7 +535,7 @@ private struct DashboardView: View {
 
     private var readingItemsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(model.currentSpiritualReadingItems) { item in
+            ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
                 let narrationText = "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)"
 
                 SpiritualReadingCard(
@@ -540,13 +545,20 @@ private struct DashboardView: View {
                         model.toggleFavorite(item)
                     },
                     listenAction: {
-                        narration.toggle(text: narrationText)
+                        if model.isEssentialMode {
+                            showingPaywall = true
+                        } else {
+                            narration.toggle(text: narrationText)
+                        }
                     },
-                    narrationState: narration.state(for: narrationText),
-                    showsReflection: model.hasPremiumAccess && item.hasExplanationContent,
-                    showsNarration: model.canNarrateCurrentReading
+                    narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationText),
+                    showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
+                    showsNarration: model.canNarrateCurrentReading || model.isEssentialMode
                 )
 
+                if model.showsAds {
+                    LimiarAdBannerSlot(label: "Publicidade")
+                }
             }
 
             if model.hasPremiumAccess && model.currentSpiritualReadingItems.isEmpty {
@@ -585,7 +597,7 @@ private struct DashboardView: View {
                             .foregroundStyle(Color.ivory)
                     }
 
-                    Text("Você está lendo os trechos principais. Reflexões, narração e maior variedade estão disponíveis no Limiar completo.")
+                    Text("Você está lendo os trechos principais com explicações essenciais. Narração, maior variedade e experiência sem anúncios ficam no Limiar completo.")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -604,6 +616,15 @@ private struct DashboardView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
                 )
+            }
+        }
+    }
+
+    private var footerAdBanner: some View {
+        Group {
+            if model.showsAds {
+                LimiarAdBannerSlot(label: "Publicidade")
+                    .padding(.top, 4)
             }
         }
     }
@@ -903,6 +924,7 @@ private struct ReadingView: View {
     @Environment(LimiarAppModel.self) private var model
     @StateObject private var narration = PassageNarrationService()
     @State private var now = Date()
+    @State private var showingPaywall = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -929,18 +951,22 @@ private struct ReadingView: View {
                     readingActions
 
                     if model.isEssentialMode {
-                        ForEach(model.currentSpiritualReadingItems) { item in
-                            VStack(alignment: .leading, spacing: 10) {
-                                Label(item.reference, systemImage: "quote.opening")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(Color.warmGold)
+                        ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
+                            SpiritualReadingCard(
+                                item: item,
+                                isSaved: model.isFavorite(item),
+                                saveAction: {
+                                    model.toggleFavorite(item)
+                                },
+                                listenAction: {
+                                    showingPaywall = true
+                                },
+                                narrationState: .idle,
+                                showsReflection: item.hasExplanationContent,
+                                showsNarration: true
+                            )
 
-                                Text(item.text)
-                                    .font(.system(size: 24, weight: .regular, design: .serif))
-                                    .foregroundStyle(Color.ivory)
-                                    .lineSpacing(8)
-                            }
-                            .padding(.vertical, 10)
+                            LimiarAdBannerSlot(label: "Publicidade")
                         }
                     } else {
                         Text(model.currentReadingText)
@@ -970,6 +996,9 @@ private struct ReadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showingPaywall) {
+            PaywallView()
+        }
         .onReceive(timer) { date in
             now = date
             model.updateReadingProgress(at: date)
@@ -1016,7 +1045,7 @@ private struct ReadingView: View {
                 .tracking(1.1)
                 .foregroundStyle(Color.warmGold)
 
-            Text("Você está lendo os trechos principais. Reflexões, narração e maior variedade estão disponíveis no Limiar completo.")
+            Text("Você está lendo os trechos principais com explicações essenciais. Narração, maior variedade e experiência sem anúncios ficam no Limiar completo.")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.softText)
                 .lineSpacing(4)

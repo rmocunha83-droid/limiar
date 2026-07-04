@@ -47,4 +47,4 @@ O app não envia ao backend:
 
 ## Modo Essencial
 
-No Modo Essencial, o app mostra apenas trechos principais e não faz chamadas remotas para gerar reflexões por IA ou narração.
+No Modo Essencial, o app mostra trechos principais com explicações essenciais, exibe anúncios e não faz chamadas remotas para gerar reflexões personalizadas ou narração.
