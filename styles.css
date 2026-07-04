@@ -156,7 +156,11 @@ a {
   background: linear-gradient(110deg, transparent 18%, rgba(255, 255, 255, 0.26) 48%, transparent 72%);
   opacity: 0;
   transform: translateX(-105%);
-  animation: button-soft-pulse 5.8s ease-in-out 2.2s infinite;
+  animation: button-soft-shine 6.8s ease-in-out 1.8s infinite;
+}
+
+.hero-actions .button:not(.secondary) {
+  animation: app-store-button-pulse 4.8s ease-in-out 1s infinite;
 }
 
 .eyebrow {
@@ -267,7 +271,20 @@ h1 {
   }
 }
 
-@keyframes button-soft-pulse {
+@keyframes app-store-button-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(179, 207, 184, 0), 0 0 0 0 rgba(179, 207, 184, 0);
+    transform: scale(1);
+  }
+
+  48% {
+    box-shadow: 0 10px 34px rgba(179, 207, 184, 0.16), 0 0 0 7px rgba(179, 207, 184, 0.07);
+    transform: scale(1.012);
+  }
+}
+
+@keyframes button-soft-shine {
   0%,
   62%,
   100% {
