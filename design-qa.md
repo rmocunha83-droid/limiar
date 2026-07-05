@@ -1,6 +1,6 @@
 final result: passed
 
-Reference: /Users/romeucunha/Downloads/1C86878A-40BE-4276-833E-FFFD0D4DBBB3.PNG
+Reference: /Users/romeucunha/Downloads/8DF1594E-6134-48A4-94C0-1674911F1780.PNG
 
 Viewport checked: 393 x 852 mobile.
 
