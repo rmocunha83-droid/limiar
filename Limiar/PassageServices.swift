@@ -1651,7 +1651,7 @@ struct RemoteAIReadingSessionService {
         let payload = RemoteReadingSessionRequestPayload(
             profile: RemoteAIProfilePayload(profile: profile),
             passages: passages.map(RemotePassagePayload.init),
-            recentPassageIDs: Array(recentPassageIDs.prefix(20)),
+            recentPassageIDs: Array(recentPassageIDs.prefix(40)),
             recentReflections: recentReflections.prefix(8).map(RemoteAIReflectionDigestPayload.init)
         )
 

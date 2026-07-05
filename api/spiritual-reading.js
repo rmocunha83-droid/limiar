@@ -41,7 +41,8 @@ module.exports = async function handler(req, res) {
       "Cada item deve usar os campos reference, passageText, homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion.",
       "Use passageText exatamente baseado em um dos trechos enviados; não invente versículos nem altere a tradição.",
       "Não use sempre os primeiros trechos: escolha os 3 que melhor combinam com a tradição, livros, seções, temas e histórico recente.",
-      "Evite referências presentes em Trechos recentes a evitar, salvo se não houver alternativa coerente.",
+      "Exclua referências presentes em Trechos recentes a evitar sempre que houver qualquer alternativa da mesma tradição.",
+      "Se muitos trechos recentes aparecerem na lista, prefira trechos ainda não usados, mesmo que a correspondência com tema/livro seja um pouco menor.",
       "A homily deve variar de tamanho conforme a profundidade escolhida.",
       "O spiritualMeaning deve explicar o sentido espiritual do trecho e se conectar aos temas preferidos.",
       "A practicalApplication e a conclusion devem ser concretas, específicas e diferentes entre os 3 itens."

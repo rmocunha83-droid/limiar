@@ -610,11 +610,11 @@ enum AIContentState: Equatable {
         case .localReady:
             "Preparando leitura"
         case .generating:
-            "Preparando reflexão"
+            "Preparando novos trechos"
         case .remoteReady:
             "Reflexão personalizada"
         case .fallback:
-            "Atualização indisponível"
+            "Não foi possível preparar sua reflexão"
         case .essentialMode:
             "Modo Essencial"
         }
@@ -625,11 +625,11 @@ enum AIContentState: Equatable {
         case .localReady:
             "A leitura será atualizada assim que você começar."
         case .generating:
-            "Estamos preparando novos trechos e explicações para este momento."
+            "A IA está criando 3 trechos e suas explicações espirituais. Isso costuma levar cerca de 10 segundos."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
-            "Não foi possível buscar uma nova leitura agora. Tente novamente em instantes."
+            "Não foi possível preparar sua reflexão agora. Tente novamente em instantes."
         case .essentialMode:
             "Você está lendo os trechos principais com explicações essenciais. Narração, maior variedade e experiência sem anúncios ficam no Limiar completo."
         }
@@ -838,6 +838,10 @@ final class LimiarAppModel {
         isEssentialMode
     }
 
+    var isPreparingReadingContent: Bool {
+        aiContentState == .generating || (hasPauseAccess && currentSpiritualReadingItems.isEmpty && aiContentState != .fallback)
+    }
+
     var estimatedFocusTimeText: String {
         "\(history.count)"
     }
@@ -939,13 +943,17 @@ final class LimiarAppModel {
             history: history,
             avoiding: avoidingCurrent ? currentPassage.id : nil,
             recentlyShownPassageIDs: recentPassageIDs,
-            minimumCount: hasPremiumAccess ? 12 : LimiarReadingConstants.targetItemCount
+            minimumCount: hasPauseAccess ? 24 : LimiarReadingConstants.targetItemCount
         )
         setReadingPlan(
             Array(candidates.prefix(LimiarReadingConstants.targetItemCount)),
             profile: faithProfile,
             remoteCandidatePool: candidates
         )
+    }
+
+    func retryReadingGeneration() {
+        beginNewReading(avoidingCurrent: true)
     }
 
     func prepareFreshPassageForForeground() {
@@ -1139,65 +1147,35 @@ final class LimiarAppModel {
         aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
         currentPassage = resolvedPlan[0]
-        let spiritualReadingService = AISpiritualReadingService()
-        let reflectionService = AIReflectionService()
-        if isEssentialMode {
-            currentSpiritualReadingItems = spiritualReadingService.readingItems(
-                for: resolvedPlan,
-                profile: profile,
-                recentPassageIDs: recentPassageIDs,
-                recentReflections: recentAIReflections
-            )
-            currentReflection = reflectionService.reflection(
-                for: resolvedPlan,
-                profile: profile,
-                recentReflections: recentAIReflections
-            )
-            aiContentState = .essentialMode
-            var values = LimiarAIDiagnostics.profileSnapshot(profile)
-            values["source"] = "essential_local"
-            values["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
-            LimiarAIDiagnostics.log("essential_mode_reading_prepared", values: values)
-            rememberShownPassages(resolvedPlan)
-            return
-        }
 
         var planValues = LimiarAIDiagnostics.profileSnapshot(profile)
         planValues["references"] = resolvedPlan.map(\.reference).joined(separator: " + ")
         planValues["passages"] = resolvedPlan.map(\.id).joined(separator: ",")
         planValues["recentReflections"] = "\(recentAIReflections.count)"
         LimiarAIDiagnostics.log("reading_plan_prepared", values: planValues)
-        rememberShownPassages(resolvedPlan)
-        guard hasPremiumAccess else {
-            currentSpiritualReadingItems = spiritualReadingService.readingItems(
-                for: resolvedPlan,
-                profile: profile,
-                recentPassageIDs: recentPassageIDs,
-                recentReflections: recentAIReflections
-            )
-            currentReflection = reflectionService.reflection(
-                for: resolvedPlan,
-                profile: profile,
-                recentReflections: recentAIReflections
-            )
+
+        guard hasPauseAccess else {
+            currentSpiritualReadingItems = []
+            currentReflection = emptyReflection()
             aiContentState = .localReady
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "none"
-            values["reason"] = "no_active_subscription"
+            values["reason"] = "no_pause_access"
             LimiarAIDiagnostics.log("remote_ai_skipped", values: values)
             return
         }
 
-        currentSpiritualReadingItems = essentialReadingItems(for: resolvedPlan)
+        currentSpiritualReadingItems = []
         currentReflection = emptyReflection()
         let remoteRequestKey = remoteAIRequestKey(for: candidatePool, profile: profile)
         aiContentState = .generating
         var values = LimiarAIDiagnostics.profileSnapshot(profile)
         values["source"] = "remote"
         values["requestKey"] = remoteRequestKey
+        values["mode"] = isEssentialMode ? "essential" : "full"
         LimiarAIDiagnostics.log("remote_ai_started", values: values)
         refreshRemoteAIContent(
-            for: Array(candidatePool.prefix(12)),
+            for: Array(candidatePool.prefix(24)),
             fallbackPlan: resolvedPlan,
             profile: profile,
             generationID: generationID
@@ -1238,10 +1216,12 @@ final class LimiarAppModel {
     }
 
     private func rememberShownPassages(_ passages: [ScripturePassage]) {
-        let ids = passages.map(\.id)
+        let ids = passages.flatMap { passage in
+            [passage.id, passage.reference]
+        }
         recentPassageIDs.removeAll { ids.contains($0) }
         recentPassageIDs.insert(contentsOf: ids, at: 0)
-        recentPassageIDs = Array(recentPassageIDs.prefix(isEssentialMode ? 12 : 40))
+        recentPassageIDs = Array(recentPassageIDs.prefix(60))
         policyStore.saveRecentPassageIDs(recentPassageIDs)
     }
 
@@ -1255,8 +1235,6 @@ final class LimiarAppModel {
         let recentReflections = recentAIReflections
         aiGenerationTask = Task { [passages, fallbackPlan, profile, recentPassageIDs, recentReflections] in
             let readingSessionService = RemoteAIReadingSessionService()
-            let spiritualReadingService = AISpiritualReadingService()
-            let reflectionService = AIReflectionService()
 
             let remoteSession = await readingSessionService.readingSession(
                 for: passages,
@@ -1280,23 +1258,14 @@ final class LimiarAppModel {
                     currentReflection = session.reflection
                     rememberShownPassages(selectedPassages)
                     rememberReflection(reference: currentReadingReference, reflection: session.reflection)
-                    aiContentState = .remoteReady
+                    aiContentState = isEssentialMode ? .essentialMode : .remoteReady
                 } else {
                     currentReadingPlan = fallbackPlan
                     if let first = fallbackPlan.first {
                         currentPassage = first
                     }
-                    currentSpiritualReadingItems = spiritualReadingService.readingItems(
-                        for: fallbackPlan,
-                        profile: profile,
-                        recentPassageIDs: recentPassageIDs,
-                        recentReflections: recentReflections
-                    )
-                    currentReflection = reflectionService.reflection(
-                        for: fallbackPlan,
-                        profile: profile,
-                        recentReflections: recentReflections
-                    )
+                    currentSpiritualReadingItems = []
+                    currentReflection = emptyReflection()
                     aiContentState = .fallback
                 }
             }
@@ -1309,8 +1278,16 @@ final class LimiarAppModel {
         let fallbackBook = profile.favoriteBooks.first ?? .psalms
 
         return items.enumerated().map { index, item in
-            ScripturePassage(
-                id: "remote-\(index)-\(abs(item.id.hashValue))",
+            let stableReferenceID = item.reference
+                .lowercased()
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "pt_BR"))
+                .replacingOccurrences(of: " ", with: "-")
+                .replacingOccurrences(of: ",", with: "")
+                .replacingOccurrences(of: ":", with: "-")
+                .replacingOccurrences(of: "–", with: "-")
+                .replacingOccurrences(of: "—", with: "-")
+            return ScripturePassage(
+                id: "remote-\(stableReferenceID)-\(index)",
                 tradition: profile.tradition,
                 title: item.reference,
                 reference: item.reference,

@@ -535,50 +535,38 @@ private struct DashboardView: View {
 
     private var readingItemsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
-                let narrationText = "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)"
-
-                SpiritualReadingCard(
-                    item: item,
-                    isSaved: model.isFavorite(item),
-                    saveAction: {
-                        model.toggleFavorite(item)
-                    },
-                    listenAction: {
-                        if model.isEssentialMode {
-                            showingPaywall = true
-                        } else {
-                            narration.toggle(text: narrationText)
-                        }
-                    },
-                    narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationText),
-                    showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
-                    showsNarration: model.canNarrateCurrentReading || model.isEssentialMode
-                )
-
-                if model.showsAds {
-                    LimiarAdBannerSlot(label: "Publicidade")
+            if model.isPreparingReadingContent {
+                AIReadingPreparationView()
+            } else if model.aiContentState == .fallback && model.currentSpiritualReadingItems.isEmpty {
+                AIReadingRetryView {
+                    model.retryReadingGeneration()
                 }
-            }
+            } else {
+                ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
+                    let narrationText = "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)"
 
-            if model.hasPremiumAccess && model.currentSpiritualReadingItems.isEmpty {
-                HStack(alignment: .top, spacing: 12) {
-                    ProgressView()
-                        .tint(Color.warmGold)
-                        .padding(.top, 2)
+                    SpiritualReadingCard(
+                        item: item,
+                        isSaved: model.isFavorite(item),
+                        saveAction: {
+                            model.toggleFavorite(item)
+                        },
+                        listenAction: {
+                            if model.isEssentialMode {
+                                showingPaywall = true
+                            } else {
+                                narration.toggle(text: narrationText)
+                            }
+                        },
+                        narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationText),
+                        showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
+                        showsNarration: model.canNarrateCurrentReading || model.isEssentialMode
+                    )
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Preparando novos trechos")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Color.ivory)
-                        Text("Estamos preparando a leitura e as explicações espirituais para este momento.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.softText)
-                            .lineSpacing(4)
+                    if model.showsAds {
+                        LimiarAdBannerSlot(label: "Publicidade")
                     }
                 }
-                .padding(16)
-                .limiarPanel()
             }
         }
     }
@@ -787,6 +775,107 @@ private enum UnlockButtonPhase: Equatable {
         case .opening: Color.warmGold.opacity(0.22)
         case .unlocked: Color.sageButton.opacity(0.28)
         }
+    }
+}
+
+private struct AIReadingPreparationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isBreathing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center, spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.warmGold.opacity(0.10))
+                        .frame(width: 58, height: 58)
+                        .scaleEffect(reduceMotion ? 1 : (isBreathing ? 1.10 : 0.92))
+
+                    Circle()
+                        .stroke(Color.warmGold.opacity(0.26), lineWidth: 1)
+                        .frame(width: 58, height: 58)
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Color.warmGold)
+                        .scaleEffect(reduceMotion ? 1 : (isBreathing ? 1.04 : 0.98))
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Preparando novos trechos")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.ivory)
+
+                    Text("A IA está criando 3 trechos e suas explicações espirituais para este momento.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(4)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Capsule()
+                            .fill(Color.sageButton.opacity(index == 1 ? 0.72 : 0.36))
+                            .frame(height: 5)
+                    }
+                }
+
+                Text("Normalmente leva cerca de 10 segundos. Vamos mostrar a leitura somente quando tudo estiver pronto.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.softText.opacity(0.86))
+                    .lineSpacing(4)
+            }
+        }
+        .padding(18)
+        .limiarPanel()
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) {
+                isBreathing = true
+            }
+        }
+    }
+}
+
+private struct AIReadingRetryView: View {
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(Color.warmGold)
+                    .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Não foi possível preparar sua reflexão agora")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Color.ivory)
+
+                    Text("Tente novamente em instantes. A leitura só aparece quando os 3 trechos e as explicações estiverem completos.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(4)
+                }
+            }
+
+            Button(action: retry) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Tentar novamente")
+                }
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.deepInk)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding(18)
+        .limiarPanel()
     }
 }
 
@@ -1135,6 +1224,11 @@ private struct OnboardingView: View {
     @State private var showingPicker = false
     @State private var didApplyDebugTradition = false
 
+    private enum Layout {
+        static let horizontalInset: CGFloat = 28
+        static let verticalInset: CGFloat = 22
+    }
+
     init() {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
@@ -1220,7 +1314,7 @@ private struct OnboardingView: View {
                         }
                         .buttonStyle(LimiarPrimaryButtonStyle())
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Layout.horizontalInset)
                     .padding(.bottom, 24)
                 }
             }
@@ -1292,7 +1386,8 @@ private struct OnboardingView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(22)
+        .padding(.horizontal, Layout.horizontalInset)
+        .padding(.vertical, Layout.verticalInset)
     }
 
     private var spiritualThemes: some View {
@@ -1309,7 +1404,8 @@ private struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
+            .padding(.horizontal, Layout.horizontalInset)
+            .padding(.vertical, Layout.verticalInset)
         }
     }
 
@@ -1344,7 +1440,8 @@ private struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
+            .padding(.horizontal, Layout.horizontalInset)
+            .padding(.vertical, Layout.verticalInset)
         }
     }
 
@@ -1363,7 +1460,8 @@ private struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
+            .padding(.horizontal, Layout.horizontalInset)
+            .padding(.vertical, Layout.verticalInset)
         }
     }
 
@@ -1417,7 +1515,8 @@ private struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
+            .padding(.horizontal, Layout.horizontalInset)
+            .padding(.vertical, Layout.verticalInset)
         }
     }
 
@@ -2439,11 +2538,12 @@ private struct OnboardingTitle: View {
                 .tracking(1.3)
                 .foregroundStyle(Color.warmGold)
             Text(title)
-                .font(.system(size: 34, weight: .regular, design: .serif))
+                .font(.system(size: 32, weight: .regular, design: .serif))
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
-                .lineLimit(3)
-                .minimumScaleFactor(0.86)
+                .lineLimit(4)
+                .minimumScaleFactor(0.90)
+                .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -2546,7 +2646,7 @@ private struct ReadingPreferenceChipSection: View {
                 }
             }
         }
-        .padding(14)
+        .padding(16)
         .background(Color.deepInk.opacity(0.26), in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
@@ -2613,7 +2713,8 @@ private struct FlowLayout: Layout {
         var frames: [CGRect] = []
 
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let measuredSize = subview.sizeThatFits(ProposedViewSize(width: maxWidth, height: nil))
+            let size = CGSize(width: min(measuredSize.width, maxWidth), height: measuredSize.height)
             if x + size.width > maxWidth, x > 0 {
                 x = 0
                 y += rowHeight + spacing

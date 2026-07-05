@@ -252,7 +252,7 @@ function normalizePassages(passages = []) {
       book: trimText(passage.book, 80)
     }))
     .filter((passage) => nonEmpty(passage.reference) && nonEmpty(passage.text))
-    .slice(0, 8);
+    .slice(0, 24);
 }
 
 function normalizeRecentReflections(reflections = []) {
@@ -318,7 +318,7 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
     "- A profundidade escolhida deve mudar visivelmente o tamanho, a densidade e a aplicação prática.",
     "- Nunca use livros ou seções marcados como incompatíveis para a tradição.",
     "- Evite respostas genéricas que funcionariam igualmente para qualquer tradição, tema ou profundidade.",
-    `Trechos recentes a evitar: ${compactList(recentPassageIDs, 20).join(", ") || "não informado"}`,
+    `Trechos recentes a evitar, incluindo IDs e referências: ${compactList(recentPassageIDs, 40).join(", ") || "não informado"}`,
     "Reflexões recentes a não repetir:",
     historyBlock,
     "",
