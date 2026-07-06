@@ -52,7 +52,7 @@
 
 - [ ] Abrir build pelo TestFlight.
 - [ ] Confirmar onboarding.
-- [ ] Confirmar teste gratuito.
+- [ ] Confirmar acesso inicial e linguagem sem promessa de gratuidade na assinatura.
 - [ ] Confirmar paywall mensal.
 - [ ] Confirmar restauração de compra.
 - [ ] Confirmar Modo Essencial após expiração simulada ou revisão por fluxo interno.

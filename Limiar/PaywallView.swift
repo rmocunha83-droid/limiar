@@ -78,7 +78,7 @@ struct PaywallView: View {
 
     private var headerDisclosure: String {
         if subscription.accessState == .trialExpired {
-            return "Seu teste gratuito terminou. O Modo Essencial continua disponível com anúncios e sem narração."
+            return "Seu acesso inicial terminou. O Modo Essencial continua disponível com anúncios e sem narração."
         }
         return subscription.pricingDisclosureText
     }

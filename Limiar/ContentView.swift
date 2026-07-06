@@ -96,7 +96,7 @@ private struct EssentialModeIntroView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Seu teste gratuito terminou. Você ainda pode continuar usando o Limiar com trechos e explicações essenciais. A versão essencial exibe anúncios e não inclui narração.")
+                        Text("Seu acesso inicial terminou. Você ainda pode continuar usando o Limiar com trechos e explicações essenciais. A versão essencial exibe anúncios e não inclui narração.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -161,28 +161,28 @@ private struct FreeTrialStartView: View {
                         .frame(width: 58, height: 58)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("TESTE GRATUITO")
+                        Text("ACESSO INICIAL")
                             .font(.system(size: 13, weight: .bold))
                             .tracking(1.3)
                             .foregroundStyle(Color.warmGold)
 
-                        Text("Comece com 7 dias grátis")
+                        Text("Comece com 7 dias de acesso completo")
                             .font(.system(size: 44, weight: .regular, design: .serif))
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Use o Limiar completo gratuitamente por 7 dias. Depois desse período, será necessária uma assinatura mensal ou anual para continuar usando as pausas, leituras e reflexões personalizadas.")
+                        Text("Use o Limiar completo por 7 dias. Depois desse período, será necessária uma assinatura mensal ou anual para continuar usando as pausas, leituras e reflexões personalizadas.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
                     }
 
                     VStack(alignment: .leading, spacing: 13) {
-                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias grátis")
+                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias de acesso completo")
                         TrialDisclosureRow(icon: "creditcard", text: "Depois \(subscription.monthlyMarketingPrice) ou \(subscription.yearlyMarketingPrice)")
                         TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
-                        TrialDisclosureRow(icon: "checkmark.shield", text: "Sem cobrança antes do fim do teste")
-                        TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária após o teste para continuar usando")
+                        TrialDisclosureRow(icon: "checkmark.shield", text: "Nenhuma assinatura é iniciada nesta etapa")
+                        TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária depois para continuar na versão completa")
                     }
                     .padding(16)
                     .limiarPanel()
@@ -191,7 +191,7 @@ private struct FreeTrialStartView: View {
                         subscription.startFreeTrial()
                     } label: {
                         HStack(spacing: 12) {
-                            Text("Começar 7 dias grátis")
+                            Text("Começar acesso inicial")
                             Image(systemName: "arrow.right")
                         }
                         .font(.system(size: 18, weight: .semibold))
@@ -201,7 +201,7 @@ private struct FreeTrialStartView: View {
                         .foregroundStyle(Color.deepInk)
                     }
 
-                    Text("Você não está assinando agora. O teste começa localmente e o app pedirá assinatura somente após os 7 dias.")
+                    Text("Você não está assinando agora. O acesso inicial começa localmente e o app pedirá assinatura somente depois dos 7 dias.")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -237,7 +237,7 @@ private struct TrialConversionView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Você já começou a recuperar seu foco e criar uma rotina espiritual. Para continuar usando as pausas, leituras e reflexões personalizadas após o teste gratuito, assine o Limiar Premium.")
+                        Text("Você já começou a recuperar seu foco e criar uma rotina espiritual. Para continuar usando as pausas, leituras e reflexões personalizadas após o acesso inicial, assine o Limiar Premium.")
                             .font(.system(size: 17))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
@@ -260,7 +260,7 @@ private struct TrialConversionView: View {
                     }
                     .disabled(subscription.isBusy)
 
-                    Button("Continuar usando o teste") {
+                    Button("Continuar por enquanto") {
                         continueTrial()
                     }
                     .font(.system(size: 15, weight: .semibold))
@@ -462,7 +462,7 @@ private struct DashboardView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.warmGold)
 
-                    Text("Teste gratuito: \(subscription.trialRemainingText)")
+                    Text("Acesso inicial: \(subscription.trialRemainingText)")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.ivory)
 
@@ -747,7 +747,7 @@ private enum UnlockButtonPhase: Equatable {
 
     var title: String {
         switch self {
-        case .locked: "Li com calma, continuar"
+        case .locked: "Despausar apps, continuar"
         case .opening: "Travessia concluída"
         case .unlocked: "Apps disponíveis"
         }
@@ -802,11 +802,11 @@ private struct AIReadingPreparationView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Preparando novos trechos")
+                    Text("Preparando 3 novas reflexões")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(Color.ivory)
 
-                    Text("A IA está criando 3 trechos e suas explicações espirituais para este momento.")
+                    Text("Estamos criando 3 novas reflexões e explicações espirituais. Aguarde 5 segundos")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -817,12 +817,25 @@ private struct AIReadingPreparationView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<3, id: \.self) { index in
                         Capsule()
-                            .fill(Color.sageButton.opacity(index == 1 ? 0.72 : 0.36))
+                            .fill(Color.sageButton.opacity(reduceMotion ? (index == 1 ? 0.72 : 0.36) : (isBreathing ? 0.78 : 0.26)))
                             .frame(height: 5)
+                            .shadow(
+                                color: reduceMotion ? .clear : Color.sageButton.opacity(isBreathing ? 0.22 : 0.04),
+                                radius: isBreathing ? 7 : 1,
+                                y: 0
+                            )
+                            .animation(
+                                reduceMotion
+                                    ? nil
+                                    : .easeInOut(duration: 0.9)
+                                        .repeatForever(autoreverses: true)
+                                        .delay(Double(index) * 0.22),
+                                value: isBreathing
+                            )
                     }
                 }
 
-                Text("Normalmente leva cerca de 10 segundos. Vamos mostrar a leitura somente quando tudo estiver pronto.")
+                Text("O carregamento pode levar até 10 segundos. Vamos mostrar a leitura em instantes.")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.softText.opacity(0.86))
                     .lineSpacing(4)
@@ -855,7 +868,7 @@ private struct AIReadingRetryView: View {
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color.ivory)
 
-                    Text("Tente novamente em instantes. A leitura só aparece quando os 3 trechos e as explicações estiverem completos.")
+                    Text("Tente novamente em instantes. Confira sua conexão com a internet antes de tentar outra vez.")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -1303,7 +1316,7 @@ private struct OnboardingView: View {
                             advance()
                         } label: {
                             HStack(spacing: 10) {
-                                Text(displayedStep == finalOnboardingStep ? "Ver teste grátis" : "Continuar")
+                                Text(displayedStep == finalOnboardingStep ? "Começar" : "Continuar")
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.72)
                                 if displayedStep != finalOnboardingStep {
@@ -2130,7 +2143,7 @@ struct SettingsView: View {
                     }
 
                     if subscription.canResetTrialForTesting {
-                        Button("Reiniciar teste gratuito de 7 dias") {
+                        Button("Reiniciar acesso inicial de 7 dias") {
                             subscription.resetFreeTrialForTesting()
                             model.updateAccess(
                                 hasPremiumAccess: subscription.hasPremiumAccess,
@@ -2186,11 +2199,11 @@ struct SettingsView: View {
     private var subscriptionStatusLabel: String {
         switch subscription.accessState {
         case .trialNotStarted:
-            return "Teste não iniciado"
+            return "Acesso inicial não iniciado"
         case .trialActive:
-            return "Teste ativo"
+            return "Acesso inicial ativo"
         case .trialExpired:
-            return "Teste encerrado"
+            return "Acesso inicial encerrado"
         case .subscribed:
             return "Assinatura ativa"
         }

@@ -8,6 +8,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let settingsStore = ManagedSettingsStore(named: ManagedSettingsStore.Name("Limiar"))
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
+        if activity == .limiarUnlockWindow {
+            policyStore.clearMorningPauseCompletedAt()
+        }
         reapplyShieldIfNeeded()
     }
 
@@ -58,6 +61,10 @@ private struct ExtensionPolicyStore {
 
     func loadMorningPauseCompletedAt() -> Date? {
         defaults.object(forKey: "morningPauseCompletedAt") as? Date
+    }
+
+    func clearMorningPauseCompletedAt() {
+        defaults.removeObject(forKey: "morningPauseCompletedAt")
     }
 
     func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = .current) -> Bool {

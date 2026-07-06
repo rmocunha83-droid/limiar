@@ -610,11 +610,11 @@ enum AIContentState: Equatable {
         case .localReady:
             "Preparando leitura"
         case .generating:
-            "Preparando novos trechos"
+            "Preparando 3 novas reflexões"
         case .remoteReady:
             "Reflexão personalizada"
         case .fallback:
-            "Não foi possível preparar sua reflexão"
+            "Não foi possível preparar sua reflexão agora"
         case .essentialMode:
             "Modo Essencial"
         }
@@ -625,11 +625,11 @@ enum AIContentState: Equatable {
         case .localReady:
             "A leitura será atualizada assim que você começar."
         case .generating:
-            "A IA está criando 3 trechos e suas explicações espirituais. Isso costuma levar cerca de 10 segundos."
+            "Estamos criando 3 novas reflexões e explicações espirituais. Aguarde 5 segundos."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
-            "Não foi possível preparar sua reflexão agora. Tente novamente em instantes."
+            "Tente novamente em instantes. Confira sua conexão com a internet antes de tentar outra vez."
         case .essentialMode:
             "Você está lendo os trechos principais com explicações essenciais. Narração, maior variedade e experiência sem anúncios ficam no Limiar completo."
         }
@@ -883,7 +883,7 @@ final class LimiarAppModel {
             aiContentState = .localReady
             aiGenerationTask?.cancel()
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
         }
     }
 
@@ -1025,7 +1025,7 @@ final class LimiarAppModel {
     func finishReading() {
         guard hasPauseAccess else {
             isReadingSessionActive = false
-            unlockNote = "Inicie o teste gratuito para ativar a pausa antes dos apps selecionados."
+            unlockNote = "Inicie o acesso inicial para ativar a pausa antes dos apps selecionados."
             screenTimeController.clearShield()
             return
         }
@@ -1045,9 +1045,9 @@ final class LimiarAppModel {
         policyStore.saveHistory(history)
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
-        screenTimeController.stopLegacyUnlockMonitoring()
         if blockingEnabled && hasBlockedAppsSelection {
             screenTimeController.scheduleDailyMonitoring()
+            screenTimeController.scheduleShieldReapplicationForNextMorning(now: completedAt)
         }
         unlockNote = "Travessia de hoje concluída. A pausa volta amanhã às 5h."
         beginNewReading()
@@ -1056,13 +1056,13 @@ final class LimiarAppModel {
     func applyBlocking() {
         guard hasPauseAccess else {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
             return
         }
 
         guard blockingEnabled else {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1070,7 +1070,7 @@ final class LimiarAppModel {
 
         guard hasBlockedAppsSelection else {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1078,23 +1078,24 @@ final class LimiarAppModel {
 
         if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.scheduleShieldReapplicationForNextMorning()
             return
         }
 
+        screenTimeController.stopUnlockMonitoring()
         screenTimeController.applyShield(selection: selection)
     }
 
     func reapplyBlockIfNeeded() {
         guard hasPauseAccess else {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
             return
         }
 
         guard blockingEnabled else {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1102,7 +1103,7 @@ final class LimiarAppModel {
 
         guard hasBlockedAppsSelection else {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1110,8 +1111,9 @@ final class LimiarAppModel {
 
         if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
-            screenTimeController.stopLegacyUnlockMonitoring()
+            screenTimeController.scheduleShieldReapplicationForNextMorning()
         } else {
+            screenTimeController.stopUnlockMonitoring()
             screenTimeController.applyShield(selection: selection)
         }
     }

@@ -21,7 +21,7 @@ Criar um único grupo de assinatura para o lançamento.
 
 ## Observações
 
-- O teste gratuito de 7 dias é controlado pelo próprio app antes da compra.
+- O acesso inicial de 7 dias é controlado pelo próprio app antes da compra, sem iniciar assinatura nesta etapa.
 - Enviar o produto mensal e o produto anual no lançamento atual.
 - Criar o plano anual no mesmo grupo de assinatura, com produto `limiar_premium_yearly` e preço de R$ 89,90/ano.
 - Enviar as assinaturas mensal e anual junto com a versão do app para revisão.

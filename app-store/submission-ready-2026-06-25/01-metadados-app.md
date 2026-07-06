@@ -18,15 +18,15 @@ foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,
 
 ## Descrição
 
-Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece 7 dias de experiência completa e, após o teste, mantém um Modo Essencial com trechos principais.
+Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece um acesso inicial completo e, depois desse período, mantém um Modo Essencial com trechos principais.
 
 Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma jornada na própria tela inicial, com três trechos religiosos, explicações espirituais e opção individual de salvar cada trecho.
 
 O app foi pensado para quem quer menos automático e mais presença no celular.
 
 Recursos:
-- Teste gratuito de 7 dias com experiência completa.
-- Modo Essencial após o teste, com trechos principais, explicações essenciais e anúncios.
+- Acesso inicial com experiência completa antes da assinatura.
+- Modo Essencial depois do acesso inicial, com trechos principais, explicações essenciais e anúncios.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
 - Três trechos na tela inicial para uma leitura com mais calma.
@@ -39,6 +39,9 @@ Recursos:
 - Limiar Premium com assinatura mensal, renovação automática e restauração de compra.
 
 Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
+
+Termos de Uso (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Política de Privacidade: https://limiar-five.vercel.app/privacy.html
 
 ## Categoria
 

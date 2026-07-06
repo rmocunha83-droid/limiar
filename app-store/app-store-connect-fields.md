@@ -44,15 +44,15 @@ foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,
 
 ### Descrição
 
-Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece 7 dias de experiência completa e, após o teste, mantém um Modo Essencial com trechos principais.
+Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece um acesso inicial completo e, depois desse período, mantém um Modo Essencial com trechos principais.
 
 Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma jornada na própria tela inicial, com três trechos religiosos, explicações espirituais e opção individual de salvar cada trecho.
 
 O app foi pensado para quem quer menos automático e mais presença no celular.
 
 Recursos:
-- Teste gratuito de 7 dias com experiência completa.
-- Modo Essencial após o teste, com trechos principais, explicações essenciais e anúncios.
+- Acesso inicial com experiência completa antes da assinatura.
+- Modo Essencial depois do acesso inicial, com trechos principais, explicações essenciais e anúncios.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
 - Três trechos na tela inicial para uma leitura com mais calma.
@@ -65,6 +65,9 @@ Recursos:
 - Limiar Premium com assinatura mensal, renovação automática e restauração de compra.
 
 Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
+
+Termos de Uso (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Política de Privacidade: https://limiar-five.vercel.app/privacy.html
 
 ## Screenshots
 
@@ -114,10 +117,10 @@ Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_yearly`
 
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
 
 Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual.
 
-Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
+Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O acesso inicial e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
 Recursos Premium: geração completa por IA, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e uso completo da versão completa do Limiar.

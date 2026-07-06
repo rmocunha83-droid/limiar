@@ -142,7 +142,7 @@ final class SubscriptionManager {
     }
 
     var pricingDisclosureText: String {
-        "Depois dos 7 dias grátis, escolha entre \(monthlyMarketingPrice) ou \(yearlyMarketingPrice). Cancele quando quiser."
+        "Escolha entre \(monthlyMarketingPrice) ou \(yearlyMarketingPrice). A App Store confirma preço e renovação antes da assinatura."
     }
 
     var canResetTrialForTesting: Bool {
@@ -224,7 +224,7 @@ final class SubscriptionManager {
             trialStartedAt = now
             TrialStartStore.save(now)
             defaults.set(now, forKey: Constants.trialStartDefaultsKey)
-            message = "Seu teste gratuito de 7 dias começou."
+            message = "Seu acesso inicial de 7 dias começou."
         }
 
         refreshAccessState()
@@ -237,7 +237,7 @@ final class SubscriptionManager {
         trialStartedAt = now
         TrialStartStore.save(now)
         defaults.set(now, forKey: Constants.trialStartDefaultsKey)
-        message = "Teste gratuito reiniciado para 7 dias neste aparelho."
+        message = "Acesso inicial reiniciado para 7 dias neste aparelho."
         refreshAccessState(now: now)
     }
 
@@ -264,7 +264,7 @@ final class SubscriptionManager {
             return ""
         }
 
-        return "\(displayText(for: offer.period)) grátis"
+        return "\(displayText(for: offer.period)) de acesso inicial"
     }
 
     func planDetailText(for plan: SubscriptionPlan) -> String {
