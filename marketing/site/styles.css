@@ -154,6 +154,10 @@ a {
   display: none;
 }
 
+.mobile-video-section {
+  display: none;
+}
+
 .hero::before {
   content: "";
   position: absolute;
@@ -656,6 +660,10 @@ h1 {
     text-decoration: none;
   }
 
+  .mobile-video-section {
+    display: none;
+  }
+
   .nav {
     width: min(100% - 28px, var(--max));
   }
@@ -726,6 +734,92 @@ h1 {
 
   .footer {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-video-section {
+    display: grid;
+    justify-items: center;
+    gap: 18px;
+    padding: 34px 18px 56px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(212, 159, 110, 0.16), transparent 42%),
+      linear-gradient(180deg, #020809 0%, #06100f 100%);
+  }
+
+  .mobile-video-copy {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    max-width: 340px;
+    text-align: center;
+    color: var(--ivory);
+  }
+
+  .mobile-video-copy p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.32;
+  }
+
+  .mobile-video-copy span {
+    color: var(--gold);
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .phone-video-frame {
+    position: relative;
+    width: min(72vw, 286px);
+    aspect-ratio: 9 / 16;
+    padding: 12px;
+    border: 1px solid rgba(179, 207, 184, 0.32);
+    border-radius: 36px;
+    background:
+      linear-gradient(145deg, rgba(240, 233, 216, 0.12), rgba(179, 207, 184, 0.04)),
+      rgba(3, 8, 8, 0.92);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+  }
+
+  .phone-video-notch {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    z-index: 2;
+    width: 34%;
+    height: 18px;
+    border-radius: 999px;
+    background: rgba(2, 8, 9, 0.88);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .mobile-demo-video {
+    width: 100%;
+    height: 100%;
+    border-radius: 26px;
+    background: #020809;
+    object-fit: cover;
+  }
+
+  .mobile-video-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: min(100%, 340px);
+  }
+
+  .mobile-video-actions button {
+    min-height: 44px;
+    border: 1px solid rgba(179, 207, 184, 0.34);
+    border-radius: 14px;
+    background: rgba(240, 233, 216, 0.07);
+    color: var(--ivory);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
   }
 }
 

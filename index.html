@@ -64,6 +64,21 @@
         <a class="mobile-first-fold-cta" href="https://apps.apple.com/br/app/limiar/id6783115468" aria-label="Baixar na App Store"></a>
       </section>
 
+      <section class="mobile-video-section" aria-label="Vídeo explicando o Limiar">
+        <div class="mobile-video-copy">
+          <p>Entenda como funciona o Limiar no vídeo abaixo</p>
+          <span aria-hidden="true">↓</span>
+        </div>
+        <div class="phone-video-frame">
+          <div class="phone-video-notch" aria-hidden="true"></div>
+          <video class="mobile-demo-video" src="assets/limiar-mobile-demo.m4v" autoplay muted playsinline controls preload="metadata"></video>
+        </div>
+        <div class="mobile-video-actions">
+          <button class="video-sound-toggle" type="button">Ativar som</button>
+          <button class="video-restart" type="button">Reiniciar vídeo</button>
+        </div>
+      </section>
+
       <section class="hero desktop-hero">
         <div class="hero-inner">
           <div>
@@ -236,5 +251,35 @@
         </a>
       </nav>
     </footer>
+    <script>
+      (() => {
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        document.querySelectorAll(".mobile-video-section").forEach((section) => {
+          const video = section.querySelector(".mobile-demo-video");
+          const soundButton = section.querySelector(".video-sound-toggle");
+          const restartButton = section.querySelector(".video-restart");
+
+          if (!video || !soundButton || !restartButton) return;
+
+          if (reduceMotion) {
+            video.removeAttribute("autoplay");
+            video.pause();
+          }
+
+          soundButton.addEventListener("click", () => {
+            video.muted = !video.muted;
+            soundButton.textContent = video.muted ? "Ativar som" : "Silenciar";
+            if (!video.paused) return;
+            video.play().catch(() => {});
+          });
+
+          restartButton.addEventListener("click", () => {
+            video.currentTime = 0;
+            video.play().catch(() => {});
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
