@@ -110,6 +110,16 @@ a {
   border-color: rgba(240, 233, 216, 0.32);
 }
 
+.button.store-cta {
+  gap: 8px;
+}
+
+.button.store-cta .apple-mark {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1.25em;
+  line-height: 1;
+}
+
 .button.app-store-download {
   gap: 14px;
   min-height: 58px;
