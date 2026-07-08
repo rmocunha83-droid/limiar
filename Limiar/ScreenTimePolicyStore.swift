@@ -3,6 +3,12 @@ import FamilyControls
 
 struct ScreenTimePolicyStore {
     static let appGroupIdentifier = "group.com.romeucunha.Limiar"
+    static let morningTimeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
+    static var morningCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = morningTimeZone
+        return calendar
+    }
 
     private enum Key {
         static let onboarding = "onboarding"
@@ -68,21 +74,35 @@ struct ScreenTimePolicyStore {
     }
 
     func saveMorningPauseCompletedAt(_ date: Date?) {
-        defaults.set(date, forKey: Key.morningPauseCompletedAt)
+        if let date {
+            defaults.set(date, forKey: Key.morningPauseCompletedAt)
+        } else {
+            defaults.removeObject(forKey: Key.morningPauseCompletedAt)
+        }
     }
 
-    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = .current) -> Bool {
+    func clearMorningPauseCompletedAt() {
+        defaults.removeObject(forKey: Key.morningPauseCompletedAt)
+    }
+
+    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Bool {
         guard let completedAt = loadMorningPauseCompletedAt() else { return false }
         return completedAt >= Self.currentMorningCycleStart(now: now, calendar: calendar)
     }
 
-    static func currentMorningCycleStart(now: Date = Date(), calendar: Calendar = .current) -> Date {
+    static func currentMorningCycleStart(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Date {
         let todayStart = calendar.startOfDay(for: now)
         let fiveToday = calendar.date(byAdding: .hour, value: 5, to: todayStart) ?? todayStart
         if now >= fiveToday {
             return fiveToday
         }
         return calendar.date(byAdding: .day, value: -1, to: fiveToday) ?? fiveToday
+    }
+
+    static func nextMorningCycleStart(after date: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Date {
+        let currentStart = currentMorningCycleStart(now: date, calendar: calendar)
+        let nextStart = calendar.date(byAdding: .day, value: 1, to: currentStart) ?? currentStart
+        return date < currentStart ? currentStart : nextStart
     }
 
     func loadHistory() -> [ReadingHistoryItem] {

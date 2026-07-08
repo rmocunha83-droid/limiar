@@ -5,7 +5,7 @@ import StoreKit
 
 enum SubscriptionPlan: String, CaseIterable, Identifiable {
     case monthly = "limiar_premium_monthly"
-    case yearly = "limiar_premium_yearly"
+    case yearly = "limiar_premium_annual_2026"
 
     var id: String { rawValue }
 
@@ -15,13 +15,6 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
         switch self {
         case .monthly: "Mensal"
         case .yearly: "Anual"
-        }
-    }
-
-    var fallbackPrice: String {
-        switch self {
-        case .monthly: "R$ 9,90/mês"
-        case .yearly: "R$ 89,90/ano"
         }
     }
 
@@ -117,8 +110,29 @@ final class SubscriptionManager {
         accessState == .trialExpired && !hasActiveSubscription
     }
 
+    var canShowPaywall: Bool {
+        guard accessState == .trialExpired,
+              !hasActiveSubscription,
+              let postTrialPaywallStartsAt else {
+            return false
+        }
+
+        return Date() >= postTrialPaywallStartsAt
+    }
+
+    var shouldShowPostTrialPaywall: Bool {
+        canShowPaywall
+    }
+
     var trialEndsAt: Date? {
         trialStartedAt?.addingTimeInterval(Constants.trialDuration)
+    }
+
+    var postTrialPaywallStartsAt: Date? {
+        guard let trialEndsAt else { return nil }
+        let calendar = Calendar.current
+        let trialEndDay = calendar.startOfDay(for: trialEndsAt)
+        return calendar.date(byAdding: .day, value: 1, to: trialEndDay)
     }
 
     var trialDaysRemaining: Int? {
@@ -129,8 +143,7 @@ final class SubscriptionManager {
     }
 
     var shouldShowTrialConversion: Bool {
-        guard accessState == .trialActive, let trialDaysRemaining else { return false }
-        return trialDaysRemaining <= 2
+        false
     }
 
     var monthlyMarketingPrice: String {
@@ -141,8 +154,36 @@ final class SubscriptionManager {
         displayPrice(for: .yearly)
     }
 
+    var marketingPricingLine: String {
+        let prices = availablePlanPrices()
+
+        if prices.count >= 2 {
+            return "Depois \(prices.joined(separator: " ou "))"
+        }
+
+        if let price = prices.first {
+            return "Depois \(price)"
+        }
+
+        return "Preço confirmado pela App Store antes da assinatura"
+    }
+
     var pricingDisclosureText: String {
-        "Escolha entre \(monthlyMarketingPrice) ou \(yearlyMarketingPrice). A App Store confirma preço e renovação antes da assinatura."
+        let prices = availablePlanPrices()
+
+        if prices.count >= 2 {
+            return "Escolha entre \(prices.joined(separator: " ou ")). A App Store confirma preço e renovação antes da assinatura."
+        }
+
+        if let price = prices.first {
+            return "Plano disponível por \(price). A App Store confirma preço e renovação antes da assinatura."
+        }
+
+        if products.isEmpty {
+            return "Carregando preços pela App Store. A App Store confirma preço e renovação antes da assinatura."
+        }
+
+        return "Os preços serão exibidos pela App Store assim que os planos estiverem disponíveis."
     }
 
     var canResetTrialForTesting: Bool {
@@ -246,7 +287,11 @@ final class SubscriptionManager {
     }
 
     func displayPrice(for plan: SubscriptionPlan) -> String {
-        product(for: plan)?.displayPrice ?? plan.fallbackPrice
+        guard let product = product(for: plan) else {
+            return products.isEmpty ? "Carregando oferta" : "Plano indisponível"
+        }
+
+        return product.displayPrice
     }
 
     func hasConfirmedFreeTrial(for plan: SubscriptionPlan) -> Bool {
@@ -280,7 +325,7 @@ final class SubscriptionManager {
         case .monthly:
             return "Renovação mensal. Cancele quando quiser."
         case .yearly:
-            return "Equivale a R$ 7,49/mês. Economize R$ 28,90 por ano."
+            return yearlySavingsText() ?? "Renovação anual. Cancele quando quiser."
         }
     }
 
@@ -297,8 +342,38 @@ final class SubscriptionManager {
     }
 
     func primaryButtonTitle(for plan: SubscriptionPlan) -> String {
-        guard product(for: plan) != nil else { return "Carregando planos" }
+        guard product(for: plan) != nil else {
+            return products.isEmpty ? "Carregando planos" : "Plano indisponível"
+        }
         return "Assinar por \(displayPrice(for: plan))"
+    }
+
+    private func availablePlanPrices() -> [String] {
+        SubscriptionPlan.allCases
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .compactMap { plan in
+                guard product(for: plan) != nil else { return nil }
+                return displayPrice(for: plan)
+            }
+    }
+
+    private func yearlySavingsText() -> String? {
+        guard let yearly = product(for: .yearly),
+              let monthly = product(for: .monthly) else {
+            return nil
+        }
+
+        let monthlyEquivalent = yearly.price / Decimal(12)
+        let yearlyCostViaMonthly = monthly.price * Decimal(12)
+        let savings = yearlyCostViaMonthly - yearly.price
+
+        guard savings > 0 else {
+            return "Renovação anual. Cancele quando quiser."
+        }
+
+        let monthlyEquivalentText = monthlyEquivalent.formatted(yearly.priceFormatStyle)
+        let savingsText = savings.formatted(yearly.priceFormatStyle)
+        return "Equivale a \(monthlyEquivalentText)/mês. Economize \(savingsText) por ano."
     }
 
     func canPurchase(_ plan: SubscriptionPlan) -> Bool {

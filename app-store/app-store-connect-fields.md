@@ -61,8 +61,8 @@ Recursos:
 - Preferências por tradição espiritual: católica, evangélica, judaica ou espírita.
 - Temas como disciplina, esperança, sabedoria, família, trabalho, ansiedade e propósito.
 - Rotação de trechos para evitar repetições próximas a cada nova abertura relevante do app.
-- Botão "Li com calma, continuar" com retorno temporário aos apps selecionados.
-- Limiar Premium com assinatura mensal, renovação automática e restauração de compra.
+- Botão "Despausar apps, continuar" com retorno temporário aos apps selecionados.
+- Limiar Premium com assinatura mensal ou anual, renovação automática e restauração de compra.
 
 Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
 
@@ -102,7 +102,7 @@ Produto mensal:
 
 Produto anual:
 
-- Product ID: `limiar_premium_yearly`
+- Product ID: `limiar_premium_annual_2026`
 - Nome de referência: `Limiar Premium Yearly`
 - Nome exibido: `Limiar Premium Anual`
 - Duração: 1 ano
@@ -111,7 +111,7 @@ Produto anual:
 - Oferta introdutória: não configurada por padrão
 - Descrição: Acesso completo ao Limiar Premium com cobrança anual e economia em relação ao plano mensal.
 
-Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_yearly` no mesmo grupo de assinatura `Limiar Premium`, somente para o Brasil.
+Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_annual_2026` no mesmo grupo de assinatura `Limiar Premium`, somente para o Brasil.
 
 ## Notas para revisão
 

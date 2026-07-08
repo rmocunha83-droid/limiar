@@ -35,8 +35,8 @@ Recursos:
 - Preferências por tradição espiritual: católica, evangélica, judaica ou espírita.
 - Temas como disciplina, esperança, sabedoria, família, trabalho, ansiedade e propósito.
 - Rotação de trechos para evitar repetições próximas a cada nova abertura relevante do app.
-- Botão "Li com calma, continuar" com retorno temporário aos apps selecionados.
-- Limiar Premium com assinatura mensal, renovação automática e restauração de compra.
+- Botão "Despausar apps, continuar" com retorno temporário aos apps selecionados.
+- Limiar Premium com assinatura mensal ou anual, renovação automática e restauração de compra.
 
 Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
 

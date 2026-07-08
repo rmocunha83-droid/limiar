@@ -15,6 +15,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     }
 
     override func intervalDidStart(for activity: DeviceActivityName) {
+        if activity == .limiarDaily {
+            policyStore.clearMorningPauseCompletedAt()
+        }
         reapplyShieldIfNeeded()
     }
 
@@ -49,6 +52,13 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 }
 
 private struct ExtensionPolicyStore {
+    private static let morningTimeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
+    private static var morningCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = morningTimeZone
+        return calendar
+    }
+
     private let defaults = UserDefaults(suiteName: "group.com.romeucunha.Limiar") ?? .standard
 
     func loadBlockingEnabled() -> Bool {
@@ -65,9 +75,10 @@ private struct ExtensionPolicyStore {
 
     func clearMorningPauseCompletedAt() {
         defaults.removeObject(forKey: "morningPauseCompletedAt")
+        defaults.synchronize()
     }
 
-    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = .current) -> Bool {
+    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Bool {
         guard let completedAt = loadMorningPauseCompletedAt() else { return false }
         return completedAt >= currentMorningCycleStart(now: now, calendar: calendar)
     }
@@ -92,5 +103,6 @@ private struct ExtensionPolicyStore {
 }
 
 private extension DeviceActivityName {
+    static var limiarDaily: Self { Self("limiar.daily") }
     static var limiarUnlockWindow: Self { Self("limiar.unlockWindow") }
 }

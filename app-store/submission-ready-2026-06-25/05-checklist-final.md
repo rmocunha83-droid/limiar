@@ -19,6 +19,8 @@
 - [ ] Grupo `Limiar Premium` criado.
 - [ ] Produto `limiar_premium_monthly` criado.
 - [ ] Preço definido como R$ 9,90/mês.
+- [ ] Produto `limiar_premium_annual_2026` criado.
+- [ ] Preço definido como R$ 89,90/ano.
 - [ ] Disponibilidade da assinatura somente Brasil.
 - [ ] Produto mensal incluído na submissão junto com a versão do app.
 - [ ] Produto anual incluído na submissão junto com a versão do app.
@@ -53,6 +55,6 @@
 - [ ] Abrir build pelo TestFlight.
 - [ ] Confirmar onboarding.
 - [ ] Confirmar acesso inicial e linguagem sem promessa de gratuidade na assinatura.
-- [ ] Confirmar paywall mensal.
+- [ ] Confirmar paywall mensal e anual.
 - [ ] Confirmar restauração de compra.
 - [ ] Confirmar Modo Essencial após expiração simulada ou revisão por fluxo interno.

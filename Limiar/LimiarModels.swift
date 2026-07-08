@@ -610,7 +610,7 @@ enum AIContentState: Equatable {
         case .localReady:
             "Preparando leitura"
         case .generating:
-            "Preparando 3 novas reflexões"
+            "Criando suas reflexões"
         case .remoteReady:
             "Reflexão personalizada"
         case .fallback:
@@ -625,7 +625,7 @@ enum AIContentState: Equatable {
         case .localReady:
             "A leitura será atualizada assim que você começar."
         case .generating:
-            "Estamos criando 3 novas reflexões e explicações espirituais. Aguarde 5 segundos."
+            "Estamos preparando três novas reflexões bíblicas com explicações para este momento."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
@@ -960,7 +960,8 @@ final class LimiarAppModel {
         reapplyBlockIfNeeded()
         guard hasCompletedOnboarding else { return }
         readingTopResetID = UUID()
-        guard Date().timeIntervalSince(lastForegroundRefreshAt) > 2 else { return }
+        guard aiContentState != .generating else { return }
+        guard Date().timeIntervalSince(lastForegroundRefreshAt) > 8 else { return }
         lastForegroundRefreshAt = Date()
         beginNewReading(avoidingCurrent: true)
     }

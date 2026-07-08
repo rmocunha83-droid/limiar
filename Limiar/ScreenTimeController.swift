@@ -31,9 +31,21 @@ struct ScreenTimeController {
 
     func scheduleDailyMonitoring() {
         let center = DeviceActivityCenter()
+        var start = DateComponents()
+        start.calendar = ScreenTimePolicyStore.morningCalendar
+        start.timeZone = ScreenTimePolicyStore.morningTimeZone
+        start.hour = 5
+        start.minute = 0
+
+        var end = DateComponents()
+        end.calendar = ScreenTimePolicyStore.morningCalendar
+        end.timeZone = ScreenTimePolicyStore.morningTimeZone
+        end.hour = 23
+        end.minute = 59
+
         let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 5, minute: 0),
-            intervalEnd: DateComponents(hour: 23, minute: 59),
+            intervalStart: start,
+            intervalEnd: end,
             repeats: true
         )
 
@@ -49,38 +61,19 @@ struct ScreenTimeController {
         }
     }
 
-    func scheduleShieldReapplicationForNextMorning(now: Date = Date(), calendar: Calendar = .current) {
-        let nextStart = Self.nextMorningCycleStart(after: now, calendar: calendar)
-        let startComponents = calendar.dateComponents([.hour, .minute, .second], from: now)
-        let endComponents = calendar.dateComponents([.hour, .minute, .second], from: nextStart)
-        let schedule = DeviceActivitySchedule(
-            intervalStart: startComponents,
-            intervalEnd: endComponents,
-            repeats: false
-        )
-
-        do {
-            try DeviceActivityCenter().startMonitoring(.limiarUnlockWindow, during: schedule)
-            LimiarAIDiagnostics.log("screen_time_reapply_monitor_scheduled", values: [
-                "activity": "limiar.unlockWindow",
-                "nextStart": "\(nextStart)"
-            ])
-        } catch {
-            LimiarAIDiagnostics.log("screen_time_reapply_monitor_failed", values: ["error": "\(error)"])
-        }
+    func scheduleShieldReapplicationForNextMorning(now: Date = Date()) {
+        let nextStart = ScreenTimePolicyStore.nextMorningCycleStart(after: now)
+        scheduleDailyMonitoring()
+        stopUnlockMonitoring()
+        LimiarAIDiagnostics.log("screen_time_reapply_uses_daily_monitor", values: [
+            "activity": "limiar.daily",
+            "nextStart": "\(nextStart)",
+            "timeZone": ScreenTimePolicyStore.morningTimeZone.identifier
+        ])
     }
 
     func stopUnlockMonitoring() {
         DeviceActivityCenter().stopMonitoring([.limiarUnlockWindow])
-    }
-
-    private static func nextMorningCycleStart(after date: Date, calendar: Calendar) -> Date {
-        let dayStart = calendar.startOfDay(for: date)
-        let fiveToday = calendar.date(byAdding: .hour, value: 5, to: dayStart) ?? dayStart
-        if date < fiveToday {
-            return fiveToday
-        }
-        return calendar.date(byAdding: .day, value: 1, to: fiveToday) ?? fiveToday
     }
 }
 

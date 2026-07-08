@@ -407,7 +407,7 @@ def make_dashboard_mock(path: Path, visual: Image.Image) -> None:
     y += 230
     draw.rounded_rectangle((x, y, 1092, y + 204), radius=42, fill=COLORS["sage"] + (255,))
     draw_sunrise_icon(draw, (x + 44, y + 58, x + 92, y + 106))
-    draw.text((x + 118, y + 62), "Li com calma, continuar", font=font(GEORGIA, 46), fill=COLORS["deep_ink"] + (255,))
+    draw.text((x + 118, y + 62), "Despausar apps, continuar", font=font(GEORGIA, 42), fill=COLORS["deep_ink"] + (255,))
     draw.text((1010, y + 58), "›", font=font(ARIAL_BOLD, 58), fill=COLORS["deep_ink"] + (255,))
     img.convert("RGB").save(path, quality=95)
 
@@ -594,7 +594,7 @@ def make_app_store_cards() -> None:
         (
             "05-retome-consciente.png",
             "Continue melhor",
-            "Li com calma, continuar.",
+            "Despausar apps, continuar.",
             "Após concluir a leitura, os apps selecionados ficam disponíveis para uso.",
             dashboard,
             COLORS["sage"],

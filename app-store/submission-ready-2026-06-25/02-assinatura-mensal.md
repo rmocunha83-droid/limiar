@@ -1,4 +1,4 @@
-# Assinaturas Premium
+# Assinaturas Premium mensal e anual
 
 Criar um único grupo de assinatura para o lançamento.
 
@@ -19,9 +19,20 @@ Criar um único grupo de assinatura para o lançamento.
 - Oferta introdutória StoreKit: não configurada por padrão
 - Descrição: `Acesso completo ao Limiar Premium com cobrança mensal.`
 
+## Produto anual
+
+- Product ID: `limiar_premium_annual_2026`
+- Nome de referência: `Limiar Premium Yearly`
+- Nome exibido: `Limiar Premium Anual`
+- Tipo: assinatura auto-renovável
+- Duração: 1 ano
+- Preço: R$ 89,90
+- Disponibilidade: somente Brasil
+- Oferta introdutória StoreKit: não configurada por padrão
+- Descrição: `Acesso completo ao Limiar Premium com cobrança anual e economia em relação ao plano mensal.`
+
 ## Observações
 
-- O acesso inicial de 7 dias é controlado pelo próprio app antes da compra, sem iniciar assinatura nesta etapa.
 - Enviar o produto mensal e o produto anual no lançamento atual.
-- Criar o plano anual no mesmo grupo de assinatura, com produto `limiar_premium_yearly` e preço de R$ 89,90/ano.
+- O acesso inicial completo é controlado pelo próprio app antes da compra, sem iniciar assinatura nesta etapa.
 - Enviar as assinaturas mensal e anual junto com a versão do app para revisão.

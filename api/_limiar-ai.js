@@ -283,6 +283,7 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
     .map((passage, index) => {
       return [
         `Trecho ${index + 1}`,
+        `ID: ${passage.id || "não informado"}`,
         `Referência: ${passage.reference}`,
         `Título: ${passage.title}`,
         `Livro/seção/tema: ${[passage.book, passage.section, passage.theme].filter(Boolean).join(" / ")}`,
@@ -640,6 +641,89 @@ function parseProviderJSON(text) {
   }
 }
 
+function normalizeContentIdentity(value) {
+  return trimText(value, 2000)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function validationError(code, message) {
+  const error = new Error(message || code);
+  error.code = code;
+  error.statusCode = 422;
+  return error;
+}
+
+function recentIdentitySet(recentPassageIDs = []) {
+  return new Set(compactList(recentPassageIDs, 60).map(normalizeContentIdentity).filter(Boolean));
+}
+
+function passageIdentities(passage = {}) {
+  return [
+    normalizeContentIdentity(passage.id),
+    normalizeContentIdentity(passage.reference),
+    normalizeContentIdentity(passage.text)
+  ].filter(Boolean);
+}
+
+function matchAvailablePassage(item, passages = []) {
+  const itemReference = normalizeContentIdentity(item?.reference);
+  const itemText = normalizeContentIdentity(item?.passageText);
+  if (!itemReference && !itemText) return null;
+
+  return passages.find((passage) => {
+    const reference = normalizeContentIdentity(passage.reference);
+    const text = normalizeContentIdentity(passage.text);
+    return (itemReference && itemReference === reference) || (itemText && itemText === text);
+  }) || null;
+}
+
+function validateReadingDiversity(items, options = {}) {
+  const references = new Set();
+  const texts = new Set();
+  const recent = recentIdentitySet(options.recentPassageIDs);
+  const passages = Array.isArray(options.passages) ? options.passages : [];
+  const expectedItemCount = Number(options.expectedItemCount || items.length || 0);
+  const nonRecentPassages = passages.filter((passage) => {
+    const identities = passageIdentities(passage);
+    return identities.length > 0 && !identities.some((identity) => recent.has(identity));
+  });
+  const hasEnoughFreshAlternatives = expectedItemCount > 0 && nonRecentPassages.length >= expectedItemCount;
+
+  for (const item of items) {
+    const reference = normalizeContentIdentity(item.reference);
+    const text = normalizeContentIdentity(item.passageText);
+
+    if (reference) {
+      if (references.has(reference)) {
+        throw validationError("duplicate_reference", "AI returned duplicated passage references");
+      }
+      references.add(reference);
+    }
+
+    if (text) {
+      if (texts.has(text)) {
+        throw validationError("duplicate_passage_text", "AI returned duplicated passage text");
+      }
+      texts.add(text);
+    }
+
+    if (hasEnoughFreshAlternatives && recent.size) {
+      const matched = matchAvailablePassage(item, passages);
+      const identities = matched ? passageIdentities(matched) : [reference];
+      if (identities.some((identity) => recent.has(identity))) {
+        throw validationError("recent_reference_reused", "AI reused a recent passage despite available alternatives");
+      }
+    }
+  }
+
+  return items;
+}
+
 function validateReflection(value) {
   if (!value || typeof value !== "object") throw new Error("invalid_reflection");
   for (const key of reflectionSchema.required) {
@@ -649,7 +733,7 @@ function validateReflection(value) {
   return value;
 }
 
-function validateSpiritualReading(value, expectedItemCount) {
+function validateSpiritualReading(value, expectedItemCount, options = {}) {
   if (!value || !Array.isArray(value.items)) throw new Error("invalid_items");
   const maxItems = expectedItemCount || 8;
   const items = value.items.map(validateReflection).slice(0, maxItems);
@@ -657,12 +741,13 @@ function validateSpiritualReading(value, expectedItemCount) {
   if (expectedItemCount && items.length !== expectedItemCount) {
     throw new Error("unexpected_item_count");
   }
+  validateReadingDiversity(items, { ...options, expectedItemCount });
   return { items };
 }
 
-function validateReadingSession(value, expectedItemCount) {
+function validateReadingSession(value, expectedItemCount, options = {}) {
   if (!value || typeof value !== "object") throw new Error("invalid_reading_session");
-  const reading = validateSpiritualReading(value, expectedItemCount);
+  const reading = validateSpiritualReading(value, expectedItemCount, options);
   return {
     items: reading.items,
     reflection: validateReflection(value.reflection)
@@ -688,6 +773,7 @@ module.exports = {
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
+  normalizeContentIdentity,
   parseProviderJSON,
   parseBody,
   reflectionSchema,
@@ -695,6 +781,7 @@ module.exports = {
   requirePost,
   spiritualReadingSchema,
   validateReflection,
+  validateReadingDiversity,
   validateReadingSession,
   validateSpiritualReading
 };

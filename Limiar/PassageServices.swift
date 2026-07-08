@@ -673,7 +673,7 @@ struct PassageRecommendationService {
         }
 
         if plan.count < minimumCount {
-            for passage in passages where !plan.contains(where: { $0.id == passage.id }) {
+            for passage in passages where passage.tradition == profile.tradition && !plan.contains(where: { $0.id == passage.id }) {
                 plan.append(passage)
                 if plan.count >= minimumCount { break }
             }
@@ -723,9 +723,6 @@ struct PassageRecommendationService {
         }
 
         return freshMatches.shuffled() + olderMatches.shuffled()
-            + passages.filter { passage in
-                !traditionMatches.contains(where: { $0.id == passage.id })
-            }
     }
 }
 
@@ -1346,7 +1343,7 @@ enum RemoteAIError: Error {
 
 struct RemoteAIBackendClient {
     var baseURL = URL(string: "https://limiar-five.vercel.app")!
-    var timeout: TimeInterval = 32
+    var timeout: TimeInterval = 36
     var session: URLSession = .shared
 
     private static var clientID: String {
@@ -1627,7 +1624,7 @@ struct RemoteAISpiritualReadingService {
 struct RemoteAIReadingSessionService {
     private let client: RemoteAIBackendClient
 
-    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 24)) {
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 34)) {
         self.client = client
     }
 
@@ -1729,7 +1726,7 @@ struct RemoteAISpeechService {
     private static let limiarNarrationVoiceID = "21m00Tcm4TlvDq8ikWAM"
     private let client: RemoteAIBackendClient
 
-    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 22)) {
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 30)) {
         self.client = client
     }
 

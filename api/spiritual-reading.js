@@ -15,6 +15,12 @@ const {
   validateSpiritualReading
 } = require("./_limiar-ai");
 
+const DIVERSITY_RETRY_ERRORS = new Set([
+  "duplicate_reference",
+  "duplicate_passage_text",
+  "recent_reference_reused"
+]);
+
 module.exports = async function handler(req, res) {
   applyCommonHeaders(res);
   if (!requirePost(req, res)) return;
@@ -60,7 +66,7 @@ module.exports = async function handler(req, res) {
       passagesCount: passages.length
     });
 
-    const result = await callTextModel({
+    let result = await callTextModel({
       schema: spiritualReadingSchema,
       schemaName: "limiar_spiritual_reading",
       prompt,
@@ -78,8 +84,52 @@ module.exports = async function handler(req, res) {
       }
     });
 
+    let validated;
+    try {
+      validated = validateSpiritualReading(result, 3, { passages, recentPassageIDs });
+    } catch (error) {
+      if (!DIVERSITY_RETRY_ERRORS.has(error.code)) throw error;
+
+      logAIDiagnostic("spiritual_reading_diversity_retry", {
+        endpoint: "spiritual-reading",
+        requestID: rateLimit.context.requestID,
+        clientID: rateLimit.context.clientID,
+        reason: error.code,
+        recentPassageIDsCount: recentPassageIDs.length,
+        passagesCount: passages.length
+      });
+
+      result = await callTextModel({
+        schema: spiritualReadingSchema,
+        schemaName: "limiar_spiritual_reading_retry",
+        prompt: [
+          prompt,
+          "",
+          "Correção obrigatória antes de responder:",
+          "- Não repita nenhuma referência nem nenhum texto dentro da resposta.",
+          "- Não use trechos recentes se houver alternativas disponíveis.",
+          "- Use IDs diferentes entre si e fora da lista recente.",
+          "- Mantenha exatamente 3 itens."
+        ].join("\n"),
+        maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "spiritual-reading"),
+        debugContext: {
+          endpoint: "spiritual-reading",
+          requestID: rateLimit.context.requestID,
+          clientID: rateLimit.context.clientID,
+          depth: profile.explanationDepth,
+          tradition: profile.tradition,
+          favoriteThemesCount: profile.favoriteThemes.length,
+          favoriteBooksCount: profile.favoriteBooks.length,
+          favoriteSectionsCount: profile.favoriteSections.length,
+          passagesCount: passages.length
+        }
+      });
+
+      validated = validateSpiritualReading(result, 3, { passages, recentPassageIDs });
+    }
+
     res.statusCode = 200;
-    res.end(JSON.stringify(validateSpiritualReading(result, 3)));
+    res.end(JSON.stringify(validated));
   } catch (error) {
     logAIError("spiritual-reading", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;

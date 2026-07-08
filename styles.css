@@ -656,11 +656,10 @@ h1 {
 
   .mobile-first-fold-cta {
     position: absolute;
-    left: 7.5%;
-    right: 7.5%;
-    top: 85.2%;
-    height: 5.7%;
+    inset: 0;
+    z-index: 2;
     border-radius: 16px;
+    cursor: pointer;
     text-decoration: none;
   }
 

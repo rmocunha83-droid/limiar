@@ -33,6 +33,8 @@ struct ContentView: View {
                     TrialConversionView {
                         dismissedTrialConversion = true
                     }
+                } else if subscription.shouldShowPostTrialPaywall {
+                    PaywallView()
                 } else if subscription.isEssentialMode && !dismissedEssentialModeIntro {
                     EssentialModeIntroView {
                         dismissedEssentialModeIntro = true
@@ -72,6 +74,7 @@ struct ContentView: View {
 }
 
 private struct EssentialModeIntroView: View {
+    @Environment(SubscriptionManager.self) private var subscription
     let continueEssential: () -> Void
 
     var body: some View {
@@ -116,18 +119,20 @@ private struct EssentialModeIntroView: View {
                     .padding(16)
                     .limiarPanel()
 
-                    NavigationLink {
-                        PaywallView()
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text("Ver planos")
-                            Image(systemName: "arrow.right")
+                    if subscription.canShowPaywall {
+                        NavigationLink {
+                            PaywallView()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text("Ver planos")
+                                Image(systemName: "arrow.right")
+                            }
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(Color.deepInk)
                         }
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
-                        .foregroundStyle(Color.deepInk)
                     }
 
                     Button("Continuar no Modo Essencial") {
@@ -179,7 +184,7 @@ private struct FreeTrialStartView: View {
 
                     VStack(alignment: .leading, spacing: 13) {
                         TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias de acesso completo")
-                        TrialDisclosureRow(icon: "creditcard", text: "Depois \(subscription.monthlyMarketingPrice) ou \(subscription.yearlyMarketingPrice)")
+                        TrialDisclosureRow(icon: "creditcard", text: subscription.marketingPricingLine)
                         TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
                         TrialDisclosureRow(icon: "checkmark.shield", text: "Nenhuma assinatura é iniciada nesta etapa")
                         TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária depois para continuar na versão completa")
@@ -245,20 +250,22 @@ private struct TrialConversionView: View {
 
                     TrialMetricsPanel()
 
-                    NavigationLink {
-                        PaywallView()
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text("Ver planos Premium")
-                            Image(systemName: "arrow.right")
+                    if subscription.canShowPaywall {
+                        NavigationLink {
+                            PaywallView()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text("Ver planos Premium")
+                                Image(systemName: "arrow.right")
+                            }
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(Color.deepInk)
                         }
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
-                        .foregroundStyle(Color.deepInk)
+                        .disabled(subscription.isBusy)
                     }
-                    .disabled(subscription.isBusy)
 
                     Button("Continuar por enquanto") {
                         continueTrial()
@@ -552,9 +559,9 @@ private struct DashboardView: View {
                             model.toggleFavorite(item)
                         },
                         listenAction: {
-                            if model.isEssentialMode {
+                            if model.isEssentialMode && subscription.canShowPaywall {
                                 showingPaywall = true
-                            } else {
+                            } else if !model.isEssentialMode {
                                 narration.toggle(text: narrationText)
                             }
                         },
@@ -590,12 +597,14 @@ private struct DashboardView: View {
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
 
-                    NavigationLink {
-                        PaywallView()
-                    } label: {
-                        Text("Ver planos")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.sageButton)
+                    if subscription.canShowPaywall {
+                        NavigationLink {
+                            PaywallView()
+                        } label: {
+                            Text("Ver planos")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.sageButton)
+                        }
                     }
                 }
                 .padding(14)
@@ -802,11 +811,11 @@ private struct AIReadingPreparationView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Preparando 3 novas reflexões")
+                    Text("Criando suas reflexões")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(Color.ivory)
 
-                    Text("Estamos criando 3 novas reflexões e explicações espirituais. Aguarde 5 segundos")
+                    Text("Estamos preparando três novas reflexões bíblicas com explicações para este momento.")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -835,7 +844,7 @@ private struct AIReadingPreparationView: View {
                     }
                 }
 
-                Text("O carregamento pode levar até 10 segundos. Vamos mostrar a leitura em instantes.")
+                Text("Isso normalmente leva até 10 segundos.")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.softText.opacity(0.86))
                     .lineSpacing(4)
@@ -1024,6 +1033,7 @@ private struct SpiritualReadingCard: View {
 
 private struct ReadingView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
     @StateObject private var narration = PassageNarrationService()
     @State private var now = Date()
     @State private var showingPaywall = false
@@ -1061,7 +1071,9 @@ private struct ReadingView: View {
                                     model.toggleFavorite(item)
                                 },
                                 listenAction: {
-                                    showingPaywall = true
+                                    if subscription.canShowPaywall {
+                                        showingPaywall = true
+                                    }
                                 },
                                 narrationState: .idle,
                                 showsReflection: item.hasExplanationContent,
@@ -2125,7 +2137,7 @@ struct SettingsView: View {
                             .foregroundStyle(subscription.hasPremiumAccess || subscription.isEssentialMode ? Color.sageButton : .secondary)
                     }
 
-                    if !subscription.hasActiveSubscription {
+                    if !subscription.hasActiveSubscription && subscription.canShowPaywall {
                         Button("Assinar Premium") {
                             showingPaywall = true
                         }
@@ -2190,6 +2202,10 @@ struct SettingsView: View {
         }
         .onChange(of: model.faithProfile) { _, _ in model.saveProfile() }
         .familyActivityPicker(isPresented: $showingPicker, selection: $model.selection)
+        .onChange(of: model.selection) { _, _ in
+            model.saveProfile()
+            model.applyBlocking()
+        }
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
                 .environment(subscription)

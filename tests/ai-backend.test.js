@@ -78,7 +78,7 @@ test("validates spiritual reading items", () => {
 test("validates a complete reading session payload", () => {
   const item = (reference) => ({
     reference,
-    passageText: "Texto do trecho.",
+    passageText: `Texto do trecho ${reference}.`,
     homily: "Explicação espiritual do trecho.",
     spiritualMeaning: "Sentido espiritual do trecho.",
     practicalApplication: "Aplicação prática para hoje.",
@@ -111,7 +111,7 @@ test("parses provider JSON even when wrapped in markdown text", () => {
 test("accepts extra spiritual reading items and keeps the expected first items", () => {
   const item = (reference) => ({
     reference,
-    passageText: "Texto do trecho.",
+    passageText: `Texto do trecho ${reference}.`,
     homily: "Explicação espiritual do trecho.",
     spiritualMeaning: "Sentido espiritual do trecho.",
     practicalApplication: "Aplicação prática para hoje.",
@@ -214,8 +214,59 @@ test("normalizes request context without personal identifiers", () => {
   assert.match(prompt, /IDs dos temas preferidos: presence/);
   assert.match(prompt, /Evitar livros incompatíveis: Romanos/);
   assert.match(prompt, /Regras obrigatórias de personalização/);
+  assert.match(prompt, /ID: psalm-23/);
   assert.match(prompt, /Resumo anterior/);
   assert.doesNotMatch(prompt, /email|userId|deviceToken/i);
+});
+
+test("rejects duplicated references in generated spiritual reading", () => {
+  const item = (reference, passageText = "Texto do trecho.") => ({
+    reference,
+    passageText,
+    homily: "Explicação espiritual do trecho.",
+    spiritualMeaning: "Sentido espiritual do trecho.",
+    practicalApplication: "Aplicação prática para hoje.",
+    conclusion: "Conclusão breve e concreta.",
+    meditationQuestion: "Que passo concreto você escolhe agora?"
+  });
+
+  assert.throws(() => validateSpiritualReading({
+    items: [
+      item("João 15, 4-5", "Permanecei em mim."),
+      item("João 15, 4-5", "Permanecei em mim e dareis fruto."),
+      item("Salmo 23", "O Senhor é meu pastor.")
+    ]
+  }, 3), /duplicated passage references|AI returned duplicated/);
+});
+
+test("rejects recent passages when enough fresh alternatives are available", () => {
+  const item = (reference, passageText) => ({
+    reference,
+    passageText,
+    homily: "Explicação espiritual do trecho.",
+    spiritualMeaning: "Sentido espiritual do trecho.",
+    practicalApplication: "Aplicação prática para hoje.",
+    conclusion: "Conclusão breve e concreta.",
+    meditationQuestion: "Que passo concreto você escolhe agora?"
+  });
+  const passages = normalizePassages([
+    { id: "john-15", reference: "João 15, 4-5", text: "Permanecei em mim.", book: "João" },
+    { id: "psalm-23", reference: "Salmo 23", text: "O Senhor é meu pastor.", book: "Salmos" },
+    { id: "matthew-6", reference: "Mateus 6, 33", text: "Buscai primeiro o Reino.", book: "Mateus" },
+    { id: "proverbs-3", reference: "Provérbios 3, 5", text: "Confia no Senhor.", book: "Provérbios" }
+  ]);
+
+  assert.throws(() => validateReadingSession({
+    items: [
+      item("João 15, 4-5", "Permanecei em mim."),
+      item("Salmo 23", "O Senhor é meu pastor."),
+      item("Mateus 6, 33", "Buscai primeiro o Reino.")
+    ],
+    reflection: item("João 15 + Salmo 23 + Mateus 6", "Textos selecionados.")
+  }, 3, {
+    passages,
+    recentPassageIDs: ["john-15"]
+  }), /recent passage/);
 });
 
 test("normalizes depth synonyms and changes guidance clearly", () => {

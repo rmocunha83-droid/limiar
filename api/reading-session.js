@@ -15,6 +15,12 @@ const {
   validateReadingSession
 } = require("./_limiar-ai");
 
+const DIVERSITY_RETRY_ERRORS = new Set([
+  "duplicate_reference",
+  "duplicate_passage_text",
+  "recent_reference_reused"
+]);
+
 module.exports = async function handler(req, res) {
   applyCommonHeaders(res);
   if (!requirePost(req, res)) return;
@@ -71,7 +77,7 @@ module.exports = async function handler(req, res) {
       passagesCount: passages.length
     });
 
-    const result = await callTextModel({
+    let result = await callTextModel({
       schema: readingSessionSchema,
       schemaName: "limiar_reading_session",
       prompt,
@@ -89,8 +95,52 @@ module.exports = async function handler(req, res) {
       }
     });
 
+    let validated;
+    try {
+      validated = validateReadingSession(result, 3, { passages, recentPassageIDs });
+    } catch (error) {
+      if (!DIVERSITY_RETRY_ERRORS.has(error.code)) throw error;
+
+      logAIDiagnostic("reading_session_diversity_retry", {
+        endpoint: "reading-session",
+        requestID: rateLimit.context.requestID,
+        clientID: rateLimit.context.clientID,
+        reason: error.code,
+        recentPassageIDsCount: recentPassageIDs.length,
+        passagesCount: passages.length
+      });
+
+      result = await callTextModel({
+        schema: readingSessionSchema,
+        schemaName: "limiar_reading_session_retry",
+        prompt: [
+          prompt,
+          "",
+          "Correção obrigatória antes de responder:",
+          "- Não repita nenhuma referência nem nenhum texto dentro da resposta.",
+          "- Não use trechos recentes se houver alternativas disponíveis.",
+          "- Use IDs diferentes entre si e fora da lista recente.",
+          "- Mantenha exatamente 3 itens e uma reflexão geral."
+        ].join("\n"),
+        maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "reading-session"),
+        debugContext: {
+          endpoint: "reading-session",
+          requestID: rateLimit.context.requestID,
+          clientID: rateLimit.context.clientID,
+          depth: profile.explanationDepth,
+          tradition: profile.tradition,
+          favoriteThemesCount: profile.favoriteThemes.length,
+          favoriteBooksCount: profile.favoriteBooks.length,
+          favoriteSectionsCount: profile.favoriteSections.length,
+          passagesCount: passages.length
+        }
+      });
+
+      validated = validateReadingSession(result, 3, { passages, recentPassageIDs });
+    }
+
     res.statusCode = 200;
-    res.end(JSON.stringify(validateReadingSession(result, 3)));
+    res.end(JSON.stringify(validated));
   } catch (error) {
     logAIError("reading-session", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
