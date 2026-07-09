@@ -42,7 +42,13 @@ struct SettingsView: View {
                 }
 
                 Section("Preferências bíblicas") {
-                    Picker("Tradição", selection: $model.faithProfile.tradition) {
+                    Picker(
+                        "Tradição",
+                        selection: Binding(
+                            get: { model.faithProfile.tradition },
+                            set: { model.selectTradition($0) }
+                        )
+                    ) {
                         ForEach(FaithTradition.allCases) { tradition in
                             Text(tradition.title).tag(tradition)
                         }
@@ -146,9 +152,6 @@ struct SettingsView: View {
             model.saveProfile()
             model.applyBlocking()
         }
-        .onChange(of: model.faithProfile.tradition) { _, newValue in
-            model.selectTradition(newValue)
-        }
         .onChange(of: model.faithProfile) { _, _ in model.saveProfile() }
         .familyActivityPicker(isPresented: $showingPicker, selection: $model.selection)
         .onChange(of: model.selection) { _, _ in
@@ -195,6 +198,8 @@ struct BiblicalPreferencesView: View {
                             Text(category.hint)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
                         }
                     }
                 }

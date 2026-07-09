@@ -253,13 +253,13 @@ extension FaithTradition {
                 question: "O que você quer ler nas pausas?",
                 subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Lucas, João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos e cânticos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Sabedoria, Eclesiástico", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .wisdom, .sirach], defaultSelected: true),
-                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Romanos, Coríntios", sections: [.paulineLetters], books: [.romans, .corinthians]),
-                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías", sections: [.prophets], books: [.isaiah]),
-                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo", sections: [.torah, .historicalBooks], books: [.genesis, .exodus]),
-                    ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Macabeus", sections: [.deuterocanonical], books: [.tobias, .maccabees])
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Jó, Sabedoria e Sirácida", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .wisdom, .sirach], defaultSelected: true),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians]),
+                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías, Jeremias, Ezequiel e Daniel", sections: [.prophets], books: [.isaiah]),
+                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo, Josué e Juízes", sections: [.torah, .historicalBooks], books: [.genesis, .exodus]),
+                    ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Judite, Macabeus e Baruque", sections: [.deuterocanonical], books: [.tobias, .maccabees])
                 ],
                 optionalBooks: [.genesis, .exodus, .psalms, .proverbs, .isaiah, .matthew, .luke, .john, .romans, .corinthians, .tobias, .wisdom, .sirach, .maccabees],
                 minSelected: 1
@@ -269,12 +269,13 @@ extension FaithTradition {
                 question: "O que você quer ler nas pausas?",
                 subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Lucas, João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e louvor", hint: "Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
-                    ReadingStyleCategory(id: "cartas", label: "Cartas de Paulo", hint: "Romanos, Coríntios", sections: [.paulineLetters], books: [.romans, .corinthians]),
-                    ReadingStyleCategory(id: "profetas", label: "Profetas e Apocalipse", hint: "Isaías, Apocalipse", sections: [.prophets], books: [.isaiah, .revelation]),
-                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo", sections: [.torah, .historicalBooks], books: [.genesis, .exodus])
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Jó, Eclesiastes e Cantares", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas de Paulo", hint: "Romanos, Coríntios, Gálatas e Efésios", sections: [.paulineLetters], books: [.romans, .corinthians]),
+                    ReadingStyleCategory(id: "cartas-apoc", label: "Cartas gerais e Apocalipse", hint: "Hebreus, Tiago, Pedro e Apocalipse", sections: [.paulineLetters], books: [.revelation]),
+                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías, Jeremias, Ezequiel e Daniel", sections: [.prophets], books: [.isaiah]),
+                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo e livros históricos", sections: [.torah, .historicalBooks], books: [.genesis, .exodus])
                 ],
                 optionalBooks: [.genesis, .exodus, .psalms, .proverbs, .isaiah, .matthew, .luke, .john, .romans, .corinthians, .revelation],
                 minSelected: 1
@@ -284,11 +285,11 @@ extension FaithTradition {
                 question: "O que você quer ler nas pausas?",
                 subtitle: "Vamos criar leituras próximas da sua tradição. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "tora", label: "Torá — Leis e origens", hint: "Bereshit, Shemot, Vayikra, Bamidbar, Devarim", sections: [.torah], books: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy], defaultSelected: true),
-                    ReadingStyleCategory(id: "neviim", label: "Profetas — Nevi\u{2019}im", hint: "Yeshayahu / Isaías", sections: [.prophets], books: [.isaiah]),
+                    ReadingStyleCategory(id: "tora", label: "Torá — Leis e origens", hint: "Bereshit, Shemot, Vayikra e Devarim", sections: [.torah], books: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy], defaultSelected: true),
+                    ReadingStyleCategory(id: "neviim", label: "Profetas — Nevi\u{2019}im", hint: "Yeshayahu, Yirmiyahu e Yechezkel", sections: [.prophets], books: [.isaiah]),
+                    ReadingStyleCategory(id: "ketuvim", label: "Escritos — Ketuvim", hint: "Mishlei, Iyov, Kohelet e Ester", sections: [.ketuvim], books: [.psalms, .proverbs]),
                     ReadingStyleCategory(id: "tehilim", label: "Salmos e orações — Tehilim", hint: "Tehilim / Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria — Mishlei", hint: "Mishlei / Provérbios", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
-                    ReadingStyleCategory(id: "ketuvim", label: "Escritos — Ketuvim", hint: "Tehilim, Mishlei", sections: [.ketuvim], books: [.psalms, .proverbs]),
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria — Mishlei", hint: "Mishlei, Kohelet e Iyov", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
                     ReadingStyleCategory(id: "etica", label: "Ética e vida prática", hint: "Trechos morais e de conduta", sections: [.ethicalWisdom], books: [.proverbs, .leviticus, .deuteronomy])
                 ],
                 optionalBooks: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy, .psalms, .proverbs, .isaiah],
@@ -299,11 +300,11 @@ extension FaithTradition {
                 question: "Quais textos inspiram sua leitura?",
                 subtitle: "Fontes que orientam suas reflexões. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "evangelho", label: "Evangelho de Jesus", hint: "Mateus, Lucas, João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "evangelho", label: "Evangelho de Jesus", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "sermao", label: "Sermão da Montanha e parábolas", hint: "Mateus 5–7 e parábolas", sections: [.sermonOnMount, .parablesOfJesus], books: [.matthew, .luke], defaultSelected: true),
-                    ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios", sections: [.proverbs], books: [.proverbs]),
-                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Romanos, Coríntios", sections: [.paulineLetters], books: [.romans, .corinthians])
+                    ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos e cânticos", sections: [.psalms], books: [.psalms], defaultSelected: true),
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Eclesiastes e Jó", sections: [.proverbs], books: [.proverbs]),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians])
                 ],
                 optionalBooks: [.matthew, .luke, .john, .psalms, .proverbs, .romans, .corinthians],
                 minSelected: 1
@@ -481,7 +482,7 @@ struct UserFaithProfile: Codable, Equatable {
         refinedBooks = refined.isEmpty ? nil : refined
 
         favoriteBibleSections = unionSections
-        favoriteBooks = refined.isEmpty ? unionBooks : refined
+        favoriteBooks = Self.orderedUnion(unionBooks + refined)
     }
 
     mutating func normalizeStandaloneThemesForCurrentTradition() {
@@ -674,7 +675,9 @@ final class LimiarAppModel {
             ),
             profile: savedProfile
         )
-        reapplyBlockIfNeeded()
+        // O acesso ainda não foi restaurado pelo SubscriptionManager neste
+        // ponto. O ContentView reaplica a política assim que o estado local de
+        // trial/assinatura estiver disponível, evitando uma janela sem shield.
     }
 
     var lockState: LockState {
@@ -1031,7 +1034,6 @@ final class LimiarAppModel {
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
         if blockingEnabled && hasBlockedAppsSelection {
-            screenTimeController.scheduleDailyMonitoring()
             screenTimeController.scheduleShieldReapplicationForNextMorning(now: completedAt)
         }
         unlockNote = ScreenTimePolicyStore.nextMorningCycleStart(after: completedAt) > completedAt.addingTimeInterval(6 * 3600)
@@ -1057,8 +1059,6 @@ final class LimiarAppModel {
             screenTimeController.clearShield()
             return
         }
-
-        screenTimeController.scheduleDailyMonitoring()
 
         if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()
@@ -1086,8 +1086,6 @@ final class LimiarAppModel {
             screenTimeController.clearShield()
             return
         }
-
-        screenTimeController.scheduleDailyMonitoring()
 
         if policyStore.hasCompletedMorningPauseToday() {
             screenTimeController.clearShield()

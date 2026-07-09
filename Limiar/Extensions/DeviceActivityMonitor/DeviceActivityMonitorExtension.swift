@@ -10,9 +10,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         eventLog.log("interval_did_start", ["activity": activity.rawValue])
-        if activity == .limiarDaily {
-            policyStore.clearMorningPauseCompletedAt()
-        }
+        // A conclusão expira naturalmente pela comparação com o início do
+        // ciclo das 5h. Apagá-la aqui faria um re-registro do monitor pausar
+        // novamente os apps no mesmo dia.
         reapplyShieldIfNeeded()
     }
 
@@ -80,11 +80,6 @@ private struct ExtensionPolicyStore {
         defaults.object(forKey: "morningPauseCompletedAt") as? Date
     }
 
-    func clearMorningPauseCompletedAt() {
-        defaults.removeObject(forKey: "morningPauseCompletedAt")
-        defaults.synchronize()
-    }
-
     func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Bool {
         guard let completedAt = loadMorningPauseCompletedAt() else { return false }
         return completedAt >= currentMorningCycleStart(now: now, calendar: calendar)
@@ -92,7 +87,12 @@ private struct ExtensionPolicyStore {
 
     private func currentMorningCycleStart(now: Date, calendar: Calendar) -> Date {
         let todayStart = calendar.startOfDay(for: now)
-        let fiveToday = calendar.date(byAdding: .hour, value: 5, to: todayStart) ?? todayStart
+        let fiveToday = calendar.date(
+            bySettingHour: 5,
+            minute: 0,
+            second: 0,
+            of: todayStart
+        ) ?? todayStart
         if now >= fiveToday {
             return fiveToday
         }

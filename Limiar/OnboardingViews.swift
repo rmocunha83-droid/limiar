@@ -828,6 +828,8 @@ struct ReadingStyleChip: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(isSelected ? Color.deepInk.opacity(0.72) : Color.softText)
                         .multilineTextAlignment(.leading)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                 }
 
                 Spacer(minLength: 0)

@@ -89,7 +89,10 @@ final class SubscriptionManager {
     @ObservationIgnored private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
 
     init() {
-        hasActiveSubscription = false
+        // Mantém o último entitlement verificado durante a restauração
+        // assíncrona do StoreKit. A verificação atualizada continua sendo a
+        // fonte de verdade e corrige este cache logo no start().
+        hasActiveSubscription = defaults.bool(forKey: Constants.entitlementCacheKey)
         trialStartedAt = TrialStartStore.load() ?? defaults.object(forKey: Constants.trialStartDefaultsKey) as? Date
         refreshAccessState()
     }

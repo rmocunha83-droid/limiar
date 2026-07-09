@@ -52,10 +52,9 @@ struct ScreenTimeController {
             repeats: true
         )
 
-        // Reinicia o monitoramento a cada chamada: startMonitoring sobre uma
-        // activity já ativa pode falhar silenciosamente, e re-armar do zero
-        // também recupera schedules que o sistema descartou (reboot, etc.).
-        center.stopMonitoring([.limiarDaily])
+        // startMonitoring substitui o schedule existente para o mesmo nome.
+        // Evitar stop/start reduz callbacks artificiais dentro do intervalo
+        // ativo e preserva a conclusão registrada para o ciclo atual.
         do {
             try center.startMonitoring(.limiarDaily, during: schedule)
             eventLog.log("daily_monitor_scheduled", ["start": "05:00", "end": "23:59"])

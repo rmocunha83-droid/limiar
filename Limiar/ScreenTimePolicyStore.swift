@@ -3,7 +3,7 @@ import FamilyControls
 
 struct ScreenTimePolicyStore {
     static let appGroupIdentifier = "group.com.romeucunha.Limiar"
-    static let morningTimeZone = TimeZone.current
+    static var morningTimeZone: TimeZone { .current }
     static var morningCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = morningTimeZone
@@ -92,7 +92,12 @@ struct ScreenTimePolicyStore {
 
     static func currentMorningCycleStart(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Date {
         let todayStart = calendar.startOfDay(for: now)
-        let fiveToday = calendar.date(byAdding: .hour, value: 5, to: todayStart) ?? todayStart
+        let fiveToday = calendar.date(
+            bySettingHour: 5,
+            minute: 0,
+            second: 0,
+            of: todayStart
+        ) ?? todayStart
         if now >= fiveToday {
             return fiveToday
         }
