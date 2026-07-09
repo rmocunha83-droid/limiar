@@ -108,6 +108,27 @@ test("rotates least recently used passages when the preferred pool is exhausted"
   assert.equal(ids.includes("isaiah-40"), false);
 });
 
+test("stays inside preferred books via LRU rotation instead of widening", () => {
+  // Todos os trechos dos livros preferidos são recentes, mas o pool preferido
+  // tem >= 3 trechos: deve rotacionar dentro deles, nunca trazer Mateus/João.
+  const preferredIDs = CATALOG
+    .filter((passage) => ["Salmos", "Provérbios", "Isaías"].includes(passage.book))
+    .map((passage) => passage.id);
+  const selection = selectSessionPassages({
+    profile: PROFILE_WITH_BOOKS,
+    passages: CATALOG,
+    recentPassageIDs: preferredIDs,
+    count: SESSION_ITEM_COUNT,
+    seed: "unit-seed"
+  });
+
+  assert.equal(selection.selected.length, 3);
+  for (const passage of selection.selected) {
+    assert.equal(["Salmos", "Provérbios", "Isaías"].includes(passage.book), true);
+  }
+  assert.equal(selection.reusedRecentCount, 3);
+});
+
 test("widens beyond preferred books only when needed", () => {
   const onlyOnePreferred = CATALOG.filter(
     (passage) => passage.book !== "Salmos" && passage.book !== "Provérbios"

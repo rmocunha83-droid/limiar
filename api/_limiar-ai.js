@@ -387,11 +387,16 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
   const selected = [];
   const selectedIndexes = new Set();
   let selectionTier = tiers[0]?.name || "full-pool";
+  let reusedRecentCount = 0;
+
+  const byLeastRecentlyUsed = (lhs, rhs) =>
+    rhs.lastUsedRank - lhs.lastUsedRank || byPreference(lhs, rhs);
 
   for (const tier of tiers) {
-    const fresh = candidates
-      .filter((entry) => !entry.isRecent && tier.accepts(entry) && !selectedIndexes.has(entry.index))
-      .sort(byPreference);
+    const pool = candidates.filter(
+      (entry) => tier.accepts(entry) && !selectedIndexes.has(entry.index)
+    );
+    const fresh = pool.filter((entry) => !entry.isRecent).sort(byPreference);
     for (const entry of fresh) {
       selected.push(entry);
       selectedIndexes.add(entry.index);
@@ -399,18 +404,32 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     }
     selectionTier = tier.name;
     if (selected.length >= count) break;
+
+    // Preferência é filtro forte: antes de ampliar para o próximo nível,
+    // rotaciona os menos recentemente usados DESTE nível. Só amplia quando o
+    // nível não tem trechos suficientes no total — a explicação gerada é
+    // sempre nova, então repetir um versículo antigo é melhor do que trazer
+    // um livro que o usuário não escolheu.
+    if (pool.length >= count) {
+      const leastRecentFirst = pool
+        .filter((entry) => !selectedIndexes.has(entry.index))
+        .sort(byLeastRecentlyUsed);
+      for (const entry of leastRecentFirst) {
+        selected.push(entry);
+        selectedIndexes.add(entry.index);
+        reusedRecentCount += 1;
+        if (selected.length >= count) break;
+      }
+    }
+    if (selected.length >= count) break;
   }
 
-  let reusedRecentCount = 0;
   if (selected.length < count) {
-    // Pool fresco esgotado: rotaciona os menos recentemente usados,
-    // ainda priorizando os livros/seções preferidos.
+    // Rede de segurança: completa com os menos recentemente usados do pool
+    // inteiro, ainda priorizando as preferências.
     const leastRecentFirst = candidates
       .filter((entry) => !selectedIndexes.has(entry.index))
-      .sort(
-        (lhs, rhs) =>
-          rhs.lastUsedRank - lhs.lastUsedRank || byPreference(lhs, rhs)
-      );
+      .sort(byLeastRecentlyUsed);
     for (const entry of leastRecentFirst) {
       selected.push(entry);
       selectedIndexes.add(entry.index);
