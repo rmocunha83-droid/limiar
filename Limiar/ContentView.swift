@@ -2065,7 +2065,7 @@ struct SettingsView: View {
     @State private var showingPaywall = false
 
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
-    private let termsURL = URL(string: "https://limiar-five.vercel.app/terms.html")!
+    private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     private let privacyURL = URL(string: "https://limiar-five.vercel.app/privacy.html")!
     private let supportURL = URL(string: "https://limiar-five.vercel.app/support.html")!
 

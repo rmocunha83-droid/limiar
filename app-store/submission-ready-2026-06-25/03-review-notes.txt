@@ -7,3 +7,8 @@ Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O acesso inicial e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
 Recursos Premium: geração completa por IA, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e experiência completa do Limiar.
+
+Informações de assinatura exibidas no app e na metadata:
+- Termos de Uso (EULA padrão da Apple): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+- Política de Privacidade: https://limiar-five.vercel.app/privacy.html
+- A tela de assinatura mostra o título do plano, duração, preço retornado pela App Store, renovação automática, restauração de compra, Termos de Uso e Política de Privacidade.

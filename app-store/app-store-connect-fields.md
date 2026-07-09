@@ -27,6 +27,7 @@
 - Política de privacidade: https://limiar-five.vercel.app/privacy.html
 - Suporte: https://limiar-five.vercel.app/support.html
 - Termos: https://limiar-five.vercel.app/terms.html
+- Termos de Uso (EULA padrão da Apple): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 
 ## Metadados
 
@@ -118,6 +119,9 @@ Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_annual_
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
 Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+
+Termos de Uso (EULA padrão da Apple): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Política de Privacidade: https://limiar-five.vercel.app/privacy.html
 
 Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual.
 

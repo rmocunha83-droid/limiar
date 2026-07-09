@@ -5,7 +5,7 @@ struct PaywallView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.openURL) private var openURL
 
-    private let termsURL = URL(string: "https://limiar-five.vercel.app/terms.html")!
+    private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     private let privacyURL = URL(string: "https://limiar-five.vercel.app/privacy.html")!
 
     var body: some View {
