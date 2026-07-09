@@ -639,6 +639,997 @@ struct PassageRecommendationService {
             theme: .gospelOfJesus,
             section: .gospels,
             book: .john
+        ),
+
+        // MARK: Catálogo expandido — Católica
+
+        ScripturePassage(
+            id: "psalm-27-catholic",
+            tradition: .catholic,
+            title: "Luz e salvação",
+            reference: "Salmo 27, 1",
+            text: "O Senhor é minha luz e minha salvação: a quem temerei? O Senhor é a fortaleza da minha vida.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-37-catholic",
+            tradition: .catholic,
+            title: "Entregar o caminho",
+            reference: "Salmo 37, 5",
+            text: "Entrega teu caminho ao Senhor, confia nele, e ele agirá.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-34-catholic",
+            tradition: .catholic,
+            title: "Provai e vede",
+            reference: "Salmo 34, 9",
+            text: "Provai e vede como o Senhor é bom; feliz quem nele encontra o seu refúgio.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-90-catholic",
+            tradition: .catholic,
+            title: "Coração sábio",
+            reference: "Salmo 90, 12",
+            text: "Ensina-nos a contar os nossos dias, para alcançarmos um coração sábio.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-103-catholic",
+            tradition: .catholic,
+            title: "Não esquecer os benefícios",
+            reference: "Salmo 103, 1-2",
+            text: "Bendize, ó minha alma, ao Senhor, e não esqueças nenhum de seus benefícios.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-118-catholic",
+            tradition: .catholic,
+            title: "O dia que o Senhor fez",
+            reference: "Salmo 118, 24",
+            text: "Este é o dia que o Senhor fez: exultemos e alegremo-nos nele.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-139-catholic",
+            tradition: .catholic,
+            title: "Conhecido por inteiro",
+            reference: "Salmo 139, 1-3",
+            text: "Senhor, tu me sondas e me conheces. Sabes quando me sento e quando me levanto; de longe penetras meus pensamentos.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-15-catholic",
+            tradition: .catholic,
+            title: "Resposta branda",
+            reference: "Provérbios 15, 1",
+            text: "A resposta branda acalma o furor, mas a palavra dura excita a ira.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "proverbs-16-catholic",
+            tradition: .catholic,
+            title: "Passos firmados",
+            reference: "Provérbios 16, 9",
+            text: "O coração do homem traça o seu caminho, mas é o Senhor quem firma os seus passos.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "proverbs-17-catholic",
+            tradition: .catholic,
+            title: "Coração alegre",
+            reference: "Provérbios 17, 22",
+            text: "O coração alegre é bom remédio, mas o espírito abatido resseca os ossos.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "proverbs-19-catholic",
+            tradition: .catholic,
+            title: "O desígnio que permanece",
+            reference: "Provérbios 19, 21",
+            text: "Muitos são os projetos no coração do homem, mas é o desígnio do Senhor que permanece.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "isaiah-26-catholic",
+            tradition: .catholic,
+            title: "Paz para o coração firme",
+            reference: "Isaías 26, 3",
+            text: "Tu conservas na paz o coração firme, porque em ti ele confia.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-30-catholic",
+            tradition: .catholic,
+            title: "Força na serenidade",
+            reference: "Isaías 30, 15",
+            text: "Na conversão e na calma está a vossa salvação; na serenidade e na confiança está a vossa força.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-43-catholic",
+            tradition: .catholic,
+            title: "Chamado pelo nome",
+            reference: "Isaías 43, 1-2",
+            text: "Não temas, pois eu te resgatei; chamei-te pelo teu nome: tu és meu. Quando atravessares as águas, estarei contigo.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-55-catholic",
+            tradition: .catholic,
+            title: "Caminhos mais altos",
+            reference: "Isaías 55, 8-9",
+            text: "Meus pensamentos não são os vossos pensamentos, e vossos caminhos não são os meus caminhos, diz o Senhor.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "matthew-5-light-catholic",
+            tradition: .catholic,
+            title: "Luz do mundo",
+            reference: "Mateus 5, 14-16",
+            text: "Vós sois a luz do mundo. Brilhe a vossa luz diante dos homens, para que vejam as vossas boas obras.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-6-34-catholic",
+            tradition: .catholic,
+            title: "A cada dia basta seu cuidado",
+            reference: "Mateus 6, 34",
+            text: "Não vos inquieteis com o dia de amanhã, pois o amanhã terá suas próprias inquietações. A cada dia basta o seu cuidado.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-7-catholic",
+            tradition: .catholic,
+            title: "Pedi, buscai, batei",
+            reference: "Mateus 7, 7",
+            text: "Pedi e vos será dado; buscai e achareis; batei e vos será aberto.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "luke-12-catholic",
+            tradition: .catholic,
+            title: "A inquietação não acrescenta",
+            reference: "Lucas 12, 25-26",
+            text: "Quem de vós, com sua inquietação, pode acrescentar um só instante à duração de sua vida?",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "john-8-catholic",
+            tradition: .catholic,
+            title: "A luz da vida",
+            reference: "João 8, 12",
+            text: "Eu sou a luz do mundo. Quem me segue não andará nas trevas, mas terá a luz da vida.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "john-13-catholic",
+            tradition: .catholic,
+            title: "Mandamento novo",
+            reference: "João 13, 34",
+            text: "Amai-vos uns aos outros como eu vos amei.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "john-16-catholic",
+            tradition: .catholic,
+            title: "Coragem provada",
+            reference: "João 16, 33",
+            text: "No mundo tereis aflições. Mas tende coragem: eu venci o mundo.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "romans-8-28-catholic",
+            tradition: .catholic,
+            title: "Tudo contribui para o bem",
+            reference: "Romanos 8, 28",
+            text: "Deus faz com que tudo contribua para o bem daqueles que o amam.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "romans-15-catholic",
+            tradition: .catholic,
+            title: "Deus da esperança",
+            reference: "Romanos 15, 13",
+            text: "Que o Deus da esperança vos encha de toda alegria e paz na fé.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "corinthians-13-catholic",
+            tradition: .catholic,
+            title: "O amor é paciente",
+            reference: "1 Coríntios 13, 4-7",
+            text: "O amor é paciente, o amor é prestativo; não é invejoso, não se ostenta. Tudo desculpa, tudo crê, tudo espera.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .paulineLetters,
+            book: .corinthians
+        ),
+        ScripturePassage(
+            id: "corinthians-16-catholic",
+            tradition: .catholic,
+            title: "Tudo no amor",
+            reference: "1 Coríntios 16, 14",
+            text: "Tudo o que fizerdes, fazei-o no amor.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .paulineLetters,
+            book: .corinthians
+        ),
+        ScripturePassage(
+            id: "genesis-28-catholic",
+            tradition: .catholic,
+            title: "Guardado no caminho",
+            reference: "Gênesis 28, 15",
+            text: "Eis que estou contigo e te guardarei por onde quer que fores.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .genesis
+        ),
+        ScripturePassage(
+            id: "exodus-33-catholic",
+            tradition: .catholic,
+            title: "Presença e descanso",
+            reference: "Êxodo 33, 14",
+            text: "Minha presença irá contigo, e eu te darei descanso.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .torah,
+            book: .exodus
+        ),
+        ScripturePassage(
+            id: "wisdom-6-catholic",
+            tradition: .catholic,
+            title: "Sabedoria radiante",
+            reference: "Sabedoria 6, 12",
+            text: "A Sabedoria é radiante e não fenece; deixa-se ver facilmente por aqueles que a amam.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .deuterocanonical,
+            book: .wisdom
+        ),
+        ScripturePassage(
+            id: "sirach-6-catholic",
+            tradition: .catholic,
+            title: "Amigo fiel",
+            reference: "Eclesiástico 6, 14",
+            text: "O amigo fiel é abrigo seguro: quem o encontrou, encontrou um tesouro.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .deuterocanonical,
+            book: .sirach
+        ),
+        ScripturePassage(
+            id: "sirach-2-catholic",
+            tradition: .catholic,
+            title: "Firmeza na provação",
+            reference: "Eclesiástico 2, 1-2",
+            text: "Filho, se te apresentas para servir ao Senhor, prepara a tua alma para a provação. Torna reto o teu coração e sê firme.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .deuterocanonical,
+            book: .sirach
+        ),
+        ScripturePassage(
+            id: "tobias-4-catholic",
+            tradition: .catholic,
+            title: "Não desviar o rosto",
+            reference: "Tobias 4, 7",
+            text: "Não desvies o teu rosto de nenhum pobre, e o rosto de Deus não se desviará de ti.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .deuterocanonical,
+            book: .tobias
+        ),
+
+        // MARK: Catálogo expandido — Evangélica
+
+        ScripturePassage(
+            id: "psalm-119-protestant",
+            tradition: .protestant,
+            title: "Lâmpada para os pés",
+            reference: "Salmo 119:105",
+            text: "Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-37-protestant",
+            tradition: .protestant,
+            title: "Confiar e agir",
+            reference: "Salmo 37:5",
+            text: "Entregue o seu caminho ao Senhor; confie nele, e ele agirá.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-27-protestant",
+            tradition: .protestant,
+            title: "De quem terei temor?",
+            reference: "Salmo 27:1",
+            text: "O Senhor é a minha luz e a minha salvação; de quem terei temor?",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-91-protestant",
+            tradition: .protestant,
+            title: "À sombra do Altíssimo",
+            reference: "Salmo 91:1-2",
+            text: "Aquele que habita no abrigo do Altíssimo descansará à sombra do Todo-poderoso.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-34-protestant",
+            tradition: .protestant,
+            title: "Provem e vejam",
+            reference: "Salmo 34:8",
+            text: "Provem e vejam como o Senhor é bom; como é feliz quem nele se refugia.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-18-protestant",
+            tradition: .protestant,
+            title: "Torre forte",
+            reference: "Provérbios 18:10",
+            text: "O nome do Senhor é torre forte; o justo corre para ela e está seguro.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "proverbs-15-protestant",
+            tradition: .protestant,
+            title: "Resposta calma",
+            reference: "Provérbios 15:1",
+            text: "A resposta calma desvia a fúria, mas a palavra ríspida desperta a ira.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "proverbs-19-protestant",
+            tradition: .protestant,
+            title: "O propósito permanece",
+            reference: "Provérbios 19:21",
+            text: "Muitos são os planos no coração do homem, mas o propósito do Senhor permanece.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "isaiah-26-protestant",
+            tradition: .protestant,
+            title: "Perfeita paz",
+            reference: "Isaías 26:3",
+            text: "Tu guardarás em perfeita paz aquele cujo propósito está firme, porque em ti confia.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-43-protestant",
+            tradition: .protestant,
+            title: "Pelas águas",
+            reference: "Isaías 43:2",
+            text: "Quando você atravessar as águas, eu estarei com você; os rios não o encobrirão.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-55-protestant",
+            tradition: .protestant,
+            title: "Buscar enquanto é tempo",
+            reference: "Isaías 55:6",
+            text: "Busquem o Senhor enquanto é possível achá-lo; clamem por ele enquanto está perto.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "matthew-6-34-protestant",
+            tradition: .protestant,
+            title: "Um dia de cada vez",
+            reference: "Mateus 6:34",
+            text: "Não se preocupem com o amanhã, pois o amanhã trará as suas próprias preocupações. Basta a cada dia o seu próprio mal.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-5-16-protestant",
+            tradition: .protestant,
+            title: "Boas obras que brilham",
+            reference: "Mateus 5:16",
+            text: "Que a luz de vocês brilhe diante dos homens, para que vejam as suas boas obras e glorifiquem ao Pai.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-7-protestant",
+            tradition: .protestant,
+            title: "A porta será aberta",
+            reference: "Mateus 7:7",
+            text: "Peçam, e será dado; busquem, e encontrarão; batam, e a porta será aberta.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "john-3-protestant",
+            tradition: .protestant,
+            title: "O amor que deu tudo",
+            reference: "João 3:16",
+            text: "Porque Deus tanto amou o mundo que deu o seu Filho unigênito, para que todo o que nele crer não pereça, mas tenha a vida eterna.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "john-16-protestant",
+            tradition: .protestant,
+            title: "Tenham ânimo",
+            reference: "João 16:33",
+            text: "Neste mundo vocês terão aflições; contudo, tenham ânimo! Eu venci o mundo.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "john-15-protestant",
+            tradition: .protestant,
+            title: "A videira e os ramos",
+            reference: "João 15:5",
+            text: "Eu sou a videira; vocês são os ramos. Quem permanece em mim, e eu nele, dá muito fruto.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "luke-6-38-protestant",
+            tradition: .protestant,
+            title: "Deem e será dado",
+            reference: "Lucas 6:38",
+            text: "Deem e lhes será dado: uma boa medida, calcada, sacudida e transbordante.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "romans-8-28-protestant",
+            tradition: .protestant,
+            title: "Para o bem dos que amam",
+            reference: "Romanos 8:28",
+            text: "Sabemos que Deus age em todas as coisas para o bem daqueles que o amam.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "romans-12-12-protestant",
+            tradition: .protestant,
+            title: "Perseverar na oração",
+            reference: "Romanos 12:12",
+            text: "Alegrem-se na esperança, sejam pacientes na tribulação, perseverem na oração.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "corinthians-10-protestant",
+            tradition: .protestant,
+            title: "Deus é fiel",
+            reference: "1 Coríntios 10:13",
+            text: "Deus é fiel; ele não permitirá que vocês sejam tentados além do que podem suportar.",
+            estimatedMinutes: 5,
+            theme: .discipline,
+            section: .paulineLetters,
+            book: .corinthians
+        ),
+        ScripturePassage(
+            id: "revelation-3-protestant",
+            tradition: .protestant,
+            title: "À porta e bato",
+            reference: "Apocalipse 3:20",
+            text: "Eis que estou à porta e bato. Se alguém ouvir a minha voz e abrir a porta, entrarei.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .prophets,
+            book: .revelation
+        ),
+        ScripturePassage(
+            id: "revelation-21-protestant",
+            tradition: .protestant,
+            title: "Toda lágrima enxugada",
+            reference: "Apocalipse 21:4",
+            text: "Ele enxugará dos seus olhos toda lágrima. Não haverá mais morte, nem tristeza, nem choro, nem dor.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .prophets,
+            book: .revelation
+        ),
+        ScripturePassage(
+            id: "exodus-14-protestant",
+            tradition: .protestant,
+            title: "O Senhor lutará",
+            reference: "Êxodo 14:14",
+            text: "O Senhor lutará por vocês; tão somente acalmem-se.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .exodus
+        ),
+        ScripturePassage(
+            id: "genesis-28-protestant",
+            tradition: .protestant,
+            title: "Cuidado em todo lugar",
+            reference: "Gênesis 28:15",
+            text: "Estou com você e cuidarei de você aonde quer que vá.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .genesis
+        ),
+
+        // MARK: Catálogo expandido — Judaica
+
+        ScripturePassage(
+            id: "psalm-90-jewish",
+            tradition: .jewish,
+            title: "Contar os dias",
+            reference: "Tehillim / Salmo 90:12",
+            text: "Ensina-nos a contar os nossos dias, para que alcancemos um coração sábio.",
+            estimatedMinutes: 5,
+            theme: .wisdom,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-118-jewish",
+            tradition: .jewish,
+            title: "O dia que o Eterno fez",
+            reference: "Tehillim / Salmo 118:24",
+            text: "Este é o dia que o Eterno fez; alegremo-nos e exultemos nele.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-130-jewish",
+            tradition: .jewish,
+            title: "Espera pela manhã",
+            reference: "Tehillim / Salmo 130:5-6",
+            text: "Minha alma espera pelo Eterno mais do que os vigias esperam pela manhã.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-37-jewish",
+            tradition: .jewish,
+            title: "Confiar o caminho",
+            reference: "Tehillim / Salmo 37:5",
+            text: "Confia o teu caminho ao Eterno; confia nele, e ele agirá.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "psalm-19-jewish",
+            tradition: .jewish,
+            title: "Os céus proclamam",
+            reference: "Tehillim / Salmo 19:2",
+            text: "Os céus proclamam a glória de Deus, e o firmamento anuncia a obra de suas mãos.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-15-jewish",
+            tradition: .jewish,
+            title: "Resposta suave",
+            reference: "Mishlei / Provérbios 15:1",
+            text: "A resposta suave afasta a ira; a palavra dura desperta o furor.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "proverbs-16-9-jewish",
+            tradition: .jewish,
+            title: "Passos firmados",
+            reference: "Mishlei / Provérbios 16:9",
+            text: "O coração do homem planeja o seu caminho, mas o Eterno firma os seus passos.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .wisdomBooks,
+            book: .proverbs
+        ),
+        ScripturePassage(
+            id: "isaiah-26-jewish",
+            tradition: .jewish,
+            title: "Paz firme",
+            reference: "Yeshayahu / Isaías 26:3",
+            text: "Ao que confia em ti, guardas em perfeita paz, porque o seu coração está firme.",
+            estimatedMinutes: 5,
+            theme: .anxiety,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-30-jewish",
+            tradition: .jewish,
+            title: "Calma e confiança",
+            reference: "Yeshayahu / Isaías 30:15",
+            text: "No arrependimento e no repouso está a vossa salvação; na calma e na confiança está a vossa força.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "isaiah-55-jewish",
+            tradition: .jewish,
+            title: "Buscar o Eterno",
+            reference: "Yeshayahu / Isaías 55:6",
+            text: "Buscai o Eterno enquanto pode ser encontrado; invocai-o enquanto está perto.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .prophets,
+            book: .isaiah
+        ),
+        ScripturePassage(
+            id: "genesis-28-jewish",
+            tradition: .jewish,
+            title: "Guardado no caminho",
+            reference: "Bereshit / Gênesis 28:15",
+            text: "Eis que estou contigo e te guardarei por onde quer que andes.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .genesis
+        ),
+        ScripturePassage(
+            id: "exodus-33-jewish",
+            tradition: .jewish,
+            title: "Presença e descanso",
+            reference: "Shemot / Êxodo 33:14",
+            text: "Minha presença irá contigo, e eu te darei descanso.",
+            estimatedMinutes: 5,
+            theme: .presence,
+            section: .torah,
+            book: .exodus
+        ),
+        ScripturePassage(
+            id: "leviticus-19-jewish",
+            tradition: .jewish,
+            title: "Amar o próximo",
+            reference: "Vayikra / Levítico 19:18",
+            text: "Amarás o teu próximo como a ti mesmo.",
+            estimatedMinutes: 5,
+            theme: .family,
+            section: .torah,
+            book: .leviticus
+        ),
+        ScripturePassage(
+            id: "numbers-6-jewish",
+            tradition: .jewish,
+            title: "Bênção e paz",
+            reference: "Bamidbar / Números 6:24-26",
+            text: "O Eterno te abençoe e te guarde; o Eterno faça brilhar sobre ti o seu rosto e te conceda a paz.",
+            estimatedMinutes: 5,
+            theme: .hope,
+            section: .torah,
+            book: .numbers
+        ),
+        ScripturePassage(
+            id: "deuteronomy-30-jewish",
+            tradition: .jewish,
+            title: "Escolhe a vida",
+            reference: "Devarim / Deuteronômio 30:19",
+            text: "Pus diante de ti a vida e a morte, a bênção e a maldição. Escolhe, pois, a vida.",
+            estimatedMinutes: 5,
+            theme: .purpose,
+            section: .torah,
+            book: .deuteronomy
+        ),
+        ScripturePassage(
+            id: "deuteronomy-31-jewish",
+            tradition: .jewish,
+            title: "Adiante de ti",
+            reference: "Devarim / Deuteronômio 31:8",
+            text: "O Eterno irá adiante de ti; ele estará contigo e não te deixará. Não temas.",
+            estimatedMinutes: 5,
+            theme: .faith,
+            section: .torah,
+            book: .deuteronomy
+        ),
+
+        // MARK: Catálogo expandido — Espírita
+
+        ScripturePassage(
+            id: "matthew-5-44-spiritist",
+            tradition: .spiritist,
+            title: "Amar além do fácil",
+            reference: "Mateus 5:44",
+            text: "Amai os vossos inimigos e orai pelos que vos perseguem. O perdão educa o coração para a paz.",
+            estimatedMinutes: 5,
+            theme: .forgiveness,
+            section: .sermonOnMount,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-6-14-spiritist",
+            tradition: .spiritist,
+            title: "Perdoar para seguir",
+            reference: "Mateus 6:14",
+            text: "Se perdoardes aos homens as suas faltas, também vosso Pai vos perdoará.",
+            estimatedMinutes: 5,
+            theme: .forgiveness,
+            section: .sermonOnMount,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-25-spiritist",
+            tradition: .spiritist,
+            title: "Nos pequeninos",
+            reference: "Mateus 25:40",
+            text: "Todas as vezes que fizestes isso a um destes meus pequeninos irmãos, foi a mim que o fizestes.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .gospels,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-7-1-spiritist",
+            tradition: .spiritist,
+            title: "Medida e julgamento",
+            reference: "Mateus 7:1-2",
+            text: "Não julgueis, para não serdes julgados. Com a medida com que medirdes, sereis medidos.",
+            estimatedMinutes: 5,
+            theme: .moralApplication,
+            section: .sermonOnMount,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-13-spiritist",
+            tradition: .spiritist,
+            title: "O grão de mostarda",
+            reference: "Mateus 13:31-32",
+            text: "O Reino dos céus é como um grão de mostarda: a menor das sementes, que cresce e se torna árvore.",
+            estimatedMinutes: 5,
+            theme: .spiritualEvolution,
+            section: .parablesOfJesus,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "matthew-5-luz-spiritist",
+            tradition: .spiritist,
+            title: "Luz pelas obras",
+            reference: "Mateus 5:14-16",
+            text: "Vós sois a luz do mundo. Que a vossa luz brilhe diante dos homens pelas boas obras.",
+            estimatedMinutes: 5,
+            theme: .practiceGood,
+            section: .sermonOnMount,
+            book: .matthew
+        ),
+        ScripturePassage(
+            id: "luke-6-31-spiritist",
+            tradition: .spiritist,
+            title: "A regra simples",
+            reference: "Lucas 6:31",
+            text: "Como quereis que os homens vos façam, fazei-o também a eles.",
+            estimatedMinutes: 5,
+            theme: .moralApplication,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "luke-10-samaritano-spiritist",
+            tradition: .spiritist,
+            title: "Compaixão que age",
+            reference: "Lucas 10:33-34",
+            text: "Um samaritano viu o homem ferido e moveu-se de compaixão: aproximou-se e cuidou dele.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .parablesOfJesus,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "luke-15-spiritist",
+            tradition: .spiritist,
+            title: "O abraço do pai",
+            reference: "Lucas 15:20",
+            text: "Ainda estava longe, quando o pai o viu, moveu-se de compaixão, correu e o abraçou.",
+            estimatedMinutes: 5,
+            theme: .forgiveness,
+            section: .parablesOfJesus,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "luke-17-spiritist",
+            tradition: .spiritist,
+            title: "O Reino dentro de vós",
+            reference: "Lucas 17:21",
+            text: "O Reino de Deus não vem com sinais visíveis: o Reino de Deus está dentro de vós.",
+            estimatedMinutes: 5,
+            theme: .innerReform,
+            section: .gospels,
+            book: .luke
+        ),
+        ScripturePassage(
+            id: "john-13-spiritist",
+            tradition: .spiritist,
+            title: "Sinal de discipulado",
+            reference: "João 13:34-35",
+            text: "Amai-vos uns aos outros como eu vos amei. Nisto conhecerão que sois meus discípulos.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "john-14-moradas-spiritist",
+            tradition: .spiritist,
+            title: "Muitas moradas",
+            reference: "João 14:2",
+            text: "Na casa de meu Pai há muitas moradas. Vou preparar-vos um lugar.",
+            estimatedMinutes: 5,
+            theme: .consolationHope,
+            section: .gospels,
+            book: .john
+        ),
+        ScripturePassage(
+            id: "romans-12-21-spiritist",
+            tradition: .spiritist,
+            title: "Vencer o mal com o bem",
+            reference: "Romanos 12:21",
+            text: "Não te deixes vencer pelo mal, mas vence o mal com o bem.",
+            estimatedMinutes: 5,
+            theme: .practiceGood,
+            section: .paulineLetters,
+            book: .romans
+        ),
+        ScripturePassage(
+            id: "corinthians-13-13-spiritist",
+            tradition: .spiritist,
+            title: "A maior é a caridade",
+            reference: "1 Coríntios 13:13",
+            text: "Agora permanecem a fé, a esperança e a caridade; a maior delas é a caridade.",
+            estimatedMinutes: 5,
+            theme: .charity,
+            section: .paulineLetters,
+            book: .corinthians
+        ),
+        ScripturePassage(
+            id: "psalm-23-spiritist",
+            tradition: .spiritist,
+            title: "O pastor que restaura",
+            reference: "Salmo 23:1-3",
+            text: "O Senhor é meu pastor, nada me faltará. Ele restaura as forças da minha alma.",
+            estimatedMinutes: 5,
+            theme: .consolationHope,
+            section: .psalms,
+            book: .psalms
+        ),
+        ScripturePassage(
+            id: "proverbs-15-spiritist",
+            tradition: .spiritist,
+            title: "Mansidão na palavra",
+            reference: "Provérbios 15:1",
+            text: "A resposta branda desvia o furor. A mansidão na palavra é caridade na convivência.",
+            estimatedMinutes: 5,
+            theme: .patience,
+            section: .wisdomBooks,
+            book: .proverbs
         )
     ]
 
@@ -697,7 +1688,7 @@ struct PassageRecommendationService {
         let completedIDs = history.prefix(8).flatMap { item in
             item.passageID.split(separator: "+").map(String.init)
         }
-        let recentIDs = Set(completedIDs + recentlyShownPassageIDs.prefix(18))
+        let recentIDs = Set(completedIDs + recentlyShownPassageIDs.prefix(36))
         let traditionMatches = passages.filter { $0.tradition == profile.tradition }
         let scored: [(passage: ScripturePassage, score: Int)] = traditionMatches.map { passage in
             var score = 0
@@ -714,15 +1705,41 @@ struct PassageRecommendationService {
                 return lhs.passage.id < rhs.passage.id
             }
             return lhs.score > rhs.score
-        }.map(\.passage)
-        let freshMatches = rankedMatches.filter { passage in
-            !recentIDs.contains(passage.id) && passage.id != currentPassageID
         }
-        let olderMatches = rankedMatches.filter { passage in
-            recentIDs.contains(passage.id) || passage.id == currentPassageID
+        let freshMatches = rankedMatches.filter { entry in
+            !recentIDs.contains(entry.passage.id) && entry.passage.id != currentPassageID
+        }
+        let olderMatches = rankedMatches.filter { entry in
+            recentIDs.contains(entry.passage.id) || entry.passage.id == currentPassageID
         }
 
-        return freshMatches.shuffled() + olderMatches.shuffled()
+        // Variedade sem perder personalização: embaralha apenas dentro de cada
+        // faixa de pontuação, preservando a ordem ditada pelas preferências.
+        let freshOrdered = Dictionary(grouping: freshMatches, by: \.score)
+            .sorted { $0.key > $1.key }
+            .flatMap { $0.value.shuffled() }
+            .map(\.passage)
+
+        return freshOrdered + olderMatches.shuffled().map(\.passage)
+    }
+
+    func passage(withID id: String) -> ScripturePassage? {
+        passages.first { $0.id == id }
+    }
+
+    func passage(matchingReference reference: String, tradition: FaithTradition) -> ScripturePassage? {
+        let normalized = Self.normalizedReference(reference)
+        return passages.first { passage in
+            passage.tradition == tradition && Self.normalizedReference(passage.reference) == normalized
+        }
+    }
+
+    static func normalizedReference(_ value: String) -> String {
+        value
+            .lowercased()
+            .folding(options: [.diacriticInsensitive], locale: Locale(identifier: "pt_BR"))
+            .replacingOccurrences(of: ":", with: ",")
+            .replacingOccurrences(of: " ", with: "")
     }
 }
 
@@ -976,6 +1993,48 @@ struct LocalSpiritualReadingGenerator: AISpiritualReadingGenerating {
         case .financialBalance:
             "olhe uma decisão financeira com equilíbrio e responsabilidade"
         }
+    }
+}
+
+// Sessão do dia persistida: o app reutiliza a mesma leitura enquanto o usuário
+// não conclui a travessia, em vez de gerar (e "gastar") trechos novos a cada
+// abertura do app. Invalida automaticamente quando o dia ou o perfil mudam.
+struct DailyReadingSessionSnapshot: Codable {
+    let dayKey: String
+    let profileKey: String
+    let items: [SpiritualReadingItem]
+    let reflection: AIReflection
+}
+
+struct DailyReadingSessionStore {
+    private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+    private let key = "limiar.dailyReadingSession.v1"
+
+    static func todayKey(_ date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: date)
+    }
+
+    func load(profileKey: String, dayKey: String = DailyReadingSessionStore.todayKey()) -> DailyReadingSessionSnapshot? {
+        guard let data = defaults.data(forKey: key),
+              let snapshot = try? JSONDecoder().decode(DailyReadingSessionSnapshot.self, from: data),
+              snapshot.dayKey == dayKey,
+              snapshot.profileKey == profileKey,
+              snapshot.items.count >= LimiarReadingConstants.targetItemCount else {
+            return nil
+        }
+        return snapshot
+    }
+
+    func save(_ snapshot: DailyReadingSessionSnapshot) {
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        defaults.set(data, forKey: key)
+    }
+
+    func clear() {
+        defaults.removeObject(forKey: key)
     }
 }
 
@@ -1505,6 +2564,7 @@ struct RemoteSpiritualReadingResponse: Codable {
 struct RemoteSpiritualReadingItemResponse: Codable {
     let reference: String
     let passageText: String
+    let passageID: String?
     let homily: String
     let spiritualMeaning: String?
     let practicalApplication: String?
@@ -1531,7 +2591,8 @@ struct RemoteSpiritualReadingItemResponse: Codable {
             reference: cleanReference,
             text: cleanText,
             homily: cleanHomily,
-            practicalConclusion: practicalText
+            practicalConclusion: practicalText,
+            passageID: passageID?.trimmedForAI
         )
     }
 }

@@ -569,6 +569,9 @@ struct SpiritualReadingItem: Identifiable, Codable, Equatable {
     let text: String
     let homily: String
     let practicalConclusion: String
+    // ID do trecho no catálogo local, quando o backend informa. Permite
+    // recuperar livro/seção/tema reais em vez de metadados sintéticos.
+    var passageID: String? = nil
 
     var hasExplanationContent: Bool {
         !homily.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -682,6 +685,7 @@ final class LimiarAppModel {
 
     private let recommender = PassageRecommendationService()
     private let policyStore = ScreenTimePolicyStore()
+    private let dailySessionStore = DailyReadingSessionStore()
     private let screenTimeController = ScreenTimeController()
     private var lastForegroundRefreshAt = Date.distantPast
     private var aiGenerationTask: Task<Void, Never>?
@@ -943,7 +947,7 @@ final class LimiarAppModel {
             history: history,
             avoiding: avoidingCurrent ? currentPassage.id : nil,
             recentlyShownPassageIDs: recentPassageIDs,
-            minimumCount: hasPauseAccess ? 24 : LimiarReadingConstants.targetItemCount
+            minimumCount: hasPauseAccess ? 36 : LimiarReadingConstants.targetItemCount
         )
         setReadingPlan(
             Array(candidates.prefix(LimiarReadingConstants.targetItemCount)),
@@ -953,6 +957,7 @@ final class LimiarAppModel {
     }
 
     func retryReadingGeneration() {
+        dailySessionStore.clear()
         beginNewReading(avoidingCurrent: true)
     }
 
@@ -961,6 +966,13 @@ final class LimiarAppModel {
         guard hasCompletedOnboarding else { return }
         readingTopResetID = UUID()
         guard aiContentState != .generating else { return }
+        // Sessão utilizável em tela: não regenera a cada retorno ao foreground.
+        // Isso mantém a leitura do dia estável, evita custo repetido de IA e
+        // impede que o pool de trechos seja consumido sem o usuário ler.
+        if currentSpiritualReadingItems.count >= LimiarReadingConstants.targetItemCount,
+           aiContentState != .fallback {
+            return
+        }
         guard Date().timeIntervalSince(lastForegroundRefreshAt) > 8 else { return }
         lastForegroundRefreshAt = Date()
         beginNewReading(avoidingCurrent: true)
@@ -1044,6 +1056,10 @@ final class LimiarAppModel {
             at: 0
         )
         policyStore.saveHistory(history)
+        // Leitura concluída: agora sim os trechos entram no histórico de
+        // recentes (anti-repetição) e a sessão do dia é encerrada.
+        rememberShownPassages(currentReadingPlan)
+        dailySessionStore.clear()
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
         if blockingEnabled && hasBlockedAppsSelection {
@@ -1168,6 +1184,18 @@ final class LimiarAppModel {
             return
         }
 
+        // Reaproveita a sessão do dia quando ela existe para este perfil:
+        // nada de nova geração (nem novo consumo de trechos) a cada abertura.
+        if let saved = dailySessionStore.load(profileKey: sessionProfileKey(for: profile)) {
+            applyGeneratedSession(items: saved.items, reflection: saved.reflection, profile: profile)
+            aiContentState = isEssentialMode ? .essentialMode : .remoteReady
+            var cachedValues = LimiarAIDiagnostics.profileSnapshot(profile)
+            cachedValues["source"] = "daily-session"
+            cachedValues["items"] = "\(saved.items.count)"
+            LimiarAIDiagnostics.log("ai_reading_session_loaded", values: cachedValues)
+            return
+        }
+
         currentSpiritualReadingItems = []
         currentReflection = emptyReflection()
         let remoteRequestKey = remoteAIRequestKey(for: candidatePool, profile: profile)
@@ -1178,11 +1206,31 @@ final class LimiarAppModel {
         values["mode"] = isEssentialMode ? "essential" : "full"
         LimiarAIDiagnostics.log("remote_ai_started", values: values)
         refreshRemoteAIContent(
-            for: Array(candidatePool.prefix(24)),
+            for: Array(candidatePool.prefix(36)),
             fallbackPlan: resolvedPlan,
             profile: profile,
             generationID: generationID
         )
+    }
+
+    private func sessionProfileKey(for profile: UserFaithProfile) -> String {
+        [
+            profile.tradition.rawValue,
+            profile.explanationDepth.rawValue,
+            profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
+            profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
+            profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
+        ].joined(separator: "|")
+    }
+
+    private func applyGeneratedSession(items: [SpiritualReadingItem], reflection: AIReflection, profile: UserFaithProfile) {
+        currentSpiritualReadingItems = items
+        let selectedPassages = scripturePassages(from: items, profile: profile)
+        currentReadingPlan = selectedPassages
+        if let first = selectedPassages.first {
+            currentPassage = first
+        }
+        currentReflection = reflection
     }
 
     private func emptyReflection() -> AIReflection {
@@ -1251,15 +1299,18 @@ final class LimiarAppModel {
             await MainActor.run {
                 guard aiGenerationID == generationID else { return }
                 if let session = remoteSession {
-                    let items = session.items
-                    currentSpiritualReadingItems = items
-                    let selectedPassages = scripturePassages(from: items, profile: profile)
-                    currentReadingPlan = selectedPassages
-                    if let first = selectedPassages.first {
-                        currentPassage = first
-                    }
-                    currentReflection = session.reflection
-                    rememberShownPassages(selectedPassages)
+                    applyGeneratedSession(items: session.items, reflection: session.reflection, profile: profile)
+                    // Persiste a sessão do dia. Os trechos só entram no
+                    // histórico de recentes quando a leitura for concluída
+                    // (finishReading) — gerar não é ler.
+                    dailySessionStore.save(
+                        DailyReadingSessionSnapshot(
+                            dayKey: DailyReadingSessionStore.todayKey(),
+                            profileKey: sessionProfileKey(for: profile),
+                            items: session.items,
+                            reflection: session.reflection
+                        )
+                    )
                     rememberReflection(reference: currentReadingReference, reflection: session.reflection)
                     aiContentState = isEssentialMode ? .essentialMode : .remoteReady
                 } else {
@@ -1281,6 +1332,15 @@ final class LimiarAppModel {
         let fallbackBook = profile.favoriteBooks.first ?? .psalms
 
         return items.enumerated().map { index, item in
+            // Preferência: resolver o trecho real do catálogo (livro/seção/tema
+            // corretos) pelo ID informado pelo backend ou pela referência.
+            if let passageID = item.passageID,
+               let match = recommender.passage(withID: passageID) {
+                return match
+            }
+            if let match = recommender.passage(matchingReference: item.reference, tradition: profile.tradition) {
+                return match
+            }
             let stableReferenceID = item.reference
                 .lowercased()
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "pt_BR"))

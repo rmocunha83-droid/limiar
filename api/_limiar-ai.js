@@ -1,20 +1,23 @@
 const DEFAULT_MODEL = "gpt-5.4-mini";
 const DEFAULT_TEXT_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_REASONING_EFFORT = "low";
 const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
 const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_TTS_SPEED = 0.92;
 const DEFAULT_TIMEOUT_MS = 25000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
+const SESSION_ITEM_COUNT = 3;
 const rateLimitBuckets = globalThis.__limiarAIRateLimitBuckets || new Map();
 globalThis.__limiarAIRateLimitBuckets = rateLimitBuckets;
 
-const reflectionSchema = {
+// A IA gera somente os campos de explicação. Referência e texto bíblico são
+// fixados pelo servidor a partir dos trechos selecionados — a IA nunca escolhe
+// nem reescreve versículos.
+const explanationFieldsSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    reference: { type: "string" },
-    passageText: { type: "string" },
     homily: { type: "string" },
     spiritualMeaning: { type: "string" },
     practicalApplication: { type: "string" },
@@ -22,8 +25,6 @@ const reflectionSchema = {
     meditationQuestion: { type: "string" }
   },
   required: [
-    "reference",
-    "passageText",
     "homily",
     "spiritualMeaning",
     "practicalApplication",
@@ -32,29 +33,40 @@ const reflectionSchema = {
   ]
 };
 
-const spiritualReadingSchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    items: {
-      type: "array",
-      minItems: 1,
-      maxItems: 8,
-      items: reflectionSchema
-    }
-  },
-  required: ["items"]
-};
+// Sem minItems/maxItems: o modo strict do structured outputs não aceita
+// restrições de tamanho de array. A contagem exata é imposta pelo prompt e
+// validada pelo servidor em validateExplanationItems.
+function explanationItemsSchema() {
+  return {
+    type: "array",
+    items: explanationFieldsSchema
+  };
+}
 
-const readingSessionSchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    items: spiritualReadingSchema.properties.items,
-    reflection: reflectionSchema
-  },
-  required: ["items", "reflection"]
-};
+function readingSessionExplanationSchema(itemCount = SESSION_ITEM_COUNT) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      items: explanationItemsSchema(),
+      reflection: explanationFieldsSchema
+    },
+    required: ["items", "reflection"]
+  };
+}
+
+function spiritualReadingExplanationSchema(itemCount = SESSION_ITEM_COUNT) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      items: explanationItemsSchema()
+    },
+    required: ["items"]
+  };
+}
+
+const reflectionExplanationSchema = explanationFieldsSchema;
 
 function applyCommonHeaders(res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -205,16 +217,18 @@ function depthGuidance(depth) {
   ].join("\n");
 }
 
+// Budgets contam também os reasoning tokens do modelo (Responses API),
+// por isso têm folga sobre o tamanho esperado do JSON final.
 function depthOutputTokenLimit(depth, endpoint) {
   if (endpoint === "reading-session") {
-    if (depth === "curta") return 1200;
-    if (depth === "grande") return 3000;
-    return 2100;
+    if (depth === "curta") return 1800;
+    if (depth === "grande") return 4200;
+    return 2800;
   }
   const isReading = endpoint === "spiritual-reading";
-  if (depth === "curta") return isReading ? 900 : 500;
-  if (depth === "grande") return isReading ? 2400 : 1300;
-  return isReading ? 1600 : 850;
+  if (depth === "curta") return isReading ? 1500 : 900;
+  if (depth === "grande") return isReading ? 3600 : 2000;
+  return isReading ? 2400 : 1300;
 }
 
 function diagnosticEnabled() {
@@ -252,7 +266,7 @@ function normalizePassages(passages = []) {
       book: trimText(passage.book, 80)
     }))
     .filter((passage) => nonEmpty(passage.reference) && nonEmpty(passage.text))
-    .slice(0, 24);
+    .slice(0, 48);
 }
 
 function normalizeRecentReflections(reflections = []) {
@@ -267,25 +281,171 @@ function normalizeRecentReflections(reflections = []) {
     .slice(0, 8);
 }
 
+function normalizeContentIdentity(value) {
+  return trimText(value, 2000)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function recentIdentitySet(recentPassageIDs = []) {
+  return new Set(compactList(recentPassageIDs, 80).map(normalizeContentIdentity).filter(Boolean));
+}
+
+function passageIdentities(passage = {}) {
+  return [
+    normalizeContentIdentity(passage.id),
+    normalizeContentIdentity(passage.reference),
+    normalizeContentIdentity(passage.text)
+  ].filter(Boolean);
+}
+
+function stableHash(value) {
+  let hash = 5381;
+  const text = String(value);
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) + hash + text.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+// Seleção determinística dos trechos da sessão. A IA não participa desta etapa:
+// 1. Filtro forte: livros preferidos primeiro; amplia para seções preferidas e
+//    depois para todo o pool apenas quando não há trechos suficientes.
+// 2. Anti-repetição: trechos recentes só entram quando o pool fresco esgota e,
+//    nesse caso, entra primeiro o menos recentemente usado (rotação LRU).
+// 3. Desempate estável por semente (dia + cliente) para variar entre dias sem
+//    perder determinismo dentro da mesma requisição.
+function selectSessionPassages({ profile, passages, recentPassageIDs = [], count = SESSION_ITEM_COUNT, seed = "" }) {
+  const recent = recentIdentitySet(recentPassageIDs);
+  const recencyRank = new Map();
+  compactList(recentPassageIDs, 80).forEach((value, index) => {
+    const identity = normalizeContentIdentity(value);
+    if (identity && !recencyRank.has(identity)) recencyRank.set(identity, index);
+  });
+
+  const favoriteBooks = new Set(profile.favoriteBooks.map(normalizeContentIdentity).filter(Boolean));
+  const favoriteSections = new Set(profile.favoriteSections.map(normalizeContentIdentity).filter(Boolean));
+  const favoriteThemes = new Set(profile.favoriteThemes.map(normalizeContentIdentity).filter(Boolean));
+  const avoidedBooks = new Set(profile.avoidedBooks.map(normalizeContentIdentity).filter(Boolean));
+  const avoidedSections = new Set(profile.avoidedSections.map(normalizeContentIdentity).filter(Boolean));
+
+  const candidates = passages
+    .filter((passage) => {
+      const book = normalizeContentIdentity(passage.book);
+      const section = normalizeContentIdentity(passage.section);
+      if (book && avoidedBooks.has(book)) return false;
+      if (section && avoidedSections.has(section)) return false;
+      return true;
+    })
+    .map((passage, index) => {
+      const identities = passageIdentities(passage);
+      const isRecent = identities.some((identity) => recent.has(identity));
+      let lastUsedRank = Infinity;
+      for (const identity of identities) {
+        if (recencyRank.has(identity)) {
+          lastUsedRank = Math.min(lastUsedRank, recencyRank.get(identity));
+        }
+      }
+      const book = normalizeContentIdentity(passage.book);
+      const section = normalizeContentIdentity(passage.section);
+      const theme = normalizeContentIdentity(passage.theme);
+      let score = 0;
+      if (book && favoriteBooks.has(book)) score += 4;
+      if (section && favoriteSections.has(section)) score += 3;
+      if (theme && favoriteThemes.has(theme)) score += 2;
+      return {
+        passage,
+        index,
+        isRecent,
+        lastUsedRank,
+        inFavoriteBooks: Boolean(book && favoriteBooks.has(book)),
+        inFavoriteSections: Boolean(section && favoriteSections.has(section)),
+        score,
+        jitter: stableHash(`${seed}|${passage.id || passage.reference}`)
+      };
+    });
+
+  const tiers = [];
+  if (favoriteBooks.size) {
+    tiers.push({ name: "favorite-books", accepts: (entry) => entry.inFavoriteBooks });
+  }
+  if (favoriteSections.size) {
+    tiers.push({
+      name: "favorite-sections",
+      accepts: (entry) => entry.inFavoriteBooks || entry.inFavoriteSections
+    });
+  }
+  tiers.push({ name: "full-pool", accepts: () => true });
+
+  const byPreference = (lhs, rhs) =>
+    rhs.score - lhs.score || lhs.jitter - rhs.jitter || lhs.index - rhs.index;
+
+  const selected = [];
+  const selectedIndexes = new Set();
+  let selectionTier = tiers[0]?.name || "full-pool";
+
+  for (const tier of tiers) {
+    const fresh = candidates
+      .filter((entry) => !entry.isRecent && tier.accepts(entry) && !selectedIndexes.has(entry.index))
+      .sort(byPreference);
+    for (const entry of fresh) {
+      selected.push(entry);
+      selectedIndexes.add(entry.index);
+      if (selected.length >= count) break;
+    }
+    selectionTier = tier.name;
+    if (selected.length >= count) break;
+  }
+
+  let reusedRecentCount = 0;
+  if (selected.length < count) {
+    // Pool fresco esgotado: rotaciona os menos recentemente usados,
+    // ainda priorizando os livros/seções preferidos.
+    const leastRecentFirst = candidates
+      .filter((entry) => !selectedIndexes.has(entry.index))
+      .sort(
+        (lhs, rhs) =>
+          rhs.lastUsedRank - lhs.lastUsedRank || byPreference(lhs, rhs)
+      );
+    for (const entry of leastRecentFirst) {
+      selected.push(entry);
+      selectedIndexes.add(entry.index);
+      reusedRecentCount += 1;
+      if (selected.length >= count) break;
+    }
+  }
+
+  return {
+    selected: selected.slice(0, count).map((entry) => entry.passage),
+    selectionTier,
+    reusedRecentCount,
+    freshCount: candidates.filter((entry) => !entry.isRecent).length,
+    candidateCount: candidates.length
+  };
+}
+
 function buildSystemPrompt() {
   return [
     "Você é o motor de reflexão espiritual do app Limiar.",
     "Gere conteúdo em português do Brasil, com tom acolhedor, sóbrio e pastoral.",
-    "Não invente texto bíblico ou religioso: use apenas os trechos enviados.",
+    "Os trechos bíblicos já foram escolhidos: escreva apenas as explicações pedidas para cada um deles, na ordem enviada.",
+    "Não invente, não altere e não repita o texto bíblico dentro das explicações; apenas comente o sentido.",
     "Respeite a tradição informada. Para tradição judaica, não use Novo Testamento. Para espírita, use tom moral e de reforma íntima.",
     "Evite diagnóstico médico, aconselhamento clínico, promessas espirituais absolutas ou linguagem de autoridade religiosa institucional.",
     "Não inclua identificadores pessoais. Responda somente no JSON solicitado."
   ].join("\n");
 }
 
-function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentReflections = [] }) {
-  const passageBlock = passages
+function buildExplanationPrompt({ profile, selectedPassages, recentReflections = [], includeReflection }) {
+  const passageBlock = selectedPassages
     .map((passage, index) => {
       return [
         `Trecho ${index + 1}`,
-        `ID: ${passage.id || "não informado"}`,
         `Referência: ${passage.reference}`,
-        `Título: ${passage.title}`,
         `Livro/seção/tema: ${[passage.book, passage.section, passage.theme].filter(Boolean).join(" / ")}`,
         `Texto: ${passage.text}`
       ].join("\n");
@@ -298,34 +458,54 @@ function buildContextPrompt({ profile, passages, recentPassageIDs = [], recentRe
         .join("\n")
     : "- sem histórico recente";
 
-  return [
-    "Preferências atuais do usuário. Use estas escolhas como regras de personalização, não como contexto opcional:",
+  const lines = [
+    "Preferências do usuário. Use estas escolhas como regras de personalização, não como contexto opcional:",
     `Tradição: ${profile.tradition}${profile.traditionID ? ` [${profile.traditionID}]` : ""}`,
+    `Diretriz de tom da tradição: ${profile.toneGuidance || "não informado"}`,
     `Profundidade: ${profile.explanationDepth}`,
     depthGuidance(profile.explanationDepth),
-    `Seções preferidas: ${profile.favoriteSections.join(", ") || "não informado"}`,
-    `IDs das seções preferidas: ${profile.favoriteSectionIDs.join(", ") || "não informado"}`,
-    `Livros preferidos: ${profile.favoriteBooks.join(", ") || "não informado"}`,
-    `IDs dos livros preferidos: ${profile.favoriteBookIDs.join(", ") || "não informado"}`,
     `Temas preferidos: ${profile.favoriteThemes.join(", ") || "não informado"}`,
-    `IDs dos temas preferidos: ${profile.favoriteThemeIDs.join(", ") || "não informado"}`,
-    `Evitar seções incompatíveis: ${profile.avoidedSections.join(", ") || "não informado"}`,
-    `Evitar livros incompatíveis: ${profile.avoidedBooks.join(", ") || "não informado"}`,
-    `Diretriz de tom da tradição: ${profile.toneGuidance || "não informado"}`,
     "",
-    "Regras obrigatórias de personalização:",
-    "- Priorize o sentido espiritual dos trechos enviados que combinem com os livros, seções e temas preferidos.",
+    "Regras obrigatórias:",
+    `- Gere explicações para exatamente ${selectedPassages.length} trechos, na mesma ordem em que foram enviados: items[0] corresponde ao Trecho 1, items[1] ao Trecho 2, e assim por diante.`,
+    "- Em cada item, homily, spiritualMeaning, practicalApplication, conclusion e meditationQuestion devem ser específicos daquele trecho.",
     "- Integre pelo menos um tema preferido quando houver temas informados, de forma natural e coerente.",
     "- A profundidade escolhida deve mudar visivelmente o tamanho, a densidade e a aplicação prática.",
-    "- Nunca use livros ou seções marcados como incompatíveis para a tradição.",
-    "- Evite respostas genéricas que funcionariam igualmente para qualquer tradição, tema ou profundidade.",
-    `Trechos recentes a evitar, incluindo IDs e referências: ${compactList(recentPassageIDs, 40).join(", ") || "não informado"}`,
-    "Reflexões recentes a não repetir:",
+    "- Varie aberturas, imagens e perguntas entre os itens e em relação ao histórico recente: nada de fórmulas fixas.",
+    "- Evite respostas genéricas que funcionariam igualmente para qualquer tradição, tema ou profundidade."
+  ];
+
+  if (includeReflection) {
+    lines.push(
+      "",
+      "Regras para reflection:",
+      "- Gere uma reflexão única para o conjunto dos trechos.",
+      "- A homily deve resumir o eixo espiritual da leitura.",
+      "- O spiritualMeaning deve ser o bloco principal e respeitar claramente a profundidade escolhida.",
+      "- A practicalApplication deve nascer dos trechos e dos temas preferidos, com uma ação concreta para o restante do dia.",
+      "- A conclusion deve ser específica, não uma frase fixa reaproveitada.",
+      "- A meditationQuestion deve ser nova em relação ao histórico recente."
+    );
+  }
+
+  lines.push(
+    "",
+    "Reflexões recentes a não repetir (varie vocabulário e perguntas):",
     historyBlock,
     "",
-    "Trechos disponíveis:",
-    passageBlock
-  ].join("\n");
+    "Trechos escolhidos:",
+    passageBlock,
+    "",
+    "Otimize para resposta rápida: seja completo, mas não prolixo."
+  );
+
+  return lines.join("\n");
+}
+
+function reasoningConfig() {
+  const effort = trimText(process.env.OPENAI_REASONING_EFFORT || DEFAULT_REASONING_EFFORT, 20).toLowerCase();
+  if (["off", "none", "disabled", "0"].includes(effort)) return undefined;
+  return { effort };
 }
 
 async function callTextModel({ schema, schemaName, prompt, maxOutputTokens, debugContext = {} }) {
@@ -345,6 +525,7 @@ async function callTextModel({ schema, schemaName, prompt, maxOutputTokens, debu
   const baseURL = (process.env.OPENAI_BASE_URL || DEFAULT_TEXT_BASE_URL).replace(/\/$/, "");
   const model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
   const formatName = safeSchemaName(schemaName);
+  const reasoning = reasoningConfig();
 
   try {
     logAIDiagnostic("openai_request_start", {
@@ -353,12 +534,10 @@ async function callTextModel({ schema, schemaName, prompt, maxOutputTokens, debu
       clientID: debugContext.clientID,
       depth: debugContext.depth,
       tradition: debugContext.tradition,
-      favoriteThemesCount: debugContext.favoriteThemesCount,
-      favoriteBooksCount: debugContext.favoriteBooksCount,
-      favoriteSectionsCount: debugContext.favoriteSectionsCount,
       passagesCount: debugContext.passagesCount,
       promptLength: prompt.length,
       maxOutputTokens,
+      reasoningEffort: reasoning?.effort,
       ...promptDebugDetails(prompt)
     });
     let response;
@@ -372,23 +551,19 @@ async function callTextModel({ schema, schemaName, prompt, maxOutputTokens, debu
         body: JSON.stringify({
           model,
           max_output_tokens: maxOutputTokens,
+          ...(reasoning ? { reasoning } : {}),
           instructions: [
             buildSystemPrompt(),
-            `Retorne somente JSON válido compatível com o schema ${schemaName}.`,
+            "Retorne somente JSON válido no formato solicitado.",
             "Não use markdown, comentários ou texto fora do JSON."
           ].join("\n"),
-          input: [
-            prompt,
-            "",
-            `Schema esperado (${schemaName}):`,
-            JSON.stringify(schema)
-          ].join("\n"),
+          input: prompt,
           text: {
             format: {
               type: "json_schema",
               name: formatName,
               schema,
-              strict: false
+              strict: true
             }
           }
         }),
@@ -411,6 +586,13 @@ async function callTextModel({ schema, schemaName, prompt, maxOutputTokens, debu
       const error = new Error(data?.error?.message || `OpenAI request failed with ${response.status}`);
       error.code = classifyProviderError("openai", response.status, data);
       error.statusCode = response.status;
+      throw error;
+    }
+
+    if (data?.status === "incomplete" && data?.incomplete_details?.reason === "max_output_tokens") {
+      const error = new Error("OpenAI response was truncated by max_output_tokens");
+      error.code = "openai_output_truncated";
+      error.statusCode = 502;
       throw error;
     }
 
@@ -641,132 +823,87 @@ function parseProviderJSON(text) {
   }
 }
 
-function normalizeContentIdentity(value) {
-  return trimText(value, 2000)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function validationError(code, message) {
   const error = new Error(message || code);
   error.code = code;
-  error.statusCode = 422;
+  error.statusCode = 502;
   return error;
 }
 
-function recentIdentitySet(recentPassageIDs = []) {
-  return new Set(compactList(recentPassageIDs, 60).map(normalizeContentIdentity).filter(Boolean));
-}
-
-function passageIdentities(passage = {}) {
-  return [
-    normalizeContentIdentity(passage.id),
-    normalizeContentIdentity(passage.reference),
-    normalizeContentIdentity(passage.text)
-  ].filter(Boolean);
-}
-
-function matchAvailablePassage(item, passages = []) {
-  const itemReference = normalizeContentIdentity(item?.reference);
-  const itemText = normalizeContentIdentity(item?.passageText);
-  if (!itemReference && !itemText) return null;
-
-  return passages.find((passage) => {
-    const reference = normalizeContentIdentity(passage.reference);
-    const text = normalizeContentIdentity(passage.text);
-    return (itemReference && itemReference === reference) || (itemText && itemText === text);
-  }) || null;
-}
-
-function validateReadingDiversity(items, options = {}) {
-  const references = new Set();
-  const texts = new Set();
-  const recent = recentIdentitySet(options.recentPassageIDs);
-  const passages = Array.isArray(options.passages) ? options.passages : [];
-  const expectedItemCount = Number(options.expectedItemCount || items.length || 0);
-  const nonRecentPassages = passages.filter((passage) => {
-    const identities = passageIdentities(passage);
-    return identities.length > 0 && !identities.some((identity) => recent.has(identity));
-  });
-  const hasEnoughFreshAlternatives = expectedItemCount > 0 && nonRecentPassages.length >= expectedItemCount;
-
-  for (const item of items) {
-    const reference = normalizeContentIdentity(item.reference);
-    const text = normalizeContentIdentity(item.passageText);
-
-    if (reference) {
-      if (references.has(reference)) {
-        throw validationError("duplicate_reference", "AI returned duplicated passage references");
-      }
-      references.add(reference);
-    }
-
-    if (text) {
-      if (texts.has(text)) {
-        throw validationError("duplicate_passage_text", "AI returned duplicated passage text");
-      }
-      texts.add(text);
-    }
-
-    if (hasEnoughFreshAlternatives && recent.size) {
-      const matched = matchAvailablePassage(item, passages);
-      const identities = matched ? passageIdentities(matched) : [reference];
-      if (identities.some((identity) => recent.has(identity))) {
-        throw validationError("recent_reference_reused", "AI reused a recent passage despite available alternatives");
-      }
-    }
+function validateExplanationFields(value, context = "item") {
+  if (!value || typeof value !== "object") {
+    throw validationError("invalid_explanation", `AI returned an invalid ${context}`);
   }
-
-  return items;
-}
-
-function validateReflection(value) {
-  if (!value || typeof value !== "object") throw new Error("invalid_reflection");
-  for (const key of reflectionSchema.required) {
-    if (!nonEmpty(value[key])) throw new Error(`missing_${key}`);
-    value[key] = trimText(value[key], 3000);
+  const clean = {};
+  for (const key of explanationFieldsSchema.required) {
+    if (!nonEmpty(value[key])) {
+      throw validationError(`missing_${key}`, `AI ${context} is missing ${key}`);
+    }
+    clean[key] = trimText(value[key], 3000);
   }
-  return value;
+  return clean;
 }
 
-function validateSpiritualReading(value, expectedItemCount, options = {}) {
-  if (!value || !Array.isArray(value.items)) throw new Error("invalid_items");
-  const maxItems = expectedItemCount || 8;
-  const items = value.items.map(validateReflection).slice(0, maxItems);
-  if (!items.length) throw new Error("empty_items");
-  if (expectedItemCount && items.length !== expectedItemCount) {
-    throw new Error("unexpected_item_count");
+function validateExplanationItems(value, expectedItemCount) {
+  if (!value || !Array.isArray(value.items)) {
+    throw validationError("invalid_items", "AI response did not include items");
   }
-  validateReadingDiversity(items, { ...options, expectedItemCount });
-  return { items };
+  if (value.items.length < expectedItemCount) {
+    throw validationError("unexpected_item_count", "AI returned fewer items than expected");
+  }
+  return value.items
+    .slice(0, expectedItemCount)
+    .map((item, index) => validateExplanationFields(item, `item ${index + 1}`));
 }
 
-function validateReadingSession(value, expectedItemCount, options = {}) {
-  if (!value || typeof value !== "object") throw new Error("invalid_reading_session");
-  const reading = validateSpiritualReading(value, expectedItemCount, options);
+// Monta os itens finais da resposta: versículo vem do trecho selecionado
+// (fonte da verdade), explicações vêm da IA. Campos extras (passageID, book,
+// section, theme) são opcionais e ignorados por clientes antigos.
+function assembleReadingItems(selectedPassages, explanations) {
+  return selectedPassages.map((passage, index) => ({
+    reference: passage.reference,
+    passageText: passage.text,
+    passageID: passage.id || undefined,
+    book: passage.book || undefined,
+    section: passage.section || undefined,
+    theme: passage.theme || undefined,
+    ...explanations[index]
+  }));
+}
+
+function assembleReflection(selectedPassages, explanation) {
   return {
-    items: reading.items,
-    reflection: validateReflection(value.reflection)
+    reference: selectedPassages.map((passage) => passage.reference).join(" + "),
+    passageText: selectedPassages
+      .map((passage) => `${passage.reference}: ${passage.text}`)
+      .join("\n\n"),
+    ...explanation
   };
+}
+
+function selectionSeed(context = {}) {
+  const day = new Date().toISOString().slice(0, 10);
+  return `${day}|${context.clientID || "anonymous"}`;
 }
 
 module.exports = {
   DEFAULT_MODEL,
+  DEFAULT_REASONING_EFFORT,
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
+  SESSION_ITEM_COUNT,
   applyAudioHeaders,
   applyCommonHeaders,
-  buildContextPrompt,
+  assembleReadingItems,
+  assembleReflection,
+  buildExplanationPrompt,
   callTextModel,
   callElevenLabsSpeech,
   depthGuidance,
   depthOutputTokenLimit,
   enforceAIRateLimit,
+  explanationFieldsSchema,
   logAIDiagnostic,
   logAIError,
   normalizeSpeechInput,
@@ -776,12 +913,12 @@ module.exports = {
   normalizeContentIdentity,
   parseProviderJSON,
   parseBody,
-  reflectionSchema,
-  readingSessionSchema,
+  readingSessionExplanationSchema,
+  reflectionExplanationSchema,
   requirePost,
-  spiritualReadingSchema,
-  validateReflection,
-  validateReadingDiversity,
-  validateReadingSession,
-  validateSpiritualReading
+  selectSessionPassages,
+  selectionSeed,
+  spiritualReadingExplanationSchema,
+  validateExplanationFields,
+  validateExplanationItems
 };

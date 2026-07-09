@@ -1,6 +1,9 @@
 const {
+  SESSION_ITEM_COUNT,
   applyCommonHeaders,
-  buildContextPrompt,
+  assembleReadingItems,
+  assembleReflection,
+  buildExplanationPrompt,
   callTextModel,
   depthOutputTokenLimit,
   enforceAIRateLimit,
@@ -10,16 +13,13 @@ const {
   normalizeProfile,
   normalizeRecentReflections,
   parseBody,
-  readingSessionSchema,
+  readingSessionExplanationSchema,
   requirePost,
-  validateReadingSession
+  selectSessionPassages,
+  selectionSeed,
+  validateExplanationFields,
+  validateExplanationItems
 } = require("./_limiar-ai");
-
-const DIVERSITY_RETRY_ERRORS = new Set([
-  "duplicate_reference",
-  "duplicate_passage_text",
-  "recent_reference_reused"
-]);
 
 module.exports = async function handler(req, res) {
   applyCommonHeaders(res);
@@ -40,45 +40,41 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const prompt = [
-      buildContextPrompt({ profile, passages, recentPassageIDs, recentReflections }),
-      "",
-      "Gere uma sessão completa de leitura em uma única resposta.",
-      "A resposta deve conter exatamente 3 itens em items e uma reflection geral para o conjunto.",
-      "",
-      "Regras para items:",
-      "- Selecione exatamente 3 trechos dentre os trechos disponíveis enviados.",
-      "- Use passageText baseado nos trechos enviados; não invente versículos nem altere a tradição.",
-      "- Não use sempre os primeiros trechos: escolha os 3 que melhor combinam com tradição, livros, seções, temas e histórico recente.",
-      "- Exclua referências presentes em Trechos recentes a evitar sempre que houver qualquer alternativa da mesma tradição.",
-      "- Se muitos trechos recentes aparecerem na lista, prefira trechos ainda não usados, mesmo que a correspondência com tema/livro seja um pouco menor.",
-      "- Em cada item, homily, spiritualMeaning, practicalApplication, conclusion e meditationQuestion devem ser específicos daquele trecho.",
-      "",
-      "Regras para reflection:",
-      "- Gere uma reflexão única para o conjunto dos 3 trechos.",
-      "- A homily deve resumir o eixo espiritual da leitura.",
-      "- O spiritualMeaning deve ser o bloco principal e respeitar claramente a profundidade escolhida.",
-      "- A practicalApplication deve nascer dos trechos e dos temas preferidos, com uma ação concreta para o restante do dia.",
-      "- A conclusion deve ser específica, não uma frase fixa reaproveitada.",
-      "- A meditationQuestion deve ser nova em relação ao histórico recente.",
-      "",
-      "Otimize para resposta rápida: seja completo, mas não prolixo."
-    ].join("\n");
+    // Seleção determinística: o servidor fixa os 3 trechos respeitando as
+    // preferências como filtro forte e rotacionando contra o histórico. A IA
+    // recebe os trechos já escolhidos e escreve apenas as explicações.
+    const itemCount = Math.min(SESSION_ITEM_COUNT, passages.length);
+    const selection = selectSessionPassages({
+      profile,
+      passages,
+      recentPassageIDs,
+      count: itemCount,
+      seed: selectionSeed(rateLimit.context)
+    });
 
-    logAIDiagnostic("reading_session_preferences_loaded", {
+    logAIDiagnostic("reading_session_passages_selected", {
       endpoint: "reading-session",
       requestID: rateLimit.context.requestID,
       clientID: rateLimit.context.clientID,
       tradition: profile.tradition,
       depth: profile.explanationDepth,
-      favoriteThemes: profile.favoriteThemes.join(", "),
       favoriteBooks: profile.favoriteBooks.join(", "),
-      favoriteSections: profile.favoriteSections.join(", "),
-      passagesCount: passages.length
+      selectedReferences: selection.selected.map((passage) => passage.reference).join(" + "),
+      selectionTier: selection.selectionTier,
+      reusedRecentCount: selection.reusedRecentCount,
+      freshCount: selection.freshCount,
+      candidateCount: selection.candidateCount
     });
 
-    let result = await callTextModel({
-      schema: readingSessionSchema,
+    const prompt = buildExplanationPrompt({
+      profile,
+      selectedPassages: selection.selected,
+      recentReflections,
+      includeReflection: true
+    });
+
+    const result = await callTextModel({
+      schema: readingSessionExplanationSchema(itemCount),
       schemaName: "limiar_reading_session",
       prompt,
       maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "reading-session"),
@@ -88,59 +84,18 @@ module.exports = async function handler(req, res) {
         clientID: rateLimit.context.clientID,
         depth: profile.explanationDepth,
         tradition: profile.tradition,
-        favoriteThemesCount: profile.favoriteThemes.length,
-        favoriteBooksCount: profile.favoriteBooks.length,
-        favoriteSectionsCount: profile.favoriteSections.length,
-        passagesCount: passages.length
+        passagesCount: selection.selected.length
       }
     });
 
-    let validated;
-    try {
-      validated = validateReadingSession(result, 3, { passages, recentPassageIDs });
-    } catch (error) {
-      if (!DIVERSITY_RETRY_ERRORS.has(error.code)) throw error;
-
-      logAIDiagnostic("reading_session_diversity_retry", {
-        endpoint: "reading-session",
-        requestID: rateLimit.context.requestID,
-        clientID: rateLimit.context.clientID,
-        reason: error.code,
-        recentPassageIDsCount: recentPassageIDs.length,
-        passagesCount: passages.length
-      });
-
-      result = await callTextModel({
-        schema: readingSessionSchema,
-        schemaName: "limiar_reading_session_retry",
-        prompt: [
-          prompt,
-          "",
-          "Correção obrigatória antes de responder:",
-          "- Não repita nenhuma referência nem nenhum texto dentro da resposta.",
-          "- Não use trechos recentes se houver alternativas disponíveis.",
-          "- Use IDs diferentes entre si e fora da lista recente.",
-          "- Mantenha exatamente 3 itens e uma reflexão geral."
-        ].join("\n"),
-        maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "reading-session"),
-        debugContext: {
-          endpoint: "reading-session",
-          requestID: rateLimit.context.requestID,
-          clientID: rateLimit.context.clientID,
-          depth: profile.explanationDepth,
-          tradition: profile.tradition,
-          favoriteThemesCount: profile.favoriteThemes.length,
-          favoriteBooksCount: profile.favoriteBooks.length,
-          favoriteSectionsCount: profile.favoriteSections.length,
-          passagesCount: passages.length
-        }
-      });
-
-      validated = validateReadingSession(result, 3, { passages, recentPassageIDs });
-    }
+    const explanations = validateExplanationItems(result, itemCount);
+    const reflection = validateExplanationFields(result.reflection, "reflection");
 
     res.statusCode = 200;
-    res.end(JSON.stringify(validated));
+    res.end(JSON.stringify({
+      items: assembleReadingItems(selection.selected, explanations),
+      reflection: assembleReflection(selection.selected, reflection)
+    }));
   } catch (error) {
     logAIError("reading-session", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
