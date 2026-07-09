@@ -136,6 +136,23 @@ enum SpiritualTheme: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    static func standaloneOptions(for tradition: FaithTradition) -> [SpiritualTheme] {
+        guard tradition == .spiritist else { return standaloneOptions }
+        return [
+            .gospelOfJesus,
+            .innerReform,
+            .charity,
+            .forgiveness,
+            .prayer,
+            .family,
+            .patience,
+            .spiritualEvolution,
+            .consolationHope,
+            .moralApplication,
+            .practiceGood
+        ]
+    }
+
     static let standaloneOptions: [SpiritualTheme] = [
         .faith,
         .hope,
@@ -185,205 +202,113 @@ enum SpiritualTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum ReadingPreferenceCategory: String, Hashable {
-    case section
-    case book
-    case theme
-}
-
-struct ReadingPreferenceOption: Identifiable, Hashable {
+/// Categoria de estilo de leitura mostrada no passo "Leituras" do onboarding
+/// e em Configurações. Dirigida por dados: a mesma tela funciona para as 4
+/// tradições trocando apenas o config. `books` alimenta a geração (filtro
+/// forte) e fica restrito aos livros com conteúdo no catálogo.
+struct ReadingStyleCategory: Identifiable, Hashable {
     let id: String
-    let title: String
-    let category: ReadingPreferenceCategory
-    let tradition: FaithTradition
-    let section: BibleSection?
-    let book: BibleBook?
-    let theme: SpiritualTheme?
-
-    static func section(_ section: BibleSection, title: String? = nil, tradition: FaithTradition) -> ReadingPreferenceOption {
-        ReadingPreferenceOption(
-            id: "\(tradition.rawValue).section.\(section.rawValue)",
-            title: title ?? section.title,
-            category: .section,
-            tradition: tradition,
-            section: section,
-            book: nil,
-            theme: nil
-        )
-    }
-
-    static func book(_ book: BibleBook, title: String? = nil, tradition: FaithTradition) -> ReadingPreferenceOption {
-        ReadingPreferenceOption(
-            id: "\(tradition.rawValue).book.\(book.rawValue)",
-            title: title ?? book.title,
-            category: .book,
-            tradition: tradition,
-            section: nil,
-            book: book,
-            theme: nil
-        )
-    }
-
-    static func theme(_ theme: SpiritualTheme, title: String? = nil, tradition: FaithTradition) -> ReadingPreferenceOption {
-        ReadingPreferenceOption(
-            id: "\(tradition.rawValue).theme.\(theme.rawValue)",
-            title: title ?? theme.title,
-            category: .theme,
-            tradition: tradition,
-            section: nil,
-            book: nil,
-            theme: theme
-        )
-    }
+    let label: String
+    let hint: String
+    let sections: [BibleSection]
+    let books: [BibleBook]
+    var defaultSelected: Bool = false
 }
 
-struct ReadingPreferenceSection: Identifiable, Hashable {
-    let title: String
-    let subtitle: String?
-    let options: [ReadingPreferenceOption]
+struct TraditionReadingConfig {
+    let question: String
+    let subtitle: String
+    let categories: [ReadingStyleCategory]
+    let optionalBooks: [BibleBook]
+    let minSelected: Int
 
-    var id: String { title }
+    func category(id: String) -> ReadingStyleCategory? {
+        categories.first { $0.id == id }
+    }
 
-    init(title: String, subtitle: String? = nil, options: [ReadingPreferenceOption]) {
-        self.title = title
-        self.subtitle = subtitle
-        self.options = options
+    var defaultCategoryIDs: [String] {
+        categories.filter(\.defaultSelected).map(\.id)
+    }
+
+    /// Título de exibição de um livro no passo opcional (nomes hebraicos na
+    /// tradição judaica; título padrão nas demais).
+    func bookDisplayTitle(_ book: BibleBook, tradition: FaithTradition) -> String {
+        guard tradition == .jewish else { return book.title }
+        switch book {
+        case .genesis: return "Gênesis / Bereshit"
+        case .exodus: return "Êxodo / Shemot"
+        case .psalms: return "Salmos / Tehilim"
+        case .proverbs: return "Provérbios / Mishlei"
+        case .isaiah: return "Isaías / Yeshayahu"
+        default: return book.title
+        }
     }
 }
 
 extension FaithTradition {
-    var readingPreferenceSections: [ReadingPreferenceSection] {
+    var readingConfig: TraditionReadingConfig {
         switch self {
         case .catholic:
-            [
-                ReadingPreferenceSection(
-                    title: "Tipos de leitura",
-                    options: [
-                        .section(.gospels, tradition: self),
-                        .section(.psalms, title: "Salmos e Orações", tradition: self),
-                        .section(.proverbs, title: "Sabedoria", tradition: self),
-                        .section(.paulineLetters, tradition: self),
-                        .section(.prophets, tradition: self),
-                        .section(.historicalBooks, title: "Histórias Bíblicas", tradition: self),
-                        .section(.torah, title: "Leis e Origens", tradition: self),
-                        .section(.wisdomBooks, title: "Reflexões e Sabedoria", tradition: self),
-                        .section(.deuterocanonical, title: "Livros Católicos", tradition: self)
-                    ]
-                ),
-                ReadingPreferenceSection(
-                    title: "Livros que mais inspiram você",
-                    options: [
-                        .book(.genesis, tradition: self),
-                        .book(.exodus, tradition: self),
-                        .book(.psalms, tradition: self),
-                        .book(.proverbs, tradition: self),
-                        .book(.isaiah, tradition: self),
-                        .book(.matthew, tradition: self),
-                        .book(.luke, tradition: self),
-                        .book(.john, tradition: self),
-                        .book(.romans, tradition: self),
-                        .book(.corinthians, tradition: self),
-                        .book(.tobias, tradition: self),
-                        .book(.wisdom, tradition: self),
-                        .book(.sirach, tradition: self),
-                        .book(.maccabees, tradition: self)
-                    ]
-                )
-            ]
+            TraditionReadingConfig(
+                question: "O que você quer ler nas pausas?",
+                subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
+                categories: [
+                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Lucas, João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos e cânticos", sections: [.psalms], books: [.psalms], defaultSelected: true),
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Sabedoria, Eclesiástico", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .wisdom, .sirach], defaultSelected: true),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Romanos, Coríntios", sections: [.paulineLetters], books: [.romans, .corinthians]),
+                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías", sections: [.prophets], books: [.isaiah]),
+                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo", sections: [.torah, .historicalBooks], books: [.genesis, .exodus]),
+                    ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Macabeus", sections: [.deuterocanonical], books: [.tobias, .maccabees])
+                ],
+                optionalBooks: [.genesis, .exodus, .psalms, .proverbs, .isaiah, .matthew, .luke, .john, .romans, .corinthians, .tobias, .wisdom, .sirach, .maccabees],
+                minSelected: 1
+            )
         case .protestant:
-            [
-                ReadingPreferenceSection(
-                    title: "Tipos de leitura",
-                    options: [
-                        .section(.gospels, tradition: self),
-                        .section(.psalms, title: "Salmos e Orações", tradition: self),
-                        .section(.proverbs, title: "Sabedoria", tradition: self),
-                        .section(.paulineLetters, tradition: self),
-                        .section(.prophets, tradition: self),
-                        .section(.historicalBooks, title: "Histórias Bíblicas", tradition: self),
-                        .section(.torah, title: "Leis e Origens", tradition: self),
-                        .section(.wisdomBooks, title: "Reflexões e Sabedoria", tradition: self)
-                    ]
-                ),
-                ReadingPreferenceSection(
-                    title: "Livros que mais inspiram você",
-                    options: [
-                        .book(.genesis, tradition: self),
-                        .book(.exodus, tradition: self),
-                        .book(.psalms, tradition: self),
-                        .book(.proverbs, tradition: self),
-                        .book(.isaiah, tradition: self),
-                        .book(.matthew, tradition: self),
-                        .book(.luke, tradition: self),
-                        .book(.john, tradition: self),
-                        .book(.romans, tradition: self),
-                        .book(.corinthians, tradition: self),
-                        .book(.revelation, tradition: self)
-                    ]
-                )
-            ]
+            TraditionReadingConfig(
+                question: "O que você quer ler nas pausas?",
+                subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
+                categories: [
+                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Lucas, João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "salmos", label: "Salmos e louvor", hint: "Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas de Paulo", hint: "Romanos, Coríntios", sections: [.paulineLetters], books: [.romans, .corinthians]),
+                    ReadingStyleCategory(id: "profetas", label: "Profetas e Apocalipse", hint: "Isaías, Apocalipse", sections: [.prophets], books: [.isaiah, .revelation]),
+                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo", sections: [.torah, .historicalBooks], books: [.genesis, .exodus])
+                ],
+                optionalBooks: [.genesis, .exodus, .psalms, .proverbs, .isaiah, .matthew, .luke, .john, .romans, .corinthians, .revelation],
+                minSelected: 1
+            )
         case .jewish:
-            [
-                ReadingPreferenceSection(
-                    title: "Tipos de leitura",
-                    options: [
-                        .section(.torah, title: "Torá — Leis e origens", tradition: self),
-                        .section(.prophets, title: "Profetas — Nevi’im", tradition: self),
-                        .section(.ketuvim, title: "Escritos — Ketuvim", tradition: self),
-                        .section(.psalms, title: "Salmos e Orações — Tehilim", tradition: self),
-                        .section(.proverbs, title: "Sabedoria — Mishlei", tradition: self),
-                        .section(.ethicalWisdom, title: "Ética e vida prática", tradition: self)
-                    ]
-                ),
-                ReadingPreferenceSection(
-                    title: "Livros que mais inspiram você",
-                    options: [
-                        .book(.genesis, title: "Gênesis / Bereshit", tradition: self),
-                        .book(.exodus, title: "Êxodo / Shemot", tradition: self),
-                        .book(.leviticus, title: "Levítico / Vayikra", tradition: self),
-                        .book(.numbers, title: "Números / Bamidbar", tradition: self),
-                        .book(.deuteronomy, title: "Deuteronômio / Devarim", tradition: self),
-                        .book(.psalms, title: "Salmos / Tehilim", tradition: self),
-                        .book(.proverbs, title: "Provérbios / Mishlei", tradition: self),
-                        .book(.isaiah, title: "Isaías / Yeshayahu", tradition: self)
-                    ]
-                )
-            ]
+            TraditionReadingConfig(
+                question: "O que você quer ler nas pausas?",
+                subtitle: "Vamos criar leituras próximas da sua tradição. Você pode mudar depois.",
+                categories: [
+                    ReadingStyleCategory(id: "tora", label: "Torá — Leis e origens", hint: "Bereshit, Shemot, Vayikra, Bamidbar, Devarim", sections: [.torah], books: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy], defaultSelected: true),
+                    ReadingStyleCategory(id: "neviim", label: "Profetas — Nevi\u{2019}im", hint: "Yeshayahu / Isaías", sections: [.prophets], books: [.isaiah]),
+                    ReadingStyleCategory(id: "tehilim", label: "Salmos e orações — Tehilim", hint: "Tehilim / Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria — Mishlei", hint: "Mishlei / Provérbios", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
+                    ReadingStyleCategory(id: "ketuvim", label: "Escritos — Ketuvim", hint: "Tehilim, Mishlei", sections: [.ketuvim], books: [.psalms, .proverbs]),
+                    ReadingStyleCategory(id: "etica", label: "Ética e vida prática", hint: "Trechos morais e de conduta", sections: [.ethicalWisdom], books: [.proverbs, .leviticus, .deuteronomy])
+                ],
+                optionalBooks: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy, .psalms, .proverbs, .isaiah],
+                minSelected: 1
+            )
         case .spiritist:
-            [
-                ReadingPreferenceSection(
-                    title: "Temas de reflexão",
-                    subtitle: "Assuntos espirituais e morais para orientar as leituras.",
-                    options: [
-                        .theme(.gospelOfJesus, tradition: self),
-                        .theme(.innerReform, tradition: self),
-                        .theme(.charity, tradition: self),
-                        .theme(.forgiveness, tradition: self),
-                        .theme(.prayer, tradition: self),
-                        .theme(.family, tradition: self),
-                        .theme(.patience, tradition: self),
-                        .theme(.spiritualEvolution, tradition: self),
-                        .theme(.consolationHope, tradition: self),
-                        .theme(.moralApplication, title: "Vida prática e moral", tradition: self)
-                    ]
-                ),
-                ReadingPreferenceSection(
-                    title: "Textos de apoio",
-                    subtitle: "Fontes que podem apoiar as reflexões espíritas.",
-                    options: [
-                        .section(.gospels, tradition: self),
-                        .section(.psalms, title: "Salmos e Orações", tradition: self),
-                        .section(.proverbs, title: "Sabedoria", tradition: self),
-                        .section(.sermonOnMount, tradition: self),
-                        .section(.parablesOfJesus, tradition: self)
-                    ]
-                )
-            ]
+            TraditionReadingConfig(
+                question: "Quais textos inspiram sua leitura?",
+                subtitle: "Fontes que orientam suas reflexões. Você pode mudar depois.",
+                categories: [
+                    ReadingStyleCategory(id: "evangelho", label: "Evangelho de Jesus", hint: "Mateus, Lucas, João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "sermao", label: "Sermão da Montanha e parábolas", hint: "Mateus 5–7 e parábolas", sections: [.sermonOnMount, .parablesOfJesus], books: [.matthew, .luke], defaultSelected: true),
+                    ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios", sections: [.proverbs], books: [.proverbs]),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Romanos, Coríntios", sections: [.paulineLetters], books: [.romans, .corinthians])
+                ],
+                optionalBooks: [.matthew, .luke, .john, .psalms, .proverbs, .romans, .corinthians],
+                minSelected: 1
+            )
         }
-    }
-
-    var allowedReadingPreferenceOptions: [ReadingPreferenceOption] {
-        readingPreferenceSections.flatMap(\.options)
     }
 
     var aiToneGuidance: String {
@@ -444,21 +369,53 @@ struct UserFaithProfile: Codable, Equatable {
     var favoriteBooks: [BibleBook]
     var favoriteThemes: [SpiritualTheme]
     var explanationDepth: ExplanationDepth
+    /// Categorias de estilo selecionadas no passo "Leituras". Opcional para
+    /// decodificar perfis antigos (nil = migrar inferindo pelos livros salvos).
+    var selectedReadingCategoryIDs: [String]?
+    /// Afinação opcional por livros específicos. Quando presente, vale como
+    /// filtro forte no lugar da união das categorias. Não conta para o mínimo.
+    var refinedBooks: [BibleBook]?
 
     static let starter = UserFaithProfile(
         tradition: .catholic,
         favoriteBibleSections: [.psalms, .gospels],
         favoriteBooks: [.psalms, .john],
         favoriteThemes: [.presence, .discipline],
-        explanationDepth: .medium
+        explanationDepth: .medium,
+        selectedReadingCategoryIDs: ["evangelhos", "salmos", "sabedoria"]
     )
 
-    var selectedReadingPreferenceCount: Int {
-        tradition.allowedReadingPreferenceOptions.filter { contains($0) }.count
+    var selectedReadingCategoryCount: Int {
+        (selectedReadingCategoryIDs ?? []).count
     }
 
     var hasSelectedReadingPreferences: Bool {
-        selectedReadingPreferenceCount > 0
+        selectedReadingCategoryCount >= tradition.readingConfig.minSelected
+    }
+
+    func isCategorySelected(_ id: String) -> Bool {
+        selectedReadingCategoryIDs?.contains(id) ?? false
+    }
+
+    func isRefinedBookSelected(_ book: BibleBook) -> Bool {
+        refinedBooks?.contains(book) ?? false
+    }
+
+    /// Livros elegíveis para a afinação opcional: interseção entre os livros
+    /// do config e a união das categorias selecionadas.
+    var refinementBookPool: [BibleBook] {
+        let config = tradition.readingConfig
+        let unionBooks = Set(selectedCategories.flatMap(\.books))
+        return config.optionalBooks.filter { unionBooks.contains($0) }
+    }
+
+    var selectedCategories: [ReadingStyleCategory] {
+        let config = tradition.readingConfig
+        let ids = selectedReadingCategoryIDs ?? []
+        let selected = config.categories.filter { ids.contains($0.id) }
+        // Perfil sem nenhuma categoria (estado transitório da UI): a geração
+        // segue funcionando com os defaults da tradição.
+        return selected.isEmpty ? config.categories.filter(\.defaultSelected) : selected
     }
 
     var selectedSectionOptionIds: [String] {
@@ -473,66 +430,68 @@ struct UserFaithProfile: Codable, Equatable {
         favoriteThemes.map(\.rawValue).sorted()
     }
 
-    func contains(_ option: ReadingPreferenceOption) -> Bool {
-        switch option.category {
-        case .section:
-            guard let section = option.section else { return false }
-            return favoriteBibleSections.contains(section)
-        case .book:
-            guard let book = option.book else { return false }
-            return favoriteBooks.contains(book)
-        case .theme:
-            guard let theme = option.theme else { return false }
-            return favoriteThemes.contains(theme)
+    mutating func toggleReadingCategory(_ id: String) {
+        var ids = selectedReadingCategoryIDs ?? []
+        if ids.contains(id) {
+            ids.removeAll { $0 == id }
+        } else {
+            ids.append(id)
         }
+        selectedReadingCategoryIDs = ids
     }
 
-    mutating func toggle(_ option: ReadingPreferenceOption) {
-        switch option.category {
-        case .section:
-            guard let section = option.section else { return }
-            if favoriteBibleSections.contains(section) {
-                favoriteBibleSections.removeAll { $0 == section }
-            } else {
-                favoriteBibleSections.append(section)
-            }
-        case .book:
-            guard let book = option.book else { return }
-            if favoriteBooks.contains(book) {
-                favoriteBooks.removeAll { $0 == book }
-            } else {
-                favoriteBooks.append(book)
-            }
-        case .theme:
-            guard let theme = option.theme else { return }
-            if favoriteThemes.contains(theme) {
-                favoriteThemes.removeAll { $0 == theme }
-            } else {
-                favoriteThemes.append(theme)
-            }
+    mutating func toggleRefinedBook(_ book: BibleBook) {
+        var books = refinedBooks ?? []
+        if books.contains(book) {
+            books.removeAll { $0 == book }
+        } else {
+            books.append(book)
         }
+        refinedBooks = books.isEmpty ? nil : books
     }
 
+    /// Deriva favoriteBibleSections/favoriteBooks das categorias selecionadas
+    /// (união dedupada) e valida tudo contra o config da tradição atual.
+    /// Migra perfis antigos (sem selectedReadingCategoryIDs) inferindo as
+    /// categorias pelas escolhas de livros/seções já salvas.
     mutating func normalizeReadingPreferencesForTradition() {
-        let allowed = tradition.allowedReadingPreferenceOptions
-        let allowedSections = Set(allowed.compactMap(\.section))
-        let allowedBooks = Set(allowed.compactMap(\.book))
-        let allowedThemes = Set(allowed.compactMap(\.theme))
-        if !allowedSections.isEmpty {
-            favoriteBibleSections = favoriteBibleSections.filter { allowedSections.contains($0) }
+        let config = tradition.readingConfig
+        let validIDs = Set(config.categories.map(\.id))
+
+        if let stored = selectedReadingCategoryIDs {
+            selectedReadingCategoryIDs = stored.filter { validIDs.contains($0) }
+        } else {
+            // Migração: inferir categorias a partir dos livros/seções antigos
+            // e preservar a escolha estreita original como afinação.
+            let inferred = config.categories.filter { category in
+                category.books.contains(where: favoriteBooks.contains)
+                    || category.sections.contains(where: favoriteBibleSections.contains)
+            }.map(\.id)
+            selectedReadingCategoryIDs = inferred.isEmpty ? config.defaultCategoryIDs : inferred
+            let inferredUnion = Set(selectedCategories.flatMap(\.books))
+            if !favoriteBooks.isEmpty, Set(favoriteBooks).isStrictSubset(of: inferredUnion) {
+                refinedBooks = favoriteBooks
+            }
         }
-        if !allowedBooks.isEmpty || tradition == .spiritist {
-            favoriteBooks = favoriteBooks.filter { allowedBooks.contains($0) }
-        }
-        if !allowedThemes.isEmpty {
-            favoriteThemes = favoriteThemes.filter { allowedThemes.contains($0) }
-        }
+
+        let unionBooks = Self.orderedUnion(selectedCategories.flatMap(\.books))
+        let unionSections = Self.orderedUnion(selectedCategories.flatMap(\.sections))
+        let pool = Set(unionBooks)
+        let refined = Self.orderedUnion((refinedBooks ?? []).filter { pool.contains($0) })
+        refinedBooks = refined.isEmpty ? nil : refined
+
+        favoriteBibleSections = unionSections
+        favoriteBooks = refined.isEmpty ? unionBooks : refined
     }
 
     mutating func normalizeStandaloneThemesForCurrentTradition() {
-        guard tradition != .spiritist else { return }
-        let allowedThemes = Set(SpiritualTheme.standaloneOptions)
+        let allowedThemes = Set(SpiritualTheme.standaloneOptions(for: tradition))
         favoriteThemes = favoriteThemes.filter { allowedThemes.contains($0) }
+    }
+
+    private static func orderedUnion<T: Hashable>(_ values: [T]) -> [T] {
+        var seen = Set<T>()
+        return values.filter { seen.insert($0).inserted }
     }
 }
 
@@ -907,6 +866,11 @@ final class LimiarAppModel {
     func selectTradition(_ tradition: FaithTradition) {
         let didChangeTradition = faithProfile.tradition != tradition
         faithProfile.tradition = tradition
+        if didChangeTradition {
+            // Nova tradição, novo ponto de partida: defaults dela, sem afinação.
+            faithProfile.selectedReadingCategoryIDs = tradition.readingConfig.defaultCategoryIDs
+            faithProfile.refinedBooks = nil
+        }
         faithProfile.normalizeReadingPreferencesForTradition()
         faithProfile.normalizeStandaloneThemesForCurrentTradition()
         saveProfile()
@@ -915,9 +879,13 @@ final class LimiarAppModel {
         }
     }
 
-    func toggleReadingPreference(_ option: ReadingPreferenceOption) {
-        faithProfile.toggle(option)
-        faithProfile.normalizeReadingPreferencesForTradition()
+    func toggleReadingCategory(_ id: String) {
+        faithProfile.toggleReadingCategory(id)
+        saveProfile()
+    }
+
+    func toggleRefinedBook(_ book: BibleBook) {
+        faithProfile.toggleRefinedBook(book)
         saveProfile()
     }
 

@@ -54,7 +54,7 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(!subscription.hasPremiumAccess)
-                    NavigationLink("Livros, temas e seções") {
+                    NavigationLink("Estilos de leitura e livros") {
                         BiblicalPreferencesView()
                     }
                     .disabled(!subscription.hasPremiumAccess)
@@ -179,7 +179,7 @@ struct BiblicalPreferencesView: View {
     @Environment(LimiarAppModel.self) private var model
 
     var body: some View {
-        @Bindable var model = model
+        let config = model.faithProfile.tradition.readingConfig
 
         List {
             Section {
@@ -187,42 +187,70 @@ struct BiblicalPreferencesView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ForEach(model.faithProfile.tradition.readingPreferenceSections) { section in
+            Section {
+                ForEach(config.categories) { category in
+                    Toggle(isOn: categoryBinding(for: category, config: config)) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(category.label)
+                            Text(category.hint)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("Estilos de leitura")
+            } footer: {
+                Text("Escolha ao menos \(config.minSelected). Você pode mudar quando quiser.")
+            }
+
+            let pool = model.faithProfile.refinementBookPool
+            if !pool.isEmpty {
                 Section {
-                    ForEach(section.options) { option in
-                        Toggle(option.title, isOn: binding(for: option))
+                    ForEach(pool) { book in
+                        Toggle(
+                            config.bookDisplayTitle(book, tradition: model.faithProfile.tradition),
+                            isOn: refinedBookBinding(for: book)
+                        )
                     }
                 } header: {
-                    Text(section.title)
+                    Text("Afinar por livros específicos (opcional)")
                 } footer: {
-                    if let subtitle = section.subtitle {
-                        Text(subtitle)
-                    }
+                    Text("Se marcar livros, suas leituras priorizam exatamente esses. Sem marcação, usamos todos os livros dos estilos escolhidos.")
                 }
             }
         }
-        .navigationTitle("Textos e temas")
+        .navigationTitle("Leituras")
         .scrollContentBackground(.hidden)
         .background(LimiarBackground())
         .tint(Color.sageButton)
         .onDisappear {
-            model.faithProfile.normalizeReadingPreferencesForTradition()
             model.saveProfile()
             model.beginNewReading()
         }
     }
 
-    private func binding(for option: ReadingPreferenceOption) -> Binding<Bool> {
+    private func categoryBinding(for category: ReadingStyleCategory, config: TraditionReadingConfig) -> Binding<Bool> {
         Binding {
-            model.faithProfile.contains(option)
+            model.faithProfile.isCategorySelected(category.id)
         } set: { isSelected in
-            let currentlySelected = model.faithProfile.contains(option)
+            let currentlySelected = model.faithProfile.isCategorySelected(category.id)
             guard isSelected != currentlySelected else { return }
-            model.toggleReadingPreference(option)
-            if model.faithProfile.hasSelectedReadingPreferences == false,
-               let fallback = model.faithProfile.tradition.allowedReadingPreferenceOptions.first {
-                model.toggleReadingPreference(fallback)
+            // Mantém sempre ao menos o mínimo selecionado nas configurações.
+            if !isSelected, model.faithProfile.selectedReadingCategoryCount <= config.minSelected {
+                return
             }
+            model.toggleReadingCategory(category.id)
+        }
+    }
+
+    private func refinedBookBinding(for book: BibleBook) -> Binding<Bool> {
+        Binding {
+            model.faithProfile.isRefinedBookSelected(book)
+        } set: { isSelected in
+            let currentlySelected = model.faithProfile.isRefinedBookSelected(book)
+            guard isSelected != currentlySelected else { return }
+            model.toggleRefinedBook(book)
         }
     }
 }

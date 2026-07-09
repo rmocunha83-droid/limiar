@@ -49,7 +49,7 @@ struct OnboardingView: View {
                         case 1:
                             tradition
                         case 2:
-                            booksAndSections
+                            readingStyles
                         case 3:
                             spiritualThemes
                         case 4:
@@ -60,6 +60,7 @@ struct OnboardingView: View {
                             screenTime
                         }
                     }
+                    .id(displayedStep)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                     .animation(.easeInOut(duration: 0.22), value: step)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -125,19 +126,13 @@ struct OnboardingView: View {
         }
     }
 
-    private var shouldSkipStandaloneThemes: Bool {
-        model.faithProfile.tradition == .spiritist
-    }
-
     private var finalOnboardingStep: Int { 5 }
 
     private var visibleSteps: [Int] {
-        shouldSkipStandaloneThemes ? [0, 1, 2, 4, 5] : [0, 1, 2, 3, 4, 5]
+        [0, 1, 2, 3, 4, 5]
     }
 
-    private var displayedStep: Int {
-        shouldSkipStandaloneThemes && step == 3 ? 4 : step
-    }
+    private var displayedStep: Int { step }
 
     private var progressIndex: Int {
         visibleSteps.firstIndex(of: displayedStep) ?? 0
@@ -182,9 +177,9 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 20) {
                 OnboardingTitle(eyebrow: "TEMAS", title: "Quais temas você quer cultivar nas pausas?")
                 ChipGrid(
-                    items: SpiritualTheme.standaloneOptions.map(\.title),
+                    items: SpiritualTheme.standaloneOptions(for: model.faithProfile.tradition).map(\.title),
                     selected: model.faithProfile.favoriteThemes
-                        .filter { SpiritualTheme.standaloneOptions.contains($0) }
+                        .filter { SpiritualTheme.standaloneOptions(for: model.faithProfile.tradition).contains($0) }
                         .map(\.title)
                 ) { title in
                     toggleTheme(title)
@@ -196,28 +191,39 @@ struct OnboardingView: View {
         }
     }
 
-    private var booksAndSections: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                OnboardingTitle(
-                    eyebrow: "LIVROS",
-                    title: "Quais textos você quer priorizar nas suas leituras?"
-                )
+    private var readingStyles: some View {
+        let config = model.faithProfile.tradition.readingConfig
+        let selectedCount = model.faithProfile.selectedReadingCategoryCount
 
-                Text("Vamos criar leituras mais próximas da sua tradição. Você pode mudar depois.")
+        return ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                OnboardingTitle(eyebrow: "LEITURAS", title: config.question)
+
+                Text(config.subtitle)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
 
-                ForEach(model.faithProfile.tradition.readingPreferenceSections) { section in
-                    ReadingPreferenceChipSection(
-                        section: section,
-                        profile: model.faithProfile
-                    ) { option in
-                        toggleReadingPreference(option)
+                VStack(spacing: 12) {
+                    ForEach(config.categories) { category in
+                        ReadingStyleChip(
+                            category: category,
+                            isSelected: model.faithProfile.isCategorySelected(category.id)
+                        ) {
+                            model.toggleReadingCategory(category.id)
+                            readingPreferenceMessage = ""
+                        }
                     }
                 }
+
+                Text(selectedCount == 1
+                    ? "1 selecionado · escolha ao menos \(config.minSelected)"
+                    : "\(selectedCount) selecionados · escolha ao menos \(config.minSelected)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(selectedCount >= config.minSelected ? Color.softText : Color.warmGold)
+
+                OptionalBooksRefinement(config: config)
 
                 if !readingPreferenceMessage.isEmpty {
                     Label(readingPreferenceMessage, systemImage: "info.circle")
@@ -230,6 +236,7 @@ struct OnboardingView: View {
             .padding(.horizontal, Layout.horizontalInset)
             .padding(.vertical, Layout.verticalInset)
         }
+        .id(model.faithProfile.tradition)
     }
 
     private var reflectionDepth: some View {
@@ -327,14 +334,9 @@ struct OnboardingView: View {
         #endif
     }
 
-    private func toggleReadingPreference(_ option: ReadingPreferenceOption) {
-        model.toggleReadingPreference(option)
-        readingPreferenceMessage = ""
-    }
-
     private func toggleTheme(_ title: String) {
-        guard !shouldSkipStandaloneThemes else { return }
-        guard let theme = SpiritualTheme.standaloneOptions.first(where: { $0.title == title }) else { return }
+        let options = SpiritualTheme.standaloneOptions(for: model.faithProfile.tradition)
+        guard let theme = options.first(where: { $0.title == title }) else { return }
         model.toggleTheme(theme)
     }
 
@@ -351,7 +353,7 @@ struct OnboardingView: View {
 
     private func advance() {
         if step == 2, !model.faithProfile.hasSelectedReadingPreferences {
-            readingPreferenceMessage = "Escolha pelo menos uma opção para personalizar suas leituras."
+            readingPreferenceMessage = "Escolha ao menos 1 estilo de leitura para continuar."
             return
         }
 
@@ -402,8 +404,7 @@ struct OnboardingView: View {
     }
 
     private func normalizeCurrentStepForTradition() {
-        guard shouldSkipStandaloneThemes, step == 3 else { return }
-        step = 4
+        // Todas as tradições passam pelos mesmos passos.
     }
 }
 
@@ -800,5 +801,138 @@ struct OnboardingTitle: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Chip de categoria do passo "Leituras": selecionado = preenchimento sage
+/// sólido + check + texto escuro; não selecionado = contorno sutil.
+struct ReadingStyleChip: View {
+    let category: ReadingStyleCategory
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: 14) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(isSelected ? Color.deepInk : Color.softText.opacity(0.55))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(category.label)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.deepInk : Color.ivory)
+                        .multilineTextAlignment(.leading)
+
+                    Text(category.hint)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isSelected ? Color.deepInk.opacity(0.72) : Color.softText)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? Color.sageButton : Color.white.opacity(0.045))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? Color.sageButton : Color.white.opacity(0.14), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityHint(category.hint)
+    }
+}
+
+/// Passo opcional recolhido: afinar por livros específicos. Não conta para o
+/// mínimo. Mostra apenas livros das categorias já selecionadas.
+struct OptionalBooksRefinement: View {
+    @Environment(LimiarAppModel.self) private var model
+    @State private var isExpanded = false
+    let config: TraditionReadingConfig
+
+    var body: some View {
+        let pool = model.faithProfile.refinementBookPool
+
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Text("Afinar por livros específicos (opcional)")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.ivory)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.softText)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(minHeight: 48)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.white.opacity(0.045))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isExpanded ? [.isSelected] : [])
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Se marcar livros, suas leituras priorizam exatamente esses.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.softText)
+
+                    if pool.isEmpty {
+                        Text("Escolha um estilo acima para ver os livros.")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.softText.opacity(0.8))
+                    } else {
+                        FlowLayout(spacing: 10) {
+                            ForEach(pool) { book in
+                                let isSelected = model.faithProfile.isRefinedBookSelected(book)
+                                Button {
+                                    model.toggleRefinedBook(book)
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        if isSelected {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 12, weight: .bold))
+                                        }
+                                        Text(config.bookDisplayTitle(book, tradition: model.faithProfile.tradition))
+                                            .font(.system(size: 14, weight: .semibold))
+                                    }
+                                    .foregroundStyle(isSelected ? Color.deepInk : Color.ivory)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 11)
+                                    .frame(minHeight: 44)
+                                    .background(
+                                        Capsule().fill(isSelected ? Color.sageButton : Color.white.opacity(0.045))
+                                    )
+                                    .overlay(
+                                        Capsule().stroke(isSelected ? Color.sageButton : Color.white.opacity(0.16), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
     }
 }
