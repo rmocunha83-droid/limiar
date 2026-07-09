@@ -105,8 +105,34 @@ function requestContext(req, endpoint) {
   };
 }
 
+// Segredo compartilhado do app. Só é exigido quando LIMIAR_APP_SECRET está
+// configurado no ambiente — assim o backend pode ser publicado antes do build
+// do app que envia o header, e o env só é ativado quando a adoção permitir
+// (builds antigos do TestFlight não enviam o header).
+function validateAppSecret(req) {
+  const expected = trimText(process.env.LIMIAR_APP_SECRET, 200);
+  if (!expected) return true;
+  const provided = trimText(req.headers?.["x-limiar-app-key"] || "", 200);
+  if (!provided || provided.length !== expected.length) return false;
+  const crypto = require("node:crypto");
+  return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+}
+
+// Porteiro dos endpoints de IA: valida o segredo do app e aplica o rate limit.
 function enforceAIRateLimit(req, res, endpoint) {
   const context = requestContext(req, endpoint);
+
+  if (!validateAppSecret(req)) {
+    console.warn("limiar_ai_unauthorized", {
+      endpoint,
+      requestID: context.requestID,
+      clientID: context.clientID
+    });
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: "unauthorized" }));
+    return { allowed: false, context };
+  }
+
   const now = Date.now();
   const windowMs = Number(process.env.LIMIAR_AI_RATE_LIMIT_WINDOW_MS || DEFAULT_RATE_LIMIT_WINDOW_MS);
   const maxRequests = Number(process.env.LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS || DEFAULT_RATE_LIMIT_MAX_REQUESTS);

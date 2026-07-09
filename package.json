@@ -6,6 +6,10 @@
   "scripts": {
     "start": "python3 -m http.server 4173",
     "preview": "python3 -m http.server 4173",
-    "test:ai-backend": "node --test tests/ai-backend.test.js"
+    "test:ai-backend": "node --test tests/ai-backend.test.js",
+    "validate:passages": "python3 scripts/validate_passages.py"
+  },
+  "dependencies": {
+    "@vercel/blob": "^0.27.0"
   }
 }

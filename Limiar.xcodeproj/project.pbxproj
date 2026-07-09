@@ -13,12 +13,21 @@
 		LIMI00000000000000000004 /* PassageServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000014 /* PassageServices.swift */; };
 		LIMI00000000000000000005 /* ScreenTimePolicyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000015 /* ScreenTimePolicyStore.swift */; };
 		LIMI00000000000000000006 /* ScreenTimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000016 /* ScreenTimeController.swift */; };
+		LIMI00000000000000000301 /* LimiarEventLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000300 /* LimiarEventLog.swift */; };
+		LIMI00000000000000000304 /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000303 /* DiagnosticsView.swift */; };
+		LIMI00000000000000000319 /* SharedUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000318 /* SharedUI.swift */; };
+		LIMI00000000000000000317 /* SettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000316 /* SettingsViews.swift */; };
+		LIMI00000000000000000315 /* OnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000314 /* OnboardingViews.swift */; };
+		LIMI00000000000000000313 /* ReadingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000312 /* ReadingViews.swift */; };
+		LIMI00000000000000000311 /* TrialViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000310 /* TrialViews.swift */; };
+		LIMI00000000000000000302 /* LimiarEventLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000300 /* LimiarEventLog.swift */; };
 		LIMI00000000000000000110 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000112 /* SubscriptionManager.swift */; };
 		LIMI00000000000000000111 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000113 /* PaywallView.swift */; };
 		LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000121 /* AdMobBannerView.swift */; };
 		LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000202 /* GoogleMobileAds */; };
 		LIMI00000000000000000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000017 /* Assets.xcassets */; };
 		LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */; };
+		LIMI00000000000000000306 /* passages.json in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000305 /* passages.json */; };
 		LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000031 /* ShieldConfigurationExtension.swift */; };
 		LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000041 /* ShieldActionExtension.swift */; };
 		LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000051 /* DeviceActivityMonitorExtension.swift */; };
@@ -76,6 +85,14 @@
 		LIMI00000000000000000014 /* PassageServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassageServices.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000015 /* ScreenTimePolicyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimePolicyStore.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000016 /* ScreenTimeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeController.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000300 /* LimiarEventLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimiarEventLog.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000305 /* passages.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/passages.json; sourceTree = "<group>"; };
+		LIMI00000000000000000303 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000318 /* SharedUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedUI.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000316 /* SettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViews.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000314 /* OnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViews.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000312 /* ReadingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingViews.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000310 /* TrialViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrialViews.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000122 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		LIMI00000000000000000112 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000113 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
@@ -126,6 +143,14 @@
 				LIMI00000000000000000014 /* PassageServices.swift */,
 				LIMI00000000000000000015 /* ScreenTimePolicyStore.swift */,
 				LIMI00000000000000000016 /* ScreenTimeController.swift */,
+				LIMI00000000000000000300 /* LimiarEventLog.swift */,
+				LIMI00000000000000000303 /* DiagnosticsView.swift */,
+				LIMI00000000000000000318 /* SharedUI.swift */,
+				LIMI00000000000000000316 /* SettingsViews.swift */,
+				LIMI00000000000000000314 /* OnboardingViews.swift */,
+				LIMI00000000000000000312 /* ReadingViews.swift */,
+				LIMI00000000000000000310 /* TrialViews.swift */,
+				LIMI00000000000000000305 /* passages.json */,
 				LIMI00000000000000000122 /* Info.plist */,
 				LIMI00000000000000000112 /* SubscriptionManager.swift */,
 				LIMI00000000000000000113 /* PaywallView.swift */,
@@ -281,6 +306,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				LIMI00000000000000000007 /* Assets.xcassets in Resources */,
+				LIMI00000000000000000306 /* passages.json in Resources */,
 				LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -306,6 +332,13 @@
 				LIMI00000000000000000004 /* PassageServices.swift in Sources */,
 				LIMI00000000000000000005 /* ScreenTimePolicyStore.swift in Sources */,
 				LIMI00000000000000000006 /* ScreenTimeController.swift in Sources */,
+				LIMI00000000000000000301 /* LimiarEventLog.swift in Sources */,
+				LIMI00000000000000000304 /* DiagnosticsView.swift in Sources */,
+				LIMI00000000000000000319 /* SharedUI.swift in Sources */,
+				LIMI00000000000000000317 /* SettingsViews.swift in Sources */,
+				LIMI00000000000000000315 /* OnboardingViews.swift in Sources */,
+				LIMI00000000000000000313 /* ReadingViews.swift in Sources */,
+				LIMI00000000000000000311 /* TrialViews.swift in Sources */,
 				LIMI00000000000000000110 /* SubscriptionManager.swift in Sources */,
 				LIMI00000000000000000111 /* PaywallView.swift in Sources */,
 				LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */,
@@ -314,7 +347,7 @@
 		};
 		LIMI00000000000000000054 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000055 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		LIMI00000000000000000056 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000056 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */, LIMI00000000000000000302 /* LimiarEventLog.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */

@@ -6,34 +6,37 @@ import ManagedSettings
 final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let policyStore = ExtensionPolicyStore()
     private let settingsStore = ManagedSettingsStore(named: ManagedSettingsStore.Name("Limiar"))
-
-    override func intervalDidEnd(for activity: DeviceActivityName) {
-        if activity == .limiarUnlockWindow {
-            policyStore.clearMorningPauseCompletedAt()
-        }
-        reapplyShieldIfNeeded()
-    }
+    private let eventLog = LimiarEventLog(source: "monitor")
 
     override func intervalDidStart(for activity: DeviceActivityName) {
+        eventLog.log("interval_did_start", ["activity": activity.rawValue])
         if activity == .limiarDaily {
             policyStore.clearMorningPauseCompletedAt()
         }
         reapplyShieldIfNeeded()
     }
 
+    override func intervalDidEnd(for activity: DeviceActivityName) {
+        eventLog.log("interval_did_end", ["activity": activity.rawValue])
+        reapplyShieldIfNeeded()
+    }
+
     private func reapplyShieldIfNeeded() {
         guard policyStore.loadPauseAccessEnabled() else {
             settingsStore.clearAllSettings()
+            eventLog.log("shield_skipped", ["reason": "pause_access_disabled"])
             return
         }
 
         guard policyStore.loadBlockingEnabled() else {
             settingsStore.clearAllSettings()
+            eventLog.log("shield_skipped", ["reason": "blocking_disabled"])
             return
         }
 
         if policyStore.hasCompletedMorningPauseToday() {
             settingsStore.clearAllSettings()
+            eventLog.log("shield_skipped", ["reason": "pause_completed_today"])
             return
         }
 
@@ -42,6 +45,11 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         settingsStore.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
         settingsStore.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
         settingsStore.shield.webDomains = selection.webDomainTokens.isEmpty ? nil : selection.webDomainTokens
+        eventLog.log("shield_reapplied", [
+            "apps": "\(selection.applicationTokens.count)",
+            "categories": "\(selection.categoryTokens.count)",
+            "webDomains": "\(selection.webDomainTokens.count)"
+        ])
     }
 
     private func clearHiddenAppRestrictions() {
@@ -52,10 +60,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 }
 
 private struct ExtensionPolicyStore {
-    private static let morningTimeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
     private static var morningCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = morningTimeZone
+        calendar.timeZone = .current
         return calendar
     }
 
@@ -104,5 +111,4 @@ private struct ExtensionPolicyStore {
 
 private extension DeviceActivityName {
     static var limiarDaily: Self { Self("limiar.daily") }
-    static var limiarUnlockWindow: Self { Self("limiar.unlockWindow") }
 }

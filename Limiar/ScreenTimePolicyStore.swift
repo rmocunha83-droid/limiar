@@ -3,7 +3,7 @@ import FamilyControls
 
 struct ScreenTimePolicyStore {
     static let appGroupIdentifier = "group.com.romeucunha.Limiar"
-    static let morningTimeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
+    static let morningTimeZone = TimeZone.current
     static var morningCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = morningTimeZone

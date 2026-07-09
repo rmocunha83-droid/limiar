@@ -303,6 +303,54 @@ test("can enforce a simple per-client AI rate limit", () => {
   }
 });
 
+test("rejects requests without the app secret when it is configured", () => {
+  const previousSecret = process.env.LIMIAR_APP_SECRET;
+  process.env.LIMIAR_APP_SECRET = "unit-secret";
+
+  const makeRes = () => ({
+    statusCode: 200,
+    headers: {},
+    body: "",
+    setHeader(key, value) {
+      this.headers[key] = value;
+    },
+    end(value) {
+      this.body = value;
+    }
+  });
+
+  const withoutKey = {
+    headers: { "x-limiar-client-id": `unit-secret-${Math.random()}` }
+  };
+  const resWithout = makeRes();
+  assert.equal(enforceAIRateLimit(withoutKey, resWithout, "reading-session").allowed, false);
+  assert.equal(resWithout.statusCode, 401);
+  assert.match(resWithout.body, /unauthorized/);
+
+  const withKey = {
+    headers: {
+      "x-limiar-client-id": `unit-secret-${Math.random()}`,
+      "x-limiar-app-key": "unit-secret"
+    }
+  };
+  assert.equal(enforceAIRateLimit(withKey, makeRes(), "reading-session").allowed, true);
+
+  if (previousSecret === undefined) {
+    delete process.env.LIMIAR_APP_SECRET;
+  } else {
+    process.env.LIMIAR_APP_SECRET = previousSecret;
+  }
+
+  const noSecretConfigured = {
+    headers: { "x-limiar-client-id": `unit-secret-${Math.random()}` }
+  };
+  delete process.env.LIMIAR_APP_SECRET;
+  assert.equal(enforceAIRateLimit(noSecretConfigured, makeRes(), "reading-session").allowed, true);
+  if (previousSecret !== undefined) {
+    process.env.LIMIAR_APP_SECRET = previousSecret;
+  }
+});
+
 test("prepares speech text without technical markup", () => {
   const text = normalizeSpeechInput("### Título\n- Item com `json_key` e {marcação}\n\nTexto final.");
   assert.doesNotMatch(text, /###|`|json_key|\{|\}/);

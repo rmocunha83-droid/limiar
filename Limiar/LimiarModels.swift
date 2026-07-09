@@ -887,7 +887,6 @@ final class LimiarAppModel {
             aiContentState = .localReady
             aiGenerationTask?.cancel()
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
         }
     }
 
@@ -1055,6 +1054,7 @@ final class LimiarAppModel {
             ),
             at: 0
         )
+        history = Array(history.prefix(365))
         policyStore.saveHistory(history)
         // Leitura concluída: agora sim os trechos entram no histórico de
         // recentes (anti-repetição) e a sessão do dia é encerrada.
@@ -1066,20 +1066,20 @@ final class LimiarAppModel {
             screenTimeController.scheduleDailyMonitoring()
             screenTimeController.scheduleShieldReapplicationForNextMorning(now: completedAt)
         }
-        unlockNote = "Travessia de hoje concluída. A pausa volta amanhã às 5h."
+        unlockNote = ScreenTimePolicyStore.nextMorningCycleStart(after: completedAt) > completedAt.addingTimeInterval(6 * 3600)
+            ? "Travessia de hoje concluída. A pausa volta amanhã às 5h."
+            : "Travessia concluída. A pausa volta às 5h."
         beginNewReading()
     }
 
     func applyBlocking() {
         guard hasPauseAccess else {
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
             return
         }
 
         guard blockingEnabled else {
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1087,7 +1087,6 @@ final class LimiarAppModel {
 
         guard hasBlockedAppsSelection else {
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1099,20 +1098,17 @@ final class LimiarAppModel {
             return
         }
 
-        screenTimeController.stopUnlockMonitoring()
         screenTimeController.applyShield(selection: selection)
     }
 
     func reapplyBlockIfNeeded() {
         guard hasPauseAccess else {
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
             return
         }
 
         guard blockingEnabled else {
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1120,7 +1116,6 @@ final class LimiarAppModel {
 
         guard hasBlockedAppsSelection else {
             screenTimeController.clearShield()
-            screenTimeController.stopUnlockMonitoring()
             return
         }
 
@@ -1130,7 +1125,6 @@ final class LimiarAppModel {
             screenTimeController.clearShield()
             screenTimeController.scheduleShieldReapplicationForNextMorning()
         } else {
-            screenTimeController.stopUnlockMonitoring()
             screenTimeController.applyShield(selection: selection)
         }
     }

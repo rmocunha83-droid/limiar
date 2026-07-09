@@ -29,11 +29,11 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor(red: 0.94, green: 0.91, blue: 0.84, alpha: 1)
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "\nAntes de continuar, reserve alguns minutos para uma leitura que fortaleça sua fé.\nClique no botão abaixo para começar sua travessia.",
+                text: "\nAntes de continuar, reserve alguns minutos para uma leitura que fortaleça sua fé.\nToque no botão abaixo e abra o Limiar para fazer sua travessia.",
                 color: UIColor(red: 0.74, green: 0.75, blue: 0.75, alpha: 1)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Abrir Limiar",
+                text: "Fazer a travessia",
                 color: UIColor(red: 0.03, green: 0.06, blue: 0.07, alpha: 1)
             ),
             primaryButtonBackgroundColor: UIColor(red: 0.70, green: 0.81, blue: 0.72, alpha: 1),

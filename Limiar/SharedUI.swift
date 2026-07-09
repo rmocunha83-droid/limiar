@@ -1,0 +1,551 @@
+@preconcurrency import AVFoundation
+import FamilyControls
+import ManagedSettings
+import SwiftUI
+
+struct InstagramIcon: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: Color(red: 0.99, green: 0.80, blue: 0.22), location: 0.00),
+                            .init(color: Color(red: 0.98, green: 0.22, blue: 0.32), location: 0.38),
+                            .init(color: Color(red: 0.75, green: 0.16, blue: 0.79), location: 0.72),
+                            .init(color: Color(red: 0.25, green: 0.32, blue: 0.92), location: 1.00)
+                        ],
+                        startPoint: .bottomLeading,
+                        endPoint: .topTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.white, lineWidth: 3)
+                .frame(width: 30, height: 30)
+
+            Circle()
+                .stroke(.white, lineWidth: 3)
+                .frame(width: 12, height: 12)
+
+            Circle()
+                .fill(.white)
+                .frame(width: 5, height: 5)
+                .offset(x: 10, y: -10)
+        }
+    }
+}
+
+struct BlockedApplicationIcon: View {
+    let token: ApplicationToken
+
+    var body: some View {
+        Label(token)
+            .labelStyle(.iconOnly)
+            .scaleEffect(1.22)
+            .frame(width: 58, height: 58)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.sageButton.opacity(0.20), lineWidth: 1)
+            )
+            .accessibilityLabel("App selecionado")
+    }
+}
+
+struct BlockedSelectionHierarchySummary: View {
+    let selection: FamilyActivitySelection
+
+    private var categoryTokens: [ActivityCategoryToken] {
+        Array(selection.categoryTokens).sorted { "\($0)" < "\($1)" }
+    }
+
+    private var applicationTokens: [ApplicationToken] {
+        Array(selection.applicationTokens).sorted { "\($0)" < "\($1)" }
+    }
+
+    private var webDomainTokens: [WebDomainToken] {
+        Array(selection.webDomainTokens).sorted { "\($0)" < "\($1)" }
+    }
+
+    private var totalCount: Int {
+        categoryTokens.count + applicationTokens.count + webDomainTokens.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("SELEÇÃO ATUAL")
+                    .font(.system(size: 12, weight: .bold))
+                    .tracking(1.3)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(selectionCountText)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.softText.opacity(0.78))
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                if !categoryTokens.isEmpty {
+                    BlockedSelectionGroup(
+                        title: categoryTokens.count == 1 ? "Categoria selecionada" : "Categorias selecionadas",
+                        subtitle: categoryTokens.count == 1 ? "Todos os apps desta categoria vão acionar a pausa." : "Todos os apps dessas categorias vão acionar a pausa.",
+                        itemCount: categoryTokens.count,
+                        systemImage: "square.stack.3d.up.fill"
+                    ) {
+                        ForEach(Array(categoryTokens.enumerated()), id: \.element) { index, token in
+                            TokenChildRow(isLast: index == categoryTokens.count - 1) {
+                                Label(token)
+                            }
+                        }
+                    }
+                }
+
+                if !applicationTokens.isEmpty {
+                    BlockedSelectionGroup(
+                        title: applicationTokens.count == 1 ? "App escolhido" : "Apps escolhidos",
+                        subtitle: "Selecionados individualmente no Tempo de Uso.",
+                        itemCount: applicationTokens.count,
+                        systemImage: "app.badge.fill",
+                        showsChildConnectors: false
+                    ) {
+                        ForEach(Array(applicationTokens.enumerated()), id: \.element) { index, token in
+                            TokenChildRow(
+                                isLast: index == applicationTokens.count - 1,
+                                showsConnector: false
+                            ) {
+                                Label(token)
+                            }
+                        }
+                    }
+                }
+
+                if !webDomainTokens.isEmpty {
+                    BlockedSelectionGroup(
+                        title: webDomainTokens.count == 1 ? "Site selecionado" : "Sites selecionados",
+                        subtitle: "Domínios selecionados no Tempo de Uso.",
+                        itemCount: webDomainTokens.count,
+                        systemImage: "globe"
+                    ) {
+                        ForEach(Array(webDomainTokens.enumerated()), id: \.element) { index, token in
+                            TokenChildRow(isLast: index == webDomainTokens.count - 1) {
+                                Label(token)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.deepInk.opacity(0.40), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private var selectionCountText: String {
+        totalCount == 1 ? "1 item" : "\(totalCount) itens"
+    }
+}
+
+struct BlockedSelectionGroup<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let itemCount: Int
+    let systemImage: String
+    var showsChildConnectors = true
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sageButton)
+                    .frame(width: 30, height: 30)
+                    .background(Color.sageButton.opacity(0.13), in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(title)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.ivory)
+
+                        Text(countText)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.softText.opacity(0.68))
+                    }
+
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.softText.opacity(0.74))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.sageButton.opacity(0.80))
+            }
+            .padding(12)
+            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+
+            if showsChildConnectors {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(spacing: 0) {
+                        Rectangle()
+                            .fill(Color.sageButton.opacity(0.28))
+                            .frame(width: 1.2)
+                    }
+                    .frame(width: 16)
+                    .padding(.leading, 4)
+
+                    childRows
+                }
+                .padding(.leading, 22)
+            } else {
+                childRows
+            }
+        }
+    }
+
+    private var childRows: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            content
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
+    }
+
+    private var countText: String {
+        itemCount == 1 ? "· 1 item" : "· \(itemCount) itens"
+    }
+}
+
+struct TokenChildRow<Content: View>: View {
+    let isLast: Bool
+    var showsConnector = true
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: showsConnector ? 8 : 0) {
+            if showsConnector {
+                BranchConnector(isLast: isLast)
+                    .frame(width: 18, height: 38)
+            }
+
+            content
+                .font(.system(size: 14, weight: .semibold))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(Color.ivory.opacity(0.92))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.deepInk.opacity(0.24), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+struct BranchConnector: View {
+    let isLast: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let midY = proxy.size.height / 2
+
+            Path { path in
+                path.move(to: CGPoint(x: 8, y: 0))
+                path.addLine(to: CGPoint(x: 8, y: isLast ? midY : proxy.size.height))
+                path.move(to: CGPoint(x: 8, y: midY))
+                path.addLine(to: CGPoint(x: proxy.size.width, y: midY))
+            }
+            .stroke(Color.sageButton.opacity(0.26), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+        }
+    }
+}
+
+struct LimiarBackground: View {
+    var body: some View {
+        ZStack {
+            Color.deepInk
+                .ignoresSafeArea()
+
+            Image("DoorwayBackground")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+
+            LinearGradient(
+                colors: [
+                    Color.deepInk.opacity(1.0),
+                    Color.deepInk.opacity(0.94),
+                    Color.deepInk.opacity(0.34),
+                    Color.deepInk.opacity(0.78)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .ignoresSafeArea()
+
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0.0),
+                    .init(color: Color.deepInk.opacity(0.18), location: 0.24),
+                    .init(color: Color.deepInk.opacity(0.94), location: 0.42),
+                    .init(color: Color.deepInk.opacity(0.99), location: 1.0)
+                ],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
+    }
+}
+
+struct SelectableRow: View {
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.sageButton : Color.softText)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(Color.ivory)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    Text(subtitle)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.softText)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.78)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.white.opacity(isSelected ? 0.15 : 0.07), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.sageButton.opacity(0.62) : Color.white.opacity(0.12), lineWidth: 1)
+            )
+        }
+    }
+}
+
+struct ChipGrid: View {
+    let items: [String]
+    let selected: [String]
+    let action: (String) -> Void
+
+    var body: some View {
+        FlowLayout(spacing: 10) {
+            ForEach(items, id: \.self) { item in
+                Button {
+                    action(item)
+                } label: {
+                    Text(item)
+                        .font(.system(size: 15, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(selected.contains(item) ? Color.sageButton.opacity(0.30) : Color.white.opacity(0.08), in: Capsule())
+                        .overlay(Capsule().stroke(selected.contains(item) ? Color.sageButton.opacity(0.95) : Color.white.opacity(0.16), lineWidth: selected.contains(item) ? 1.5 : 1))
+                        .foregroundStyle(selected.contains(item) ? Color.sageButton : Color.ivory.opacity(0.92))
+                }
+            }
+        }
+    }
+}
+
+struct ReadingPreferenceChipSection: View {
+    let section: ReadingPreferenceSection
+    let profile: UserFaithProfile
+    let action: (ReadingPreferenceOption) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(section.title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+
+                if let subtitle = section.subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            FlowLayout(spacing: 9) {
+                ForEach(section.options) { option in
+                    let selected = profile.contains(option)
+                    Button {
+                        action(option)
+                    } label: {
+                        ReadingPreferenceChip(title: option.title, isSelected: selected)
+                    }
+                    .accessibilityLabel(option.title)
+                    .accessibilityValue(selected ? "Selecionado" : "Não selecionado")
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.deepInk.opacity(0.26), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+struct ReadingPreferenceChip: View {
+    let title: String
+    let isSelected: Bool
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 14, weight: .semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(backgroundColor, in: Capsule())
+            .overlay(Capsule().stroke(borderColor, lineWidth: borderWidth))
+            .foregroundStyle(foregroundColor)
+    }
+
+    private var backgroundColor: Color {
+        isSelected ? Color.sageButton.opacity(0.30) : Color.deepInk.opacity(0.52)
+    }
+
+    private var borderColor: Color {
+        isSelected ? Color.sageButton.opacity(0.96) : Color.white.opacity(0.18)
+    }
+
+    private var borderWidth: CGFloat {
+        isSelected ? 1.5 : 1
+    }
+
+    private var foregroundColor: Color {
+        isSelected ? Color.sageButton : Color.ivory.opacity(0.94)
+    }
+}
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(proposal: proposal, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let arrangement = arrange(proposal: proposal, subviews: subviews)
+        for (index, frame) in arrangement.frames.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                proposal: ProposedViewSize(frame.size)
+            )
+        }
+    }
+
+    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, frames: [CGRect]) {
+        let maxWidth = proposal.width ?? 340
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var frames: [CGRect] = []
+
+        for subview in subviews {
+            let measuredSize = subview.sizeThatFits(ProposedViewSize(width: maxWidth, height: nil))
+            let size = CGSize(width: min(measuredSize.width, maxWidth), height: measuredSize.height)
+            if x + size.width > maxWidth, x > 0 {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            frames.append(CGRect(origin: CGPoint(x: x, y: y), size: size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+
+        return (CGSize(width: maxWidth, height: y + rowHeight), frames)
+    }
+}
+
+struct LimiarPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 22, weight: .regular, design: .serif))
+            .padding(.horizontal, 12)
+            .frame(width: 148, height: 58)
+            .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
+            .foregroundStyle(Color.deepInk)
+    }
+}
+
+struct LimiarHeroButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 22, weight: .regular, design: .serif))
+            .frame(width: 154, height: 62)
+            .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
+            .foregroundStyle(Color.deepInk)
+    }
+}
+
+extension View {
+    func glassCircle() -> some View {
+        self
+            .foregroundStyle(Color.aquaMist)
+            .background(Color.deepInk.opacity(0.58), in: Circle())
+            .overlay(Circle().stroke(Color.sageButton.opacity(0.34), lineWidth: 1))
+    }
+
+    func limiarPanel() -> some View {
+        self
+            .background(Color.deepInk.opacity(0.58), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.sageButton.opacity(0.20), lineWidth: 1)
+            )
+    }
+}
+
+extension Color {
+    static let deepInk = Color(red: 0.02, green: 0.04, blue: 0.045)
+    static let ivory = Color(red: 0.94, green: 0.91, blue: 0.84)
+    static let softText = Color(red: 0.74, green: 0.75, blue: 0.75)
+    static let sageButton = Color(red: 0.70, green: 0.81, blue: 0.72)
+    static let sageMist = Color(red: 0.58, green: 0.70, blue: 0.63)
+    static let warmGold = Color(red: 0.83, green: 0.62, blue: 0.43)
+    static let aqua = Color.sageButton
+    static let aquaMist = Color.sageMist
+    static let gold = Color.warmGold
+    static let warmStone = Color(red: 0.43, green: 0.41, blue: 0.35)
+}
+
+#Preview {
+    ContentView()
+        .environment(LimiarAppModel())
+}

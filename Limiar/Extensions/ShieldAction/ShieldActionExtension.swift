@@ -18,6 +18,9 @@ final class ShieldActionExtension: ShieldActionDelegate {
         if #available(iOS 26.5, *) {
             return .openParentalControlsApp
         }
-        return .defer
+        // Antes do iOS 26.5 não é possível abrir o Limiar a partir do shield.
+        // `.defer` deixaria o botão sem nenhum efeito visível; `.close` fecha o
+        // app bloqueado e a copy do shield orienta a abrir o Limiar.
+        return .close
     }
 }
