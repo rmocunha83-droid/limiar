@@ -649,6 +649,10 @@ final class LimiarAppModel {
     private let screenTimeController = ScreenTimeController()
     private var lastForegroundRefreshAt = Date.distantPast
     private var aiGenerationTask: Task<Void, Never>?
+    private var prewarmTask: Task<Void, Never>?
+    // Dia a que pertence a sessão exibida: detecta a virada de dia no
+    // foreground para trocar pela sessão pré-gerada do novo ciclo.
+    private var currentSessionDayKey = DailyReadingSessionStore.todayKey()
     private var aiGenerationID = UUID()
 
     init() {
@@ -931,6 +935,66 @@ final class LimiarAppModel {
         beginNewReading(avoidingCurrent: true)
     }
 
+    /// Pré-gera e persiste uma sessão em background, sem tocar no que está em
+    /// tela. Usada (1) no passo de ativação do onboarding, enquanto o usuário
+    /// autoriza o Tempo de Uso, e (2) após concluir a travessia, para que a
+    /// manhã seguinte abra instantânea mesmo em cold start.
+    func prewarmSessionIfNeeded(dayKey: String = DailyReadingSessionStore.todayKey()) {
+        let profile = faithProfile
+        let profileKey = sessionProfileKey(for: profile)
+        guard dailySessionStore.load(profileKey: profileKey, dayKey: dayKey) == nil else { return }
+
+        let candidates = recommender.readingPlan(
+            for: profile,
+            history: history,
+            recentlyShownPassageIDs: recentPassageIDs,
+            minimumCount: 36
+        )
+        let recents = recentPassageIDs
+        let reflections = recentAIReflections
+
+        LimiarAIDiagnostics.log(
+            "prewarm_started",
+            values: ["dayKey": dayKey, "candidates": "\(candidates.count)"]
+                .merging(LimiarAIDiagnostics.profileSnapshot(profile)) { current, _ in current }
+        )
+
+        prewarmTask?.cancel()
+        prewarmTask = Task { [candidates, profile, profileKey, dayKey, recents, reflections] in
+            let service = RemoteAIReadingSessionService()
+            let session = await service.readingSession(
+                for: Array(candidates.prefix(36)),
+                profile: profile,
+                recentPassageIDs: recents,
+                recentReflections: reflections
+            )
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                guard let session else {
+                    LimiarAIDiagnostics.log("prewarm_failed", values: ["dayKey": dayKey])
+                    return
+                }
+                // Se as preferências mudaram durante a geração, descarta:
+                // o fluxo normal gera de novo com o perfil atual.
+                guard sessionProfileKey(for: faithProfile) == profileKey else {
+                    LimiarAIDiagnostics.log("prewarm_discarded", values: ["reason": "profile_changed"])
+                    return
+                }
+                dailySessionStore.save(
+                    DailyReadingSessionSnapshot(
+                        dayKey: dayKey,
+                        profileKey: profileKey,
+                        items: session.items,
+                        reflection: session.reflection
+                    )
+                )
+                LimiarAIDiagnostics.log("prewarm_saved", values: ["dayKey": dayKey, "items": "\(session.items.count)"])
+            }
+        }
+    }
+
     func prepareFreshPassageForForeground() {
         reapplyBlockIfNeeded()
         guard hasCompletedOnboarding else { return }
@@ -939,8 +1003,10 @@ final class LimiarAppModel {
         // Sessão utilizável em tela: não regenera a cada retorno ao foreground.
         // Isso mantém a leitura do dia estável, evita custo repetido de IA e
         // impede que o pool de trechos seja consumido sem o usuário ler.
+        // Exceção: virada de dia — troca pela sessão pré-gerada do novo ciclo.
         if currentSpiritualReadingItems.count >= LimiarReadingConstants.targetItemCount,
-           aiContentState != .fallback {
+           aiContentState != .fallback,
+           currentSessionDayKey == DailyReadingSessionStore.todayKey() {
             return
         }
         guard Date().timeIntervalSince(lastForegroundRefreshAt) > 8 else { return }
@@ -1028,9 +1094,9 @@ final class LimiarAppModel {
         history = Array(history.prefix(365))
         policyStore.saveHistory(history)
         // Leitura concluída: agora sim os trechos entram no histórico de
-        // recentes (anti-repetição) e a sessão do dia é encerrada.
+        // recentes (anti-repetição). A sessão de hoje permanece salva — ela é
+        // o conteúdo concluído do dia; regenerar aqui só queimaria trechos.
         rememberShownPassages(currentReadingPlan)
-        dailySessionStore.clear()
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
         if blockingEnabled && hasBlockedAppsSelection {
@@ -1039,7 +1105,12 @@ final class LimiarAppModel {
         unlockNote = ScreenTimePolicyStore.nextMorningCycleStart(after: completedAt) > completedAt.addingTimeInterval(6 * 3600)
             ? "Travessia de hoje concluída. A pausa volta amanhã às 5h."
             : "Travessia concluída. A pausa volta às 5h."
-        beginNewReading()
+        // Pré-gera a sessão do próximo ciclo em background: amanhã às 5h o
+        // app abre com a travessia pronta, mesmo em cold start.
+        let nextCycleDayKey = DailyReadingSessionStore.todayKey(
+            ScreenTimePolicyStore.nextMorningCycleStart(after: completedAt)
+        )
+        prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
     }
 
     func applyBlocking() {
@@ -1191,6 +1262,7 @@ final class LimiarAppModel {
             currentPassage = first
         }
         currentReflection = reflection
+        currentSessionDayKey = DailyReadingSessionStore.todayKey()
     }
 
     private func emptyReflection() -> AIReflection {

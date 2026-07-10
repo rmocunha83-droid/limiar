@@ -117,6 +117,10 @@ struct OnboardingView: View {
         .onAppear {
             applyDebugTraditionIfNeeded()
             normalizeCurrentStepForTradition()
+            prewarmIfEnteringActivation(step)
+        }
+        .onChange(of: step) { _, newStep in
+            prewarmIfEnteringActivation(newStep)
         }
         .onChange(of: model.selection) { _, _ in
             model.saveProfile()
@@ -405,6 +409,15 @@ struct OnboardingView: View {
 
     private func normalizeCurrentStepForTradition() {
         // Todas as tradições passam pelos mesmos passos.
+    }
+
+    /// No passo de ativação todas as preferências já estão definidas e o
+    /// usuário passa ~30-60s autorizando o Tempo de Uso: geramos a primeira
+    /// sessão em background para o dashboard abrir pronto, sem espera.
+    private func prewarmIfEnteringActivation(_ currentStep: Int) {
+        guard currentStep == finalOnboardingStep else { return }
+        model.saveProfile()
+        model.prewarmSessionIfNeeded()
     }
 }
 

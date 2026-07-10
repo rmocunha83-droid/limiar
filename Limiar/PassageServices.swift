@@ -187,9 +187,13 @@ struct DailyReadingSessionSnapshot: Codable {
     let reflection: AIReflection
 }
 
+/// Guarda até duas sessões: a de hoje e a pré-gerada para o próximo ciclo
+/// (criada em background após a travessia ser concluída). Assim a manhã
+/// seguinte abre instantânea mesmo em cold start.
 struct DailyReadingSessionStore {
     private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
-    private let key = "limiar.dailyReadingSession.v1"
+    private let key = "limiar.dailyReadingSession.v2"
+    private let legacyKey = "limiar.dailyReadingSession.v1"
 
     static func todayKey(_ date: Date = Date()) -> String {
         let formatter = DateFormatter()
@@ -199,23 +203,52 @@ struct DailyReadingSessionStore {
     }
 
     func load(profileKey: String, dayKey: String = DailyReadingSessionStore.todayKey()) -> DailyReadingSessionSnapshot? {
-        guard let data = defaults.data(forKey: key),
-              let snapshot = try? JSONDecoder().decode(DailyReadingSessionSnapshot.self, from: data),
-              snapshot.dayKey == dayKey,
-              snapshot.profileKey == profileKey,
-              snapshot.items.count >= LimiarReadingConstants.targetItemCount else {
-            return nil
+        allSnapshots().first { snapshot in
+            snapshot.dayKey == dayKey
+                && snapshot.profileKey == profileKey
+                && snapshot.items.count >= LimiarReadingConstants.targetItemCount
         }
-        return snapshot
     }
 
     func save(_ snapshot: DailyReadingSessionSnapshot) {
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        defaults.set(data, forKey: key)
+        var snapshots = allSnapshots().filter { $0.dayKey != snapshot.dayKey }
+        snapshots.append(snapshot)
+        persist(snapshots)
     }
 
-    func clear() {
+    func clear(dayKey: String = DailyReadingSessionStore.todayKey()) {
+        persist(allSnapshots().filter { $0.dayKey != dayKey })
+    }
+
+    func clearAll() {
         defaults.removeObject(forKey: key)
+        defaults.removeObject(forKey: legacyKey)
+    }
+
+    private func allSnapshots() -> [DailyReadingSessionSnapshot] {
+        if let data = defaults.data(forKey: key),
+           let snapshots = try? JSONDecoder().decode([DailyReadingSessionSnapshot].self, from: data) {
+            return prune(snapshots)
+        }
+        // Migração do formato antigo (um único snapshot).
+        if let data = defaults.data(forKey: legacyKey),
+           let snapshot = try? JSONDecoder().decode(DailyReadingSessionSnapshot.self, from: data) {
+            return prune([snapshot])
+        }
+        return []
+    }
+
+    private func prune(_ snapshots: [DailyReadingSessionSnapshot]) -> [DailyReadingSessionSnapshot] {
+        // Mantém apenas hoje e dias futuros (chaves yyyy-MM-dd ordenam
+        // lexicograficamente); no máximo 2 sessões.
+        let today = Self.todayKey()
+        return Array(snapshots.filter { $0.dayKey >= today }.sorted { $0.dayKey < $1.dayKey }.prefix(2))
+    }
+
+    private func persist(_ snapshots: [DailyReadingSessionSnapshot]) {
+        guard let data = try? JSONEncoder().encode(prune(snapshots)) else { return }
+        defaults.set(data, forKey: key)
+        defaults.removeObject(forKey: legacyKey)
     }
 }
 
