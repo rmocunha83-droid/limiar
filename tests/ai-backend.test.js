@@ -47,7 +47,7 @@ const PROFILE_WITH_BOOKS = normalizeProfile({
 
 test("keeps GPT-5.4 mini as the default commercial text model", () => {
   assert.equal(DEFAULT_MODEL, "gpt-5.4-mini");
-  assert.equal(DEFAULT_REASONING_EFFORT, "low");
+  assert.equal(DEFAULT_REASONING_EFFORT, "minimal");
 });
 
 test("keeps ElevenLabs Flash as the economical default voice model", () => {

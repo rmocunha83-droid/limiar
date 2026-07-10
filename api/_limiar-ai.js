@@ -1,6 +1,8 @@
 const DEFAULT_MODEL = "gpt-5.4-mini";
 const DEFAULT_TEXT_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_REASONING_EFFORT = "low";
+// "minimal" corta a latência da geração (~20-30%) mantendo o schema estrito.
+// Para reverter sem deploy: setar OPENAI_REASONING_EFFORT=low no Vercel.
+const DEFAULT_REASONING_EFFORT = "minimal";
 const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
 const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_TTS_SPEED = 0.92;
