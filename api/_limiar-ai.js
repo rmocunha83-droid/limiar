@@ -1,6 +1,9 @@
 const DEFAULT_MODEL = "gpt-5.4-mini";
 const DEFAULT_TEXT_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_REASONING_EFFORT = "low";
+// "none" é o tier mais rápido do gpt-5.4 (sem reasoning tokens). Validado
+// contra a lista de valores suportados retornada pela própria API.
+// Para reverter sem deploy: OPENAI_REASONING_EFFORT=low no Vercel.
+const DEFAULT_REASONING_EFFORT = "none";
 const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
 const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_TTS_SPEED = 0.92;
