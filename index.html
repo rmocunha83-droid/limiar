@@ -16,7 +16,52 @@
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', '1567751021802834');
-      fbq('track', 'PageView');
+
+      (function () {
+        function cookieValue(name) {
+          var prefix = name + '=';
+          return document.cookie.split(';').map(function (value) { return value.trim(); }).find(function (value) {
+            return value.indexOf(prefix) === 0;
+          })?.slice(prefix.length) || '';
+        }
+
+        function eventID(prefix) {
+          var randomPart = window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+          return prefix + '_' + Date.now() + '_' + randomPart;
+        }
+
+        function sendServerEvent(eventName, id) {
+          fetch('/api/meta-capi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
+            body: JSON.stringify({
+              eventName: eventName,
+              eventID: id,
+              eventTime: Math.floor(Date.now() / 1000),
+              eventSourceURL: window.location.href,
+              fbp: cookieValue('_fbp'),
+              fbc: cookieValue('_fbc')
+            })
+          }).catch(function () {});
+        }
+
+        function trackEvent(eventName, prefix) {
+          var id = eventID(prefix);
+          fbq('track', eventName, {}, { eventID: id });
+          sendServerEvent(eventName, id);
+        }
+
+        window.addEventListener('DOMContentLoaded', function () {
+          trackEvent('PageView', 'page_view');
+          trackEvent('ViewContent', 'view_content');
+          document.querySelectorAll('a[href^="https://apps.apple.com/br/app/limiar/"]').forEach(function (link) {
+            link.addEventListener('click', function () {
+              trackEvent('Lead', 'app_store_click');
+            });
+          });
+        });
+      })();
     </script>
     <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1567751021802834&ev=PageView&noscript=1"></noscript>
     <!-- End Meta Pixel Code -->
