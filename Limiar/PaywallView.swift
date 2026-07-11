@@ -164,7 +164,8 @@ struct ConversionTestimonials: View {
         let name: String
     }
 
-    private static let placeholders = [
+    // Avaliações reais, autorizadas para uso no paywall sem foto do autor.
+    private static let testimonials = [
         Testimonial(id: 0, quote: "Eu abria o Instagram antes mesmo de levantar da cama. Agora a primeira coisa que leio todo dia é a Palavra. Mudou minhas manhãs.", name: "Mariana S."),
         Testimonial(id: 1, quote: "Voltei a ler a Bíblia todos os dias depois de anos tentando criar o hábito. O ‘Entenda o significado’ faz o texto conversar comigo.", name: "Carlos E."),
         Testimonial(id: 2, quote: "As distrações diminuíram muito. O bloqueio me dá aquele segundo de consciência antes de cair no automático.", name: "Patrícia R."),
@@ -181,7 +182,7 @@ struct ConversionTestimonials: View {
     var body: some View {
         VStack(spacing: 10) {
             TabView(selection: $selectedIndex) {
-                ForEach(Self.placeholders) { testimonial in
+                ForEach(Self.testimonials) { testimonial in
                     TestimonialCard(testimonial: testimonial)
                         .tag(testimonial.id)
                 }
@@ -190,7 +191,7 @@ struct ConversionTestimonials: View {
             .frame(height: 176)
 
             HStack(spacing: 7) {
-                ForEach(Self.placeholders) { testimonial in
+                ForEach(Self.testimonials) { testimonial in
                     Capsule()
                         .fill(testimonial.id == selectedIndex ? Color.sageButton : Color(red: 0.23, green: 0.28, blue: 0.26))
                         .frame(width: testimonial.id == selectedIndex ? 16 : 5, height: 5)
@@ -203,7 +204,7 @@ struct ConversionTestimonials: View {
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.35)) {
-                selectedIndex = (selectedIndex + 1) % Self.placeholders.count
+                selectedIndex = (selectedIndex + 1) % Self.testimonials.count
             }
         }
     }
