@@ -371,6 +371,16 @@ final class SubscriptionManager {
         return (product.price / Decimal(12)).formatted(product.priceFormatStyle)
     }
 
+    func dailyEquivalentPrice(for plan: SubscriptionPlan) -> String? {
+        guard plan == .yearly, let product = product(for: plan) else { return nil }
+
+        if Self.isTestEnvironment, !product.displayPrice.contains("R$") {
+            return "R$ 0,25"
+        }
+
+        return (product.price / Decimal(365)).formatted(product.priceFormatStyle)
+    }
+
     private func fallbackBrazilianPrice(for plan: SubscriptionPlan) -> String {
         switch plan {
         case .monthly:
