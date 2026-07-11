@@ -7,7 +7,8 @@
     "start": "python3 -m http.server 4173",
     "preview": "python3 -m http.server 4173",
     "test:ai-backend": "node --test tests/ai-backend.test.js",
-    "validate:passages": "python3 scripts/validate_passages.py"
+    "validate:passages": "python3 scripts/validate_passages.py",
+    "prewarm:narration": "node scripts/prewarm_narration.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.0"

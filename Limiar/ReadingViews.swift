@@ -302,6 +302,23 @@ struct ReadingView: View {
                     .lineLimit(1)
             }
             .buttonStyle(ReadingActionButtonStyle(isHighlighted: model.isCurrentPassageFavorite))
+
+            if model.hasPremiumAccess {
+                Button {
+                    narration.toggle(segments: model.currentReadingNarrationSegments)
+                } label: {
+                    Label(
+                        narration.state(for: model.currentReadingNarrationSegments).title,
+                        systemImage: narration.state(for: model.currentReadingNarrationSegments).systemImage
+                    )
+                    .lineLimit(1)
+                }
+                .buttonStyle(
+                    ReadingActionButtonStyle(
+                        isHighlighted: narration.state(for: model.currentReadingNarrationSegments).isHighlighted
+                    )
+                )
+            }
         }
     }
 
@@ -513,18 +530,33 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     private let speechService = RemoteAISpeechService()
     private var player: AVAudioPlayer?
     private var playbackTask: Task<Void, Never>?
+    private var prefetchTask: Task<Void, Never>?
     private var activeSpeechText = ""
+    private var queue: [String] = []
+    private var currentSegmentIndex = 0
+    private var prefetchedAudio: Data?
+    private var prefetchedSegmentIndex: Int?
 
     func toggle(text: String) {
-        if (isSpeaking || isGenerating), activeSpeechText == preparedSpeechText(text) {
+        toggle(segments: [text])
+    }
+
+    func toggle(segments: [String]) {
+        let preparedSegments = preparedSegments(from: segments)
+        let identifier = queueIdentifier(for: preparedSegments)
+        if (isSpeaking || isGenerating), activeSpeechText == identifier {
             stop()
         } else {
-            speak(text)
+            speak(preparedSegments)
         }
     }
 
     func state(for text: String) -> PassageNarrationButtonState {
-        guard activeSpeechText == preparedSpeechText(text) else { return .idle }
+        state(for: [text])
+    }
+
+    func state(for segments: [String]) -> PassageNarrationButtonState {
+        guard activeSpeechText == queueIdentifier(for: preparedSegments(from: segments)) else { return .idle }
         if isGenerating { return .generating }
         if isSpeaking { return .playing }
         return .idle
@@ -533,42 +565,63 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     func stop() {
         playbackTask?.cancel()
         playbackTask = nil
+        prefetchTask?.cancel()
+        prefetchTask = nil
         player?.stop()
         player = nil
+        queue = []
+        currentSegmentIndex = 0
+        prefetchedAudio = nil
+        prefetchedSegmentIndex = nil
         activeSpeechText = ""
         isSpeaking = false
         isGenerating = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    private func speak(_ text: String) {
+    private func speak(_ segments: [String]) {
         stop()
 
-        let prepared = preparedSpeechText(text)
-        guard !prepared.isEmpty else { return }
-        activeSpeechText = prepared
+        guard !segments.isEmpty else { return }
+        queue = segments
+        activeSpeechText = queueIdentifier(for: segments)
+        currentSegmentIndex = 0
+        isGenerating = true
+        isSpeaking = false
+        loadAndPlaySegment(at: 0)
+    }
+
+    private func loadAndPlaySegment(at index: Int) {
+        guard queue.indices.contains(index) else {
+            finishQueue()
+            return
+        }
+
+        playbackTask?.cancel()
+        let expectedIdentifier = activeSpeechText
+        let segment = queue[index]
         isGenerating = true
         isSpeaking = false
         let service = speechService
 
         playbackTask = Task { [weak self] in
             do {
-                let audio = try await service.audioData(for: prepared)
+                let audio = try await service.audioData(for: segment)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    self?.play(audio)
+                    guard self?.activeSpeechText == expectedIdentifier else { return }
+                    self?.play(audio, at: index)
                 }
             } catch {
                 await MainActor.run {
-                    self?.activeSpeechText = ""
-                    self?.isGenerating = false
-                    self?.isSpeaking = false
+                    guard self?.activeSpeechText == expectedIdentifier else { return }
+                    self?.finishQueue()
                 }
             }
         }
     }
 
-    private func play(_ data: Data) {
+    private func play(_ data: Data, at index: Int) {
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
@@ -578,94 +631,106 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             audioPlayer.delegate = self
             audioPlayer.prepareToPlay()
             player = audioPlayer
+            currentSegmentIndex = index
             isGenerating = false
             isSpeaking = true
             audioPlayer.play()
+            prefetchSegment(after: index)
         } catch {
-            activeSpeechText = ""
-            isGenerating = false
-            isSpeaking = false
+            finishQueue()
         }
     }
 
-    private func preparedSpeechText(_ text: String) -> String {
-        var prepared = text
-            .replacingOccurrences(of: "APPs", with: "aplicativos")
-            .replacingOccurrences(of: "apps", with: "aplicativos")
-            .replacingOccurrences(of: " / ", with: ", ")
-            .replacingOccurrences(of: "—", with: ", ")
-            .replacingOccurrences(of: "–", with: ", ")
-            .replacingOccurrences(of: "###", with: "")
-            .replacingOccurrences(of: "```", with: "")
-            .replacingOccurrences(of: "`", with: "")
-            .replacingOccurrences(of: "{", with: "")
-            .replacingOccurrences(of: "}", with: "")
-            .replacingOccurrences(of: "[", with: "")
-            .replacingOccurrences(of: "]", with: "")
-            .replacingOccurrences(of: "*", with: "")
-            .replacingOccurrences(of: "\"", with: "")
-            .replacingOccurrences(of: "“", with: "")
-            .replacingOccurrences(of: "”", with: "")
+    private func prefetchSegment(after index: Int) {
+        let nextIndex = index + 1
+        guard queue.indices.contains(nextIndex) else { return }
 
-        prepared = prepared.replacingOccurrences(
-            of: #"(?m)^\s*[-•]\s*"#,
-            with: "",
-            options: .regularExpression
-        )
-        prepared = prepared.replacingOccurrences(
-            of: #"(?m)^\s*#{1,6}\s*"#,
-            with: "",
-            options: .regularExpression
-        )
-        prepared = prepared.replacingOccurrences(
-            of: #""[A-Za-z0-9_]+":\s*"#,
-            with: "",
-            options: .regularExpression
-        )
-        prepared = prepared.replacingOccurrences(
-            of: #"\b[a-zA-Z]+_[a-zA-Z0-9_]+\b"#,
-            with: "",
-            options: .regularExpression
-        )
-        prepared = prepared.replacingOccurrences(
-            of: #"(?m)^[ \t]+"#,
-            with: "",
-            options: .regularExpression
-        )
-        prepared = prepared.replacingOccurrences(
-            of: #"\n{3,}"#,
-            with: "\n\n",
-            options: .regularExpression
-        )
-        prepared = prepared.replacingOccurrences(
-            of: #"([.!?])\s+"#,
-            with: "$1\n\n",
-            options: .regularExpression
-        )
-        return prepared.trimmingCharacters(in: .whitespacesAndNewlines)
+        prefetchTask?.cancel()
+        let expectedIdentifier = activeSpeechText
+        let segment = queue[nextIndex]
+        let service = speechService
+        prefetchTask = Task { [weak self] in
+            do {
+                let audio = try await service.audioData(for: segment)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self?.activeSpeechText == expectedIdentifier else { return }
+                    self?.prefetchedAudio = audio
+                    self?.prefetchedSegmentIndex = nextIndex
+                }
+            } catch {
+                // A troca de segmento ainda solicita o áudio normalmente.
+            }
+        }
+    }
+
+    private func continueQueue() {
+        let nextIndex = currentSegmentIndex + 1
+        guard queue.indices.contains(nextIndex) else {
+            finishQueue()
+            return
+        }
+
+        let expectedIdentifier = activeSpeechText
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled, self?.activeSpeechText == expectedIdentifier else { return }
+            if self?.prefetchedSegmentIndex == nextIndex, let audio = self?.prefetchedAudio {
+                self?.prefetchedAudio = nil
+                self?.prefetchedSegmentIndex = nil
+                self?.play(audio, at: nextIndex)
+            } else {
+                self?.loadAndPlaySegment(at: nextIndex)
+            }
+        }
+    }
+
+    private func preparedSegments(from segments: [String]) -> [String] {
+        segments
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func queueIdentifier(for segments: [String]) -> String {
+        segments.joined(separator: "\u{001F}")
+    }
+
+    private func finishQueue() {
+        player?.stop()
+        player = nil
+        playbackTask?.cancel()
+        playbackTask = nil
+        prefetchTask?.cancel()
+        prefetchTask = nil
+        queue = []
+        prefetchedAudio = nil
+        prefetchedSegmentIndex = nil
+        activeSpeechText = ""
+        isGenerating = false
+        isSpeaking = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor [weak self] in
-            self?.activeSpeechText = ""
-            self?.isGenerating = false
-            self?.isSpeaking = false
             self?.player = nil
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            if flag {
+                self?.continueQueue()
+            } else {
+                self?.finishQueue()
+            }
         }
     }
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         Task { @MainActor [weak self] in
-            self?.player = nil
-            self?.activeSpeechText = ""
-            self?.isGenerating = false
-            self?.isSpeaking = false
+            self?.finishQueue()
         }
     }
 
     deinit {
         playbackTask?.cancel()
+        prefetchTask?.cancel()
         player?.stop()
         activeSpeechText = ""
     }

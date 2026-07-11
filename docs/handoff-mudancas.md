@@ -19,6 +19,7 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 - `vercel.json`: região **`gru1`** (São Paulo) — funções perto dos usuários.
 - **Proteção do backend**: o rate limit permanece obrigatório. `LIMIAR_APP_SECRET` é opcional e, quando usado temporariamente, deve ser injetado no build sem entrar no Git. Uma chave estática no binário não substitui App Attest.
 - **Cache de TTS** (`api/speech.js`) via Vercel Blob: cada áudio é sintetizado uma vez e reusado. A chave inclui provedor e voz efetiva, então uma troca Azure/ElevenLabs não entrega áudio antigo. Requer criar um **Blob Store** no painel do Vercel (gera `BLOB_READ_WRITE_TOKEN`). Sem o token, funciona como antes (sintetiza sempre).
+- **Pré-aquecimento do catálogo:** `npm run prewarm:narration` narra os 977 trechos fixos no Blob, de forma idempotente. A string canônica é exatamente `"{reference}.\n{text}"`; não inclua número da sessão, perfil ou data. O custo único estimado é de 200–400 mil caracteres (poucas dezenas de reais na Azure, conforme o plano). Rode de novo quando o catálogo ganhar trechos. Se `AZURE_SPEECH_VOICE` ou `DEFAULT_AZURE_SPEECH_RATE` mudar, a chave de cache muda e o catálogo precisa ser pré-aquecido novamente.
 
 **Testes:** `tests/ai-backend.test.js` (`npm run test:ai-backend`). CI em `.github/workflows/ci.yml` roda testes + validação do catálogo + build iOS.
 

@@ -14,6 +14,7 @@ const {
   assembleReflection,
   buildExplanationPrompt,
   buildAzureSpeechSSML,
+  canonicalPassageNarrationText,
   depthGuidance,
   depthOutputTokenLimit,
   enforceAIRateLimit,
@@ -65,6 +66,13 @@ test("uses Azure and Antonio Neural as the default speech path", () => {
   assert.equal(normalizeTTSProvider("elevenlabs"), "elevenlabs");
   assert.equal(DEFAULT_AZURE_SPEECH_RATE, "-8%");
   assert.equal(DEFAULT_AZURE_SPEECH_VOICE, "pt-BR-AntonioNeural");
+});
+
+test("fixes the canonical passage narration format used by the prewarmed cache", () => {
+  assert.equal(
+    canonicalPassageNarrationText("Salmo 23", "O Senhor é meu pastor."),
+    "Salmo 23.\nO Senhor é meu pastor."
+  );
 });
 
 test("selects only preferred books when there are enough fresh passages", () => {
