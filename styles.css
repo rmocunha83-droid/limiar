@@ -231,6 +231,20 @@ a {
   display: none;
 }
 
+.desktop-section-store-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 34px;
+}
+
+.desktop-video-copy .desktop-section-store-cta {
+  justify-content: flex-start;
+}
+
+.split-store-cta {
+  grid-column: 1 / -1;
+}
+
 .desktop-video-section {
   width: min(var(--max), calc(100% - 40px));
   margin: 0 auto;
@@ -800,6 +814,10 @@ h1 {
 }
 
 @media (max-width: 860px) {
+  .desktop-section-store-cta {
+    display: none;
+  }
+
   .site-header,
   .desktop-hero {
     display: none;
