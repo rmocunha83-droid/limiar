@@ -5,25 +5,46 @@ const {
   DEFAULT_TTS_VOICE_ID,
   applyAudioHeaders,
   applyCommonHeaders,
+  azureSpeechVoice,
+  callAzureSpeech,
   callElevenLabsSpeech,
   enforceAIRateLimit,
   logAIDiagnostic,
   logAIError,
   parseBody,
-  requirePost
+  requirePost,
+  normalizeTTSProvider
 } = require("./_limiar-ai");
 
 // Cache de áudio no Vercel Blob: cada combinação texto+voz+velocidade+modelo é
 // sintetizada uma única vez. Requer o env BLOB_READ_WRITE_TOKEN (criado
 // automaticamente ao conectar um Blob Store ao projeto). Sem o token, o
 // endpoint funciona como antes, sintetizando a cada chamada.
-function cacheKey(body) {
-  const voice = String(body.voice || process.env.ELEVENLABS_VOICE_ID || DEFAULT_TTS_VOICE_ID);
-  const speed = String(body.speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED);
-  const model = String(process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL);
+function speechConfig(body) {
+  const provider = normalizeTTSProvider();
+  if (provider === "azure") {
+    // O app publicado ainda envia uma voz do ElevenLabs. No Azure ela nunca é
+    // reutilizada: somente AZURE_SPEECH_VOICE define a voz efetiva.
+    return {
+      provider,
+      voice: azureSpeechVoice(),
+      speed: "-8%",
+      model: "azure-speech"
+    };
+  }
+
+  return {
+    provider,
+    voice: String(body.voice || process.env.ELEVENLABS_VOICE_ID || DEFAULT_TTS_VOICE_ID),
+    speed: String(body.speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED),
+    model: String(process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL)
+  };
+}
+
+function cacheKey(body, config = speechConfig(body)) {
   const digest = crypto
     .createHash("sha256")
-    .update([model, voice, speed, String(body.text || "")].join(" "))
+    .update([config.provider, config.model, config.voice, config.speed, String(body.text || "")].join(" "))
     .digest("hex");
   return `tts/${digest}.mp3`;
 }
@@ -73,7 +94,8 @@ module.exports = async function handler(req, res) {
       clientID: rateLimit.context.clientID
     };
 
-    const pathname = cacheKey(body);
+    const config = speechConfig(body);
+    const pathname = cacheKey(body, config);
     if (blobEnabled()) {
       const cachedURL = await findCachedAudio(pathname, debugContext);
       if (cachedURL) {
@@ -85,12 +107,14 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const audio = await callElevenLabsSpeech({
-      input: body.text,
-      voice: body.voice,
-      speed: body.speed,
-      debugContext
-    });
+    const audio = config.provider === "azure"
+      ? await callAzureSpeech({ input: body.text, speed: body.speed, debugContext })
+      : await callElevenLabsSpeech({
+        input: body.text,
+        voice: body.voice,
+        speed: body.speed,
+        debugContext
+      });
 
     if (blobEnabled()) {
       await storeCachedAudio(pathname, audio, debugContext);

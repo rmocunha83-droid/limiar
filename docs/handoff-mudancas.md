@@ -18,7 +18,7 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 **Endurecimento e performance:**
 - `vercel.json`: região **`gru1`** (São Paulo) — funções perto dos usuários.
 - **Proteção do backend**: o rate limit permanece obrigatório. `LIMIAR_APP_SECRET` é opcional e, quando usado temporariamente, deve ser injetado no build sem entrar no Git. Uma chave estática no binário não substitui App Attest.
-- **Cache de TTS** (`api/speech.js`) via Vercel Blob: cada áudio é sintetizado uma vez e reusado. Requer criar um **Blob Store** no painel do Vercel (gera `BLOB_READ_WRITE_TOKEN`). Sem o token, funciona como antes (sintetiza sempre).
+- **Cache de TTS** (`api/speech.js`) via Vercel Blob: cada áudio é sintetizado uma vez e reusado. A chave inclui provedor e voz efetiva, então uma troca Azure/ElevenLabs não entrega áudio antigo. Requer criar um **Blob Store** no painel do Vercel (gera `BLOB_READ_WRITE_TOKEN`). Sem o token, funciona como antes (sintetiza sempre).
 
 **Testes:** `tests/ai-backend.test.js` (`npm run test:ai-backend`). CI em `.github/workflows/ci.yml` roda testes + validação do catálogo + build iOS.
 
@@ -88,6 +88,7 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 ## Variáveis de ambiente do backend (referência)
 
 `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `OPENAI_REASONING_EFFORT`, `OPENAI_TIMEOUT_MS`,
+`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` (ex.: `brazilsouth`), `AZURE_SPEECH_VOICE` (padrão `pt-BR-AntonioNeural`), `AZURE_SPEECH_TIMEOUT_MS`, `TTS_PROVIDER` (padrão `azure`; use `elevenlabs` para reversão),
 `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL`, `ELEVENLABS_TTS_SPEED`, `ELEVENLABS_TTS_TIMEOUT_MS`,
 `LIMIAR_APP_SECRET`, `LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS`, `LIMIAR_AI_RATE_LIMIT_WINDOW_MS`,
 `BLOB_READ_WRITE_TOKEN` (auto ao criar Blob Store), `META_CAPI_ACCESS_TOKEN`.

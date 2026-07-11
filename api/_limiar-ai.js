@@ -7,6 +7,10 @@ const DEFAULT_REASONING_EFFORT = "none";
 const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
 const DEFAULT_TTS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_TTS_SPEED = 0.92;
+// A escolha final do produto é uma voz masculina pt-BR. A variável de ambiente
+// permite trocá-la sem novo deploy.
+const DEFAULT_AZURE_SPEECH_VOICE = "pt-BR-AntonioNeural";
+const DEFAULT_AZURE_SPEECH_RATE = "-8%";
 const DEFAULT_TIMEOUT_MS = 25000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
@@ -770,10 +774,133 @@ async function callElevenLabsSpeech({ input, voice, speed, debugContext = {} }) 
   }
 }
 
+function azureSpeechVoice() {
+  return trimText(process.env.AZURE_SPEECH_VOICE || DEFAULT_AZURE_SPEECH_VOICE, 160);
+}
+
+function normalizeTTSProvider(value = process.env.TTS_PROVIDER) {
+  return String(value || "azure").trim().toLowerCase() === "elevenlabs" ? "elevenlabs" : "azure";
+}
+
+function escapeXML(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildAzureSpeechSSML(input, voice = azureSpeechVoice()) {
+  const cleanInput = normalizeSpeechInput(input);
+  if (!cleanInput) {
+    const error = new Error("Speech input is empty");
+    error.code = "empty_speech_input";
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return `<speak version='1.0' xml:lang='pt-BR'><voice name='${escapeXML(voice)}'><prosody rate='${DEFAULT_AZURE_SPEECH_RATE}'>${escapeXML(cleanInput)}</prosody></voice></speak>`;
+}
+
+async function callAzureSpeech({ input, speed, debugContext = {} }) {
+  const apiKey = process.env.AZURE_SPEECH_KEY;
+  const region = trimText(process.env.AZURE_SPEECH_REGION || "", 80);
+  if (!apiKey || !region) {
+    const error = new Error("AZURE_SPEECH_KEY and AZURE_SPEECH_REGION must be configured");
+    error.code = "missing_azure_speech_config";
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const voice = azureSpeechVoice();
+  const cleanInput = normalizeSpeechInput(input);
+  const ssml = buildAzureSpeechSSML(cleanInput, voice);
+  // A velocidade recebida é mantida apenas para diagnóstico. A Azure usa a
+  // cadência pastoral fixa definida no SSML, sem herdar o valor do cliente iOS.
+  const requestedSpeed = normalizeTTSSpeed(speed ?? DEFAULT_TTS_SPEED);
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    Number(process.env.AZURE_SPEECH_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)
+  );
+
+  try {
+    logAIDiagnostic("azure_tts_request_start", {
+      endpoint: debugContext.endpoint,
+      requestID: debugContext.requestID,
+      clientID: debugContext.clientID,
+      inputLength: cleanInput.length,
+      voice,
+      rate: DEFAULT_AZURE_SPEECH_RATE,
+      requestedSpeed
+    });
+
+    let response;
+    try {
+      response = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": apiKey,
+          "Content-Type": "application/ssml+xml",
+          "X-Microsoft-OutputFormat": "audio-24khz-160kbitrate-mono-mp3",
+          "User-Agent": "Limiar",
+          Accept: "audio/mpeg"
+        },
+        body: ssml,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        const timeoutError = new Error("Azure Speech request timed out");
+        timeoutError.code = "azure_tts_timeout";
+        timeoutError.statusCode = 504;
+        throw timeoutError;
+      }
+      error.code = error.code || "azure_tts_network_error";
+      error.statusCode = error.statusCode || 502;
+      throw error;
+    }
+
+    if (!response.ok) {
+      const responseText = await response.text().catch(() => "");
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { error: { message: responseText } };
+      }
+      const error = new Error(data?.error?.message || responseText || `Azure Speech request failed with ${response.status}`);
+      error.code = classifyProviderError("azure_tts", response.status, data);
+      error.statusCode = response.status;
+      throw error;
+    }
+
+    const audio = Buffer.from(await response.arrayBuffer());
+    if (!audio.length) {
+      const error = new Error("Azure Speech response was empty");
+      error.code = "azure_tts_empty_output";
+      error.statusCode = 502;
+      throw error;
+    }
+
+    logAIDiagnostic("azure_tts_request_success", {
+      endpoint: debugContext.endpoint,
+      requestID: debugContext.requestID,
+      outputBytes: audio.length,
+      voice
+    });
+    return audio;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function normalizeSpeechInput(value) {
   return trimText(value, 12000)
     .replace(/```[\s\S]*?```/g, " ")
-    .replace(/[`*_#>{}\[\]]/g, " ")
+    .replace(/[`*_#{}\[\]]/g, " ")
+    .replace(/^\s*>\s?/gm, "")
     .replace(/\b[a-zA-Z]+_[a-zA-Z0-9_]+\b/g, " ")
     .replace(/^\s*[-•]\s*/gm, "")
     .replace(/\s+\n/g, "\n")
@@ -940,6 +1067,7 @@ module.exports = {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
+  DEFAULT_AZURE_SPEECH_VOICE,
   SESSION_ITEM_COUNT,
   applyAudioHeaders,
   applyCommonHeaders,
@@ -947,7 +1075,10 @@ module.exports = {
   assembleReflection,
   buildExplanationPrompt,
   callTextModel,
+  callAzureSpeech,
   callElevenLabsSpeech,
+  azureSpeechVoice,
+  buildAzureSpeechSSML,
   depthGuidance,
   depthOutputTokenLimit,
   enforceAIRateLimit,
@@ -955,6 +1086,7 @@ module.exports = {
   logAIDiagnostic,
   logAIError,
   normalizeSpeechInput,
+  normalizeTTSProvider,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
