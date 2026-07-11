@@ -76,12 +76,15 @@ async function storeCachedAudio(pathname, audio, debugContext) {
       cacheControlMaxAge: 60 * 60 * 24 * 365
     });
     logAIDiagnostic("tts_cache_stored", { ...debugContext, pathname, bytes: audio.length });
+    return true;
   } catch (error) {
     logAIDiagnostic("tts_cache_store_failed", { ...debugContext, error: String(error?.message || error) });
+    if (debugContext?.throwOnCacheError) throw error;
+    return false;
   }
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   applyCommonHeaders(res);
   if (!requirePost(req, res)) return;
   const rateLimit = enforceAIRateLimit(req, res, "speech");
@@ -109,7 +112,7 @@ module.exports = async function handler(req, res) {
     }
 
     const audio = config.provider === "azure"
-      ? await callAzureSpeech({ input: body.text, speed: body.speed, debugContext })
+      ? await callAzureSpeech({ input: body.text, speed: config.speed, debugContext })
       : await callElevenLabsSpeech({
         input: body.text,
         voice: body.voice,
@@ -130,4 +133,13 @@ module.exports = async function handler(req, res) {
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_speech_failed" }));
   }
-};
+}
+
+module.exports = handler;
+// O script de pré-aquecimento reutiliza estes helpers para gerar exatamente a
+// mesma chave e o mesmo áudio atendidos pelo endpoint HTTP.
+module.exports.blobEnabled = blobEnabled;
+module.exports.cacheKey = cacheKey;
+module.exports.findCachedAudio = findCachedAudio;
+module.exports.speechConfig = speechConfig;
+module.exports.storeCachedAudio = storeCachedAudio;

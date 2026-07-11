@@ -36,3 +36,7 @@ Todos os textos visíveis e textos gerados para o usuário devem usar português
 ## Reflexões personalizadas
 
 O app iOS chama os endpoints em `api/` e nunca carrega chaves de provedores no cliente. Configure `OPENAI_API_KEY` no Vercel para geração textual. Para narração, o padrão é Azure Speech: `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION=brazilsouth`, `AZURE_SPEECH_VOICE=pt-BR-AntonioNeural` e `TTS_PROVIDER=azure`. O app publicado ainda pode enviar um ID de voz do ElevenLabs, mas ele é ignorado quando Azure está ativo. Para reverter sem alterar o app, defina `TTS_PROVIDER=elevenlabs` e mantenha `ELEVENLABS_API_KEY` (mais `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL` e `ELEVENLABS_TTS_SPEED`, se desejado). Usuários em teste gratuito ativo e assinantes usam a experiência completa; usuários no Modo Essencial não geram chamadas remotas de reflexão nem narração e veem anúncios do AdMob. A arquitetura está detalhada em `docs/AI_ARCHITECTURE.md`.
+
+### Pré-aquecimento da narração
+
+Os trechos fixos usam o formato canônico `"{reference}.\n{text}"`, usado de modo idêntico pelo app e pelo cache Vercel Blob. Para preencher o catálogo, execute `npm run prewarm:narration` com `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` e `BLOB_READ_WRITE_TOKEN`. O script é idempotente, processa de 3 a 5 itens em paralelo e só sintetiza itens ausentes.

@@ -782,6 +782,20 @@ function normalizeTTSProvider(value = process.env.TTS_PROVIDER) {
   return String(value || "azure").trim().toLowerCase() === "elevenlabs" ? "elevenlabs" : "azure";
 }
 
+// Contrato de cache para trechos do catálogo. App, endpoint e pré-aquecimento
+// usam exatamente "{reference}.\n{text}"; nenhum dado da sessão pode entrar aqui.
+function canonicalPassageNarrationText(reference, text) {
+  const canonicalReference = trimText(reference, 500);
+  const canonicalText = trimText(text, 12000);
+  if (!canonicalReference || !canonicalText) {
+    const error = new Error("Passage reference and text are required for narration");
+    error.code = "invalid_passage_narration_input";
+    error.statusCode = 400;
+    throw error;
+  }
+  return `${canonicalReference}.\n${canonicalText}`;
+}
+
 function escapeXML(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -1080,6 +1094,7 @@ module.exports = {
   callElevenLabsSpeech,
   azureSpeechVoice,
   buildAzureSpeechSSML,
+  canonicalPassageNarrationText,
   depthGuidance,
   depthOutputTokenLimit,
   enforceAIRateLimit,
