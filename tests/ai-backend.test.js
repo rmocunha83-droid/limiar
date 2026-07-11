@@ -7,14 +7,18 @@ const {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
+  DEFAULT_AZURE_SPEECH_RATE,
+  DEFAULT_AZURE_SPEECH_VOICE,
   SESSION_ITEM_COUNT,
   assembleReadingItems,
   assembleReflection,
   buildExplanationPrompt,
+  buildAzureSpeechSSML,
   depthGuidance,
   depthOutputTokenLimit,
   enforceAIRateLimit,
   normalizeSpeechInput,
+  normalizeTTSProvider,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
@@ -54,6 +58,13 @@ test("keeps ElevenLabs Flash as the economical default voice model", () => {
   assert.equal(DEFAULT_TTS_MODEL, "eleven_flash_v2_5");
   assert.equal(DEFAULT_TTS_VOICE_ID, "21m00Tcm4TlvDq8ikWAM");
   assert.equal(DEFAULT_TTS_SPEED, 0.92);
+});
+
+test("uses Azure and Antonio Neural as the default speech path", () => {
+  assert.equal(normalizeTTSProvider(""), "azure");
+  assert.equal(normalizeTTSProvider("elevenlabs"), "elevenlabs");
+  assert.equal(DEFAULT_AZURE_SPEECH_RATE, "-8%");
+  assert.equal(DEFAULT_AZURE_SPEECH_VOICE, "pt-BR-AntonioNeural");
 });
 
 test("selects only preferred books when there are enough fresh passages", () => {
@@ -355,6 +366,14 @@ test("prepares speech text without technical markup", () => {
   const text = normalizeSpeechInput("### Título\n- Item com `json_key` e {marcação}\n\nTexto final.");
   assert.doesNotMatch(text, /###|`|json_key|\{|\}/);
   assert.match(text, /Texto final/);
+});
+
+test("builds Azure SSML with escaped, normalized Portuguese speech text", () => {
+  const ssml = buildAzureSpeechSSML('### Olá & "paz" <sempre>', "pt-BR-AntonioNeural");
+  assert.match(ssml, /voice name='pt-BR-AntonioNeural'/);
+  assert.match(ssml, /rate='-8%'/);
+  assert.match(ssml, /Olá &amp; &quot;paz&quot; &lt;sempre&gt;/);
+  assert.doesNotMatch(ssml, /###/);
 });
 
 test("normalizes depth synonyms and changes guidance clearly", () => {
