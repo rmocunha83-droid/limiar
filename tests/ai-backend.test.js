@@ -7,6 +7,7 @@ const {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
+  DEFAULT_AZURE_SPEECH_RATE,
   DEFAULT_AZURE_SPEECH_VOICE,
   SESSION_ITEM_COUNT,
   assembleReadingItems,
@@ -62,6 +63,7 @@ test("keeps ElevenLabs Flash as the economical default voice model", () => {
 test("uses Azure and Antonio Neural as the default speech path", () => {
   assert.equal(normalizeTTSProvider(""), "azure");
   assert.equal(normalizeTTSProvider("elevenlabs"), "elevenlabs");
+  assert.equal(DEFAULT_AZURE_SPEECH_RATE, "-8%");
   assert.equal(DEFAULT_AZURE_SPEECH_VOICE, "pt-BR-AntonioNeural");
 });
 

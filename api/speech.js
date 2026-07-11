@@ -3,6 +3,7 @@ const {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_SPEED,
   DEFAULT_TTS_VOICE_ID,
+  DEFAULT_AZURE_SPEECH_RATE,
   applyAudioHeaders,
   applyCommonHeaders,
   azureSpeechVoice,
@@ -28,7 +29,7 @@ function speechConfig(body) {
     return {
       provider,
       voice: azureSpeechVoice(),
-      speed: "-8%",
+      speed: DEFAULT_AZURE_SPEECH_RATE,
       model: "azure-speech"
     };
   }
