@@ -29,6 +29,15 @@ enum FaithTradition: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// Contrato compartilhado com api/_limiar-ai.js: o áudio estático de cada
+// trecho é sempre solicitado como "{reference}.\n{text}". Não acrescente
+// número da sessão, perfil ou data, pois isso invalidaria o cache pré-aquecido.
+func canonicalPassageNarrationText(reference: String, text: String) -> String {
+    let canonicalReference = reference.trimmingCharacters(in: .whitespacesAndNewlines)
+    let canonicalText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    return "\(canonicalReference).\n\(canonicalText)"
+}
+
 enum BibleSection: String, Codable, CaseIterable, Identifiable {
     case gospels
     case psalms
@@ -775,17 +784,12 @@ final class LimiarAppModel {
         .joined(separator: "\n\n")
     }
 
-    var currentReadingNarrationText: String {
-        guard hasPremiumAccess else { return "" }
+    var currentReadingNarrationSegments: [String] {
+        guard hasPremiumAccess else { return [] }
 
-        let passageBlocks = currentSpiritualReadingItems.enumerated().map { index, item in
-            """
-            Texto \(index + 1).
-            \(item.reference).
-            \(item.text)
-            """
+        let passageSegments = currentSpiritualReadingItems.map {
+            canonicalPassageNarrationText(reference: $0.reference, text: $0.text)
         }
-        .joined(separator: "\n\n")
 
         let explanationText = [
             currentReflection.summary,
@@ -810,9 +814,12 @@ final class LimiarAppModel {
         .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         .joined(separator: "\n\n")
 
-        return [passageBlocks, reflectionBlock]
+        return passageSegments + [reflectionBlock]
             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            .joined(separator: "\n\n")
+    }
+
+    var currentReadingNarrationText: String {
+        currentReadingNarrationSegments.joined(separator: "\n\n")
     }
 
     var hasVisibleReadingExplanations: Bool {

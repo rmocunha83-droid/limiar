@@ -260,7 +260,15 @@ private struct DashboardView: View {
                 }
             } else {
                 ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
-                    let narrationText = "\(item.reference). \(item.text). \(item.homily). \(item.practicalConclusion)"
+                    let explanationSegment = [item.homily, item.practicalConclusion]
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                        .joined(separator: "\n\n")
+                    let narrationSegments = [
+                        canonicalPassageNarrationText(reference: item.reference, text: item.text),
+                        explanationSegment
+                    ]
+                    .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
                     SpiritualReadingCard(
                         item: item,
@@ -272,10 +280,10 @@ private struct DashboardView: View {
                             if model.isEssentialMode && subscription.canShowPaywall {
                                 showingPaywall = true
                             } else if !model.isEssentialMode {
-                                narration.toggle(text: narrationText)
+                                narration.toggle(segments: narrationSegments)
                             }
                         },
-                        narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationText),
+                        narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationSegments),
                         showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
                         showsNarration: model.canNarrateCurrentReading || model.isEssentialMode
                     )
