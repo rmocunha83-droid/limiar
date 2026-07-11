@@ -88,6 +88,24 @@
         </div>
       </section>
 
+      <section class="desktop-video-section" aria-label="Vídeo explicando o Limiar">
+        <div class="desktop-video-copy">
+          <p class="eyebrow">Veja em ação</p>
+          <h2>Entenda como uma distração se transforma em pausa.</h2>
+          <p class="section-lead">Veja o Limiar antes de abrir um app: uma leitura breve, uma reflexão e mais presença para seguir o dia.</p>
+        </div>
+        <div class="desktop-video-stage">
+          <div class="phone-video-frame desktop-video-frame">
+            <div class="phone-video-notch" aria-hidden="true"></div>
+            <video class="mobile-demo-video" src="assets/limiar-mobile-demo-1080.mov" autoplay muted playsinline controls preload="metadata"></video>
+          </div>
+          <div class="mobile-video-actions">
+            <button class="video-sound-toggle" type="button">Ativar som</button>
+            <button class="video-restart" type="button">Reiniciar vídeo</button>
+          </div>
+        </div>
+      </section>
+
       <section id="como-funciona" class="section">
         <p class="eyebrow">Como funciona</p>
         <h2>Uma pausa pequena pode mudar o resto do seu dia.</h2>
@@ -256,7 +274,7 @@
       (() => {
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-        document.querySelectorAll(".mobile-video-section").forEach((section) => {
+        document.querySelectorAll(".mobile-video-section, .desktop-video-section").forEach((section) => {
           const video = section.querySelector(".mobile-demo-video");
           const soundButton = section.querySelector(".video-sound-toggle");
           const restartButton = section.querySelector(".video-restart");
