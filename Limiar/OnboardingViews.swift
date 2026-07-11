@@ -222,8 +222,8 @@ struct OnboardingView: View {
                 }
 
                 Text(selectedCount == 1
-                    ? "1 selecionado · escolha ao menos \(config.minSelected)"
-                    : "\(selectedCount) selecionados · escolha ao menos \(config.minSelected)")
+                    ? "1 leitura selecionada"
+                    : "\(selectedCount) leituras selecionadas")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(selectedCount >= config.minSelected ? Color.softText : Color.warmGold)
 
