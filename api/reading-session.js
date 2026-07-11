@@ -62,6 +62,8 @@ module.exports = async function handler(req, res) {
       selectedReferences: selection.selected.map((passage) => passage.reference).join(" + "),
       selectionTier: selection.selectionTier,
       reusedRecentCount: selection.reusedRecentCount,
+      priorityCount: selection.priorityCount,
+      favoriteThemeCount: selection.favoriteThemeCount,
       freshCount: selection.freshCount,
       candidateCount: selection.candidateCount
     });

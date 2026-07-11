@@ -196,13 +196,15 @@ function normalizeProfile(profile = {}) {
     traditionID: trimText(profile.traditionID, 80),
     favoriteSections: compactList(profile.favoriteSections, 8),
     favoriteSectionIDs: compactList(profile.favoriteSectionIDs, 8),
-    favoriteBooks: compactList(profile.favoriteBooks, 12),
-    favoriteBookIDs: compactList(profile.favoriteBookIDs, 12),
+    favoriteBooks: compactList(profile.favoriteBooks, 40),
+    favoriteBookIDs: compactList(profile.favoriteBookIDs, 40),
+    priorityBooks: compactList(profile.priorityBooks, 40),
+    priorityBookIDs: compactList(profile.priorityBookIDs, 40),
     favoriteThemes: compactList(profile.favoriteThemes, 12),
     favoriteThemeIDs: compactList(profile.favoriteThemeIDs, 12),
     explanationDepth: normalizeDepth(profile.explanationDepth),
     avoidedSections: compactList(profile.avoidedSections, 8),
-    avoidedBooks: compactList(profile.avoidedBooks, 12),
+    avoidedBooks: compactList(profile.avoidedBooks, 40),
     toneGuidance: trimText(profile.toneGuidance, 500)
   };
 }
@@ -361,6 +363,7 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
   });
 
   const favoriteBooks = new Set(profile.favoriteBooks.map(normalizeContentIdentity).filter(Boolean));
+  const priorityBooks = new Set(profile.priorityBooks.map(normalizeContentIdentity).filter(Boolean));
   const favoriteSections = new Set(profile.favoriteSections.map(normalizeContentIdentity).filter(Boolean));
   const favoriteThemes = new Set(profile.favoriteThemes.map(normalizeContentIdentity).filter(Boolean));
   const avoidedBooks = new Set(profile.avoidedBooks.map(normalizeContentIdentity).filter(Boolean));
@@ -396,6 +399,7 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
         isRecent,
         lastUsedRank,
         inFavoriteBooks: Boolean(book && favoriteBooks.has(book)),
+        inPriorityBooks: Boolean(book && priorityBooks.has(book)),
         inFavoriteSections: Boolean(section && favoriteSections.has(section)),
         score,
         jitter: stableHash(`${seed}|${passage.id || passage.reference}`)
@@ -425,14 +429,37 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
   const byLeastRecentlyUsed = (lhs, rhs) =>
     rhs.lastUsedRank - lhs.lastUsedRank || byPreference(lhs, rhs);
 
+  const addEntry = (entry, reusedRecent = false) => {
+    selected.push(entry);
+    selectedIndexes.add(entry.index);
+    if (reusedRecent) reusedRecentCount += 1;
+  };
+
+  // O afinamento é prioridade, não filtro: até dois trechos frescos vêm dos
+  // livros escolhidos e a vaga restante preserva uma janela de descoberta.
+  const priorityQuota = priorityBooks.size ? Math.min(2, count) : 0;
+  for (const entry of candidates
+    .filter((candidate) => candidate.inPriorityBooks && !candidate.isRecent)
+    .sort(byPreference)
+    .slice(0, priorityQuota)) {
+    addEntry(entry);
+  }
+  const priorityCount = selected.filter((entry) => entry.inPriorityBooks).length;
+
   for (const tier of tiers) {
     const pool = candidates.filter(
       (entry) => tier.accepts(entry) && !selectedIndexes.has(entry.index)
     );
-    const fresh = pool.filter((entry) => !entry.isRecent).sort(byPreference);
+    const fresh = pool
+      .filter((entry) => !entry.isRecent)
+      .sort((lhs, rhs) => {
+        if (priorityBooks.size && lhs.inPriorityBooks !== rhs.inPriorityBooks) {
+          return lhs.inPriorityBooks ? 1 : -1;
+        }
+        return byPreference(lhs, rhs);
+      });
     for (const entry of fresh) {
-      selected.push(entry);
-      selectedIndexes.add(entry.index);
+      addEntry(entry);
       if (selected.length >= count) break;
     }
     selectionTier = tier.name;
@@ -448,9 +475,7 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
         .filter((entry) => !selectedIndexes.has(entry.index))
         .sort(byLeastRecentlyUsed);
       for (const entry of leastRecentFirst) {
-        selected.push(entry);
-        selectedIndexes.add(entry.index);
-        reusedRecentCount += 1;
+        addEntry(entry, true);
         if (selected.length >= count) break;
       }
     }
@@ -464,10 +489,27 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
       .filter((entry) => !selectedIndexes.has(entry.index))
       .sort(byLeastRecentlyUsed);
     for (const entry of leastRecentFirst) {
-      selected.push(entry);
-      selectedIndexes.add(entry.index);
-      reusedRecentCount += 1;
+      addEntry(entry, true);
       if (selected.length >= count) break;
+    }
+  }
+
+  // Rede de segurança para temas: troca apenas a janela de descoberta (nunca
+  // um trecho da cota de livros) por um candidato fresco do tema preferido.
+  let favoriteThemeCount = selected.filter((entry) => favoriteThemes.has(normalizeContentIdentity(entry.passage.theme))).length;
+  if (favoriteThemes.size && favoriteThemeCount === 0) {
+    const themeCandidate = candidates
+      .filter((entry) => !entry.isRecent && !selectedIndexes.has(entry.index) && favoriteThemes.has(normalizeContentIdentity(entry.passage.theme)))
+      .sort(byPreference)[0];
+    const replacement = selected
+      .filter((entry) => !entry.inPriorityBooks)
+      .sort((lhs, rhs) => lhs.score - rhs.score || rhs.jitter - lhs.jitter || rhs.index - lhs.index)[0];
+    if (themeCandidate && replacement) {
+      const replacementIndex = selected.indexOf(replacement);
+      selectedIndexes.delete(replacement.index);
+      selected[replacementIndex] = themeCandidate;
+      selectedIndexes.add(themeCandidate.index);
+      favoriteThemeCount = 1;
     }
   }
 
@@ -475,6 +517,8 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     selected: selected.slice(0, count).map((entry) => entry.passage),
     selectionTier,
     reusedRecentCount,
+    priorityCount: selected.slice(0, count).filter((entry) => entry.inPriorityBooks).length,
+    favoriteThemeCount,
     freshCount: candidates.filter((entry) => !entry.isRecent).length,
     candidateCount: candidates.length
   };

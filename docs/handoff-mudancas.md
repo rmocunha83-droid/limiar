@@ -10,7 +10,8 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 ## 1. Backend / geração de leituras (Vercel — JÁ EM PRODUÇÃO)
 
 **Arquitetura da geração** (`api/_limiar-ai.js`, `api/reading-session.js`, `spiritual-reading.js`, `reflection.js`):
-- O **servidor seleciona os 3 trechos de forma determinística** (`selectSessionPassages`): livros preferidos = filtro forte; rotação LRU quando o pool preferido está esgotado; só amplia para outros livros quando o nível tem menos de 3 trechos. A IA **não escolhe mais** os versículos.
+- O **servidor seleciona os 3 trechos de forma determinística** (`selectSessionPassages`). `favoriteBooks` aceita até 40 livros e permanece como a união das categorias. `priorityBooks` é opcional: até dois trechos frescos por sessão vêm desses livros, e a vaga restante privilegia descoberta fora deles. Se houver tema favorito, o servidor garante um trecho fresco desse tema quando houver candidato permitido. A IA **não escolhe mais** os versículos.
+- **Compatibilidade:** builds já publicados, que não enviam `priorityBooks`, continuam no caminho legado de seleção; o novo campo só é usado pelo app atualizado.
 - A **IA gera só as explicações** (homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion), com JSON Schema `strict`. Referência e texto bíblico vêm sempre do trecho selecionado — a IA nunca reescreve versículo.
 - **Removido o retry pesado de diversidade** (era a causa dos 422 e da latência de ~24s).
 - Modelo: OpenAI `gpt-5.4-mini` via **Responses API**. `reasoning effort = none` (tier mais rápido suportado; ajustável por env `OPENAI_REASONING_EFFORT`). Budget de tokens por profundidade corrigido (evita JSON truncado).
@@ -38,7 +39,7 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 
 - As duas listas sobrepostas ("Tipos de leitura" + "Livros") viraram **um seletor único de categorias de estilo**, dirigido por config (`ReadingStyleCategory` / `TraditionReadingConfig` em `LimiarModels.swift`) — mesmo componente para as 4 tradições, só muda o dado.
 - Seleção forte (fill sage + check), contador com mínimo 1 e aviso gentil; título sempre visível (bug do texto cortado corrigido).
-- **"Afinar por livros específicos"**: passo opcional recolhido que mostra **todos os livros da tradição** (escolha individual). Quando marcado, os livros escolhidos **substituem** a união das categorias como filtro forte na geração.
+- **"Afinar por livros específicos"**: passo opcional recolhido que mostra **todos os livros da tradição** (escolha individual). Quando marcado, os livros escolhidos passam a ter prioridade diária, sem excluir a união das categorias; isso preserva variedade para livros pequenos.
 - Espírita: temas saíram do passo Leituras e voltaram ao passo TEMAS (com lista de temas própria da tradição). Todas as tradições passam pelos mesmos passos.
 - Perfis antigos migram sozinhos (inferência das categorias pelas escolhas salvas).
 - `ContentView.swift` (era ~3k linhas) foi **dividido** em `TrialViews.swift`, `ReadingViews.swift`, `OnboardingViews.swift`, `SettingsViews.swift`, `SharedUI.swift`.

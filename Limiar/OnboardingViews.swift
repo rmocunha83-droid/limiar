@@ -179,7 +179,7 @@ struct OnboardingView: View {
     private var spiritualThemes: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
-                OnboardingTitle(eyebrow: "TEMAS", title: "Quais temas você quer cultivar nas pausas?")
+                OnboardingTitle(eyebrow: "TEMAS", title: "Quais temas você quer cultivar nas pausas? Um trecho deles estará presente todos os dias.")
                 ChipGrid(
                     items: SpiritualTheme.standaloneOptions(for: model.faithProfile.tradition).map(\.title),
                     selected: model.faithProfile.favoriteThemes
@@ -222,8 +222,8 @@ struct OnboardingView: View {
                 }
 
                 Text(selectedCount == 1
-                    ? "1 selecionado · escolha ao menos \(config.minSelected)"
-                    : "\(selectedCount) selecionados · escolha ao menos \(config.minSelected)")
+                    ? "1 leitura selecionada"
+                    : "\(selectedCount) leituras selecionadas")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(selectedCount >= config.minSelected ? Color.softText : Color.warmGold)
 
@@ -906,7 +906,7 @@ struct OptionalBooksRefinement: View {
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Se marcar livros, suas leituras priorizam exatamente esses.")
+                    Text("Estes livros terão prioridade nas suas leituras diárias — os demais livros das suas escolhas continuam aparecendo para variar.")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.softText)
 

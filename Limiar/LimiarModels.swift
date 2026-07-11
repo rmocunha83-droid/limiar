@@ -477,6 +477,10 @@ struct UserFaithProfile: Codable, Equatable {
         favoriteBooks.map(\.rawValue).sorted()
     }
 
+    var selectedPriorityBookOptionIds: [String] {
+        (refinedBooks ?? []).map(\.rawValue).sorted()
+    }
+
     var selectedThemeOptionIds: [String] {
         favoriteThemes.map(\.rawValue).sorted()
     }
@@ -527,15 +531,15 @@ struct UserFaithProfile: Codable, Equatable {
 
         let unionBooks = Self.orderedUnion(selectedCategories.flatMap(\.books))
         let unionSections = Self.orderedUnion(selectedCategories.flatMap(\.sections))
-        // O afinamento aceita qualquer livro da tradição (escolha individual,
-        // independente das categorias) e, quando presente, vale como filtro
-        // forte no lugar da união — é o que a copy promete ao usuário.
+        // O afinamento aceita qualquer livro da tradição e viaja separado como
+        // prioridade. A união das categorias continua sendo o pool normal,
+        // preservando variedade mesmo quando a pessoa escolhe um livro pequeno.
         let pool = Set(config.optionalBooks)
         let refined = Self.orderedUnion((refinedBooks ?? []).filter { pool.contains($0) })
         refinedBooks = refined.isEmpty ? nil : refined
 
         favoriteBibleSections = unionSections
-        favoriteBooks = refined.isEmpty ? unionBooks : refined
+        favoriteBooks = unionBooks
     }
 
     mutating func normalizeStandaloneThemesForCurrentTradition() {
