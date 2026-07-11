@@ -4,6 +4,8 @@ import SwiftUI
 struct PaywallView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
+    var continueEssential: (() -> Void)? = nil
 
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     private let privacyURL = URL(string: "https://limiar-five.vercel.app/privacy.html")!
@@ -15,289 +17,380 @@ struct PaywallView: View {
             LimiarBackground()
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
-                    header
-                    if subscription.accessState == .trialExpired {
-                        TrialMetricsPanel()
-                    }
-                    benefits
-                    planPicker(selection: $subscription.selectedPlan)
-                    primaryAction
-                    restoreAndLegal
+                VStack(alignment: .leading, spacing: 16) {
+                    ConversionHeader(
+                        eyebrow: "LIMIAR PREMIUM",
+                        title: "Ontem, sua travessia ficou menor.",
+                        subtitle: "Sua pausa continua — mas desde ontem ela vem sem a parte que fazia a diferença."
+                    )
+
+                    ConversionContrastLine(text: "Você continua com a pausa, o bloqueio e os 3 trechos.")
+
+                    ConversionLossBlock(
+                        title: "Desde ontem, você está sem:",
+                        finalItem: "Pausa limpa — anúncios nos trechos e no dashboard"
+                    )
+
+                    ConversionTestimonials(startingIndex: 1)
+
+                    ConversionPlanPicker(selection: $subscription.selectedPlan)
+
+                    ConversionPurchaseSection(
+                        buttonTitle: "Voltar ao Limiar completo",
+                        escapeTitle: "Continuar no Essencial",
+                        escapeAction: {
+                            if let continueEssential {
+                                continueEssential()
+                            } else {
+                                dismiss()
+                            }
+                        }
+                    )
+
+                    ConversionLegalLinks(termsURL: termsURL, privacyURL: privacyURL)
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 58)
-                .padding(.bottom, 28)
+                .padding(.horizontal, 30)
+                .padding(.top, 52)
+                .padding(.bottom, 30)
             }
         }
         .preferredColorScheme(.dark)
-        .task {
-            subscription.start()
-        }
+        .task { subscription.start() }
     }
+}
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image("LimiarLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 58, height: 58)
+struct ConversionHeader: View {
+    let eyebrow: String
+    let title: String
+    let subtitle: String
 
-            Text("Limiar Premium")
-                .font(.system(size: 46, weight: .regular, design: .serif))
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(eyebrow)
+                .font(.system(size: 11, weight: .bold))
+                .tracking(2)
+                .foregroundStyle(Color.warmGold)
+
+            Text(title)
+                .font(.system(size: 27, weight: .regular, design: .serif))
                 .foregroundStyle(Color.ivory)
                 .fixedSize(horizontal: false, vertical: true)
-                .opacity(subscription.accessState == .trialExpired ? 0 : 1)
-                .overlay(alignment: .leading) {
-                    if subscription.accessState == .trialExpired {
-                        Text("Continue sua jornada com o Limiar")
-                            .font(.system(size: 40, weight: .regular, design: .serif))
-                            .foregroundStyle(Color.ivory)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
 
-            Text(headerSubtitle)
-                .font(.system(size: 19))
+            Text(subtitle)
+                .font(.system(size: 13))
                 .foregroundStyle(Color.softText)
-                .lineSpacing(5)
-
-            Text(headerDisclosure)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.warmGold)
                 .lineSpacing(4)
         }
     }
+}
 
-    private var headerSubtitle: String {
-        if subscription.accessState == .trialExpired {
-            return "Você ainda pode continuar no Modo Essencial com trechos e explicações essenciais. Para remover anúncios, narrar os textos e ter maior variedade, assine o Limiar completo."
+struct ConversionContrastLine: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color.sageButton)
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.softText)
         }
-        return "Transforme a pausa antes dos apps selecionados em um momento de reflexão."
+    }
+}
+
+struct ConversionLossBlock: View {
+    let title: String
+    let finalItem: String
+
+    private var items: [String] {
+        [
+            "Reflexão completa: significado, aplicação e pergunta",
+            "Narração com voz natural",
+            "Tradição, profundidade e livros do seu jeito",
+            "Histórico e lista de trechos salvos",
+            finalItem
+        ]
     }
 
-    private var headerDisclosure: String {
-        if subscription.accessState == .trialExpired {
-            return "Seu acesso inicial terminou. O Modo Essencial continua disponível com anúncios e sem narração."
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    ConversionListRow(symbol: "xmark", color: Color.conversionCoral, text: item)
+                    if index < items.count - 1 {
+                        Divider().overlay(Color.conversionDivider)
+                    }
+                }
+            }
+            .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
         }
-        return subscription.pricingDisclosureText
+    }
+}
+
+struct ConversionListRow: View {
+    let symbol: String
+    let color: Color
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(color)
+                .frame(width: 18)
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(Color(red: 0.79, green: 0.81, blue: 0.79))
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+    }
+}
+
+struct ConversionTestimonials: View {
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+
+    struct Testimonial: Identifiable {
+        let id: Int
+        let quote: String
+        let name: String
     }
 
-    private var benefits: some View {
+    private static let placeholders = [
+        Testimonial(id: 0, quote: "Eu abria o Instagram antes mesmo de levantar da cama. Agora a primeira coisa que leio todo dia é a Palavra. Mudou minhas manhãs.", name: "Mariana S."),
+        Testimonial(id: 1, quote: "Voltei a ler a Bíblia todos os dias depois de anos tentando criar o hábito. O ‘Entenda o significado’ faz o texto conversar comigo.", name: "Carlos E."),
+        Testimonial(id: 2, quote: "As distrações diminuíram muito. O bloqueio me dá aquele segundo de consciência antes de cair no automático.", name: "Patrícia R."),
+        Testimonial(id: 3, quote: "Faço a travessia no café da manhã ouvindo os trechos. A narração parece alguém lendo para mim, com calma.", name: "João P."),
+        Testimonial(id: 4, quote: "Cada dia vem um trecho diferente, nos temas que eu escolhi. Sinto que o app respeita a minha fé.", name: "Ana L.")
+    ]
+
+    @State private var selectedIndex: Int
+
+    init(startingIndex: Int = 0) {
+        _selectedIndex = State(initialValue: startingIndex)
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            TabView(selection: $selectedIndex) {
+                ForEach(Self.placeholders) { testimonial in
+                    TestimonialCard(testimonial: testimonial)
+                        .tag(testimonial.id)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 176)
+
+            HStack(spacing: 7) {
+                ForEach(Self.placeholders) { testimonial in
+                    Capsule()
+                        .fill(testimonial.id == selectedIndex ? Color.sageButton : Color(red: 0.23, green: 0.28, blue: 0.26))
+                        .frame(width: testimonial.id == selectedIndex ? 16 : 5, height: 5)
+                        .animation(.easeInOut(duration: 0.2), value: selectedIndex)
+                }
+            }
+        }
+        .task(id: selectedIndex) {
+            guard !voiceOverEnabled else { return }
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.35)) {
+                selectedIndex = (selectedIndex + 1) % Self.placeholders.count
+            }
+        }
+    }
+}
+
+private struct TestimonialCard: View {
+    let testimonial: ConversionTestimonials.Testimonial
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PaywallBenefit(icon: "sparkles", text: "Leituras e reflexões espirituais personalizadas")
-            PaywallBenefit(icon: "rectangle.slash", text: "Experiência sem anúncios")
-            PaywallBenefit(icon: "text.bubble", text: "Explicações em linguagem simples")
-            PaywallBenefit(icon: "book.closed", text: "Escolha de religião, temas e livros preferidos")
-            PaywallBenefit(icon: "slider.horizontal.3", text: "Reflexões curtas, médias ou longas")
-            PaywallBenefit(icon: "arrow.triangle.2.circlepath", text: "Novas mensagens com menos repetição")
-            PaywallBenefit(icon: "clock.arrow.circlepath", text: "Histórico de leituras")
-            PaywallBenefit(icon: "sunrise.fill", text: "Pausas conscientes antes dos apps selecionados")
-        }
-        .padding(16)
-        .limiarPanel()
-    }
+            Text("★★★★★")
+                .font(.system(size: 15, weight: .semibold))
+                .tracking(2)
+                .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
 
-    private func planPicker(selection: Binding<SubscriptionPlan>) -> some View {
+            Text("“\(testimonial.quote)”")
+                .font(.system(size: 14, weight: .regular, design: .serif))
+                .foregroundStyle(Color.ivory)
+                .lineSpacing(3)
+                .lineLimit(5)
+
+            Spacer(minLength: 0)
+
+            Text(testimonial.name)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.softText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(19)
+        .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
+        .padding(.horizontal, 1)
+    }
+}
+
+struct ConversionPlanPicker: View {
+    @Environment(SubscriptionManager.self) private var subscription
+    @Binding var selection: SubscriptionPlan
+
+    var body: some View {
         VStack(spacing: 12) {
             ForEach(SubscriptionPlan.allCases.sorted { $0.sortOrder < $1.sortOrder }) { plan in
-                PaywallPlanRow(
-                    plan: plan,
-                    price: subscription.displayPrice(for: plan),
-                    detailText: subscription.planDetailText(for: plan),
-                    trialText: subscription.trialText(for: plan),
-                    hasFreeTrial: subscription.hasConfirmedFreeTrial(for: plan),
-                    badgeText: plan.badgeText,
-                    isSelected: selection.wrappedValue == plan
-                ) {
-                    selection.wrappedValue = plan
+                Button {
+                    selection = plan
+                } label: {
+                    VStack(alignment: .leading, spacing: 7) {
+                        if plan == .yearly {
+                            Text("MAIS ESCOLHIDO")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1)
+                                .foregroundStyle(Color.deepInk)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(Color.sageButton, in: Capsule())
+                        }
+
+                        HStack {
+                            Image(systemName: selection == plan ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(selection == plan ? Color.sageButton : Color.softText)
+                            Text(plan.title)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.ivory)
+                            Spacer()
+                            Text(mainPrice(for: plan))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.ivory)
+                        }
+
+                        Text(detail(for: plan))
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.softText)
+                            .padding(.leading, 31)
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 16)
+                    .background(selection == plan ? Color(red: 0.086, green: 0.13, blue: 0.12) : Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(selection == plan ? Color.sageButton : Color.conversionBorder, lineWidth: selection == plan ? 2 : 1))
                 }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private var primaryAction: some View {
+    private func mainPrice(for plan: SubscriptionPlan) -> String {
+        if plan == .yearly, let monthly = subscription.monthlyEquivalentPrice(for: plan) {
+            return "\(monthly)/mês"
+        }
+        return subscription.displayPrice(for: plan)
+    }
+
+    private func detail(for plan: SubscriptionPlan) -> String {
+        switch plan {
+        case .yearly:
+            return "\(subscription.displayPrice(for: plan)) por ano · menos de R$ 0,25 por dia"
+        case .monthly:
+            return "Renovação mensal · cancele quando quiser"
+        }
+    }
+}
+
+struct ConversionPurchaseSection: View {
+    @Environment(SubscriptionManager.self) private var subscription
+    let buttonTitle: String
+    let escapeTitle: String
+    var escapeAction: (() -> Void)?
+
+    var body: some View {
         VStack(spacing: 10) {
             Button {
-                Task {
-                    await subscription.purchaseSelectedPlan()
-                }
+                Task { await subscription.purchaseSelectedPlan() }
             } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     if subscription.state == .purchasing {
-                        ProgressView()
-                            .tint(Color.deepInk)
+                        ProgressView().tint(Color.deepInk)
                     }
-                    Text(subscription.primaryButtonTitle(for: subscription.selectedPlan))
+                    Text(buttonTitle)
                     Image(systemName: "arrow.right")
                 }
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .frame(maxWidth: .infinity)
-                .frame(height: 60)
+                .frame(height: 56)
                 .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
                 .foregroundStyle(Color.deepInk)
             }
             .disabled(!subscription.canPurchase(subscription.selectedPlan))
             .opacity(subscription.canPurchase(subscription.selectedPlan) ? 1 : 0.62)
 
-            Text(subscription.renewalDisclosure(for: subscription.selectedPlan))
-                .font(.system(size: 13, weight: .medium))
+            Button(escapeTitle) { escapeAction?() }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.softText)
+                .frame(maxWidth: .infinity)
+
+            Text("Cancele quando quiser · A App Store confirma antes de cobrar")
+                .font(.system(size: 11))
                 .foregroundStyle(Color.softText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
-            Text("A assinatura renova automaticamente, salvo cancelamento pelo menos 24 horas antes do fim do período atual.")
-                .font(.system(size: 12))
-                .foregroundStyle(Color.softText.opacity(0.86))
-                .lineSpacing(3)
+            Text(subscription.renewalDisclosure(for: subscription.selectedPlan))
+                .font(.system(size: 11))
+                .foregroundStyle(Color.softText.opacity(0.85))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
             if !subscription.statusText.isEmpty {
                 Text(subscription.statusText)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(statusColor)
-                    .lineSpacing(3)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.softText)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 2)
             }
         }
     }
+}
 
-    private var restoreAndLegal: some View {
-        VStack(spacing: 14) {
+struct ConversionLegalLinks: View {
+    @Environment(SubscriptionManager.self) private var subscription
+    @Environment(\.openURL) private var openURL
+    let termsURL: URL
+    let privacyURL: URL
+
+    var body: some View {
+        VStack(spacing: 12) {
             Button {
-                Task {
-                    await subscription.restorePurchases()
-                }
+                Task { await subscription.restorePurchases() }
             } label: {
                 Label("Restaurar compra", systemImage: "arrow.clockwise")
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                    .font(.system(size: 13, weight: .semibold))
             }
             .disabled(subscription.isBusy)
 
-            NavigationLink {
-                SettingsView()
-            } label: {
-                Label("Configurações básicas", systemImage: "gearshape")
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.10), lineWidth: 1))
-            }
-
             HStack(spacing: 18) {
-                Button("Termos de Uso") {
-                    openURL(termsURL)
-                }
-                Button("Política de Privacidade") {
-                    openURL(privacyURL)
-                }
+                Button("Termos de Uso") { openURL(termsURL) }
+                Button("Política de Privacidade") { openURL(privacyURL) }
             }
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .foregroundStyle(Color.sageButton)
             .frame(maxWidth: .infinity)
         }
     }
-
-    private var statusColor: Color {
-        switch subscription.state {
-        case .failed, .productsUnavailable:
-            return Color.warmGold
-        case .purchased, .restored, .active:
-            return Color.sageButton
-        default:
-            return Color.softText
-        }
-    }
 }
 
-private struct PaywallBenefit: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.warmGold)
-                .frame(width: 24)
-                .padding(.top, 2)
-
-            Text(text)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.ivory)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-private struct PaywallPlanRow: View {
-    let plan: SubscriptionPlan
-    let price: String
-    let detailText: String
-    let trialText: String
-    let hasFreeTrial: Bool
-    let badgeText: String?
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .center, spacing: 14) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color.sageButton : Color.softText)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text(plan.title)
-                            .font(.system(size: 21, weight: .semibold, design: .serif))
-                            .foregroundStyle(Color.ivory)
-
-                        if let badgeText {
-                            Text(badgeText)
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(Color.deepInk)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.warmGold.opacity(0.95), in: Capsule())
-                        }
-                    }
-
-                    Text(price)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.ivory)
-
-                    Text(detailText)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.softText)
-
-                }
-
-                Spacer()
-            }
-            .padding(16)
-            .background(Color.white.opacity(isSelected ? 0.15 : 0.07), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.sageButton.opacity(0.70) : Color.white.opacity(0.12), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityText)
-    }
-
-    private var accessibilityText: String {
-        hasFreeTrial ? "\(plan.title), \(price), \(trialText)" : "\(plan.title), \(price)"
-    }
+extension Color {
+    static let conversionPanel = Color(red: 0.067, green: 0.106, blue: 0.11)
+    static let conversionBorder = Color(red: 0.141, green: 0.192, blue: 0.184)
+    static let conversionDivider = Color(red: 0.114, green: 0.157, blue: 0.153)
+    static let conversionCoral = Color(red: 0.847, green: 0.541, blue: 0.478)
 }
 
 #Preview {

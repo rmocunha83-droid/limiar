@@ -200,6 +200,7 @@ struct SpiritualReadingCard: View {
 struct ReadingView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
+    @Environment(\.requestReview) private var requestReview
     @StateObject private var narration = PassageNarrationService()
     @State private var now = Date()
     @State private var showingPaywall = false
@@ -395,6 +396,7 @@ struct ReadingView: View {
     private var completionButton: some View {
         Button {
             model.finishReading()
+            requestReviewIfEligibleAfterCompletion()
         } label: {
             Text(model.canCompleteReading ? "Concluir leitura" : "Siga no seu tempo")
                 .font(.system(size: 18, weight: .semibold))
@@ -404,6 +406,22 @@ struct ReadingView: View {
                 .foregroundStyle(model.canCompleteReading ? .black : Color.ivory.opacity(0.65))
         }
         .disabled(!model.canCompleteReading)
+    }
+
+    private func requestReviewIfEligibleAfterCompletion() {
+        let history = model.history
+        let readingWasHealthy = model.aiContentState != .fallback
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            guard subscription.claimReviewRequestIfEligible(
+                history: history,
+                readingWasHealthy: readingWasHealthy
+            ) else {
+                return
+            }
+
+            requestReview()
+        }
     }
 }
 

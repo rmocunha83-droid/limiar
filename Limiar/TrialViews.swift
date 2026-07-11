@@ -12,69 +12,48 @@ struct EssentialModeIntroView: View {
             LimiarBackground()
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
-                    Image("LimiarLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 62, height: 62)
+                VStack(alignment: .leading, spacing: 18) {
+                    ConversionHeader(
+                        eyebrow: "MODO ESSENCIAL",
+                        title: "Seu acesso inicial terminou.",
+                        subtitle: "Sua pausa diária continua funcionando, gratuita. Veja o que fica com você:"
+                    )
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("MODO ESSENCIAL")
-                            .font(.system(size: 13, weight: .bold))
-                            .tracking(1.3)
-                            .foregroundStyle(Color.warmGold)
-
-                        Text("Modo Essencial ativado")
-                            .font(.system(size: 43, weight: .regular, design: .serif))
-                            .foregroundStyle(Color.ivory)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Text("Seu acesso inicial terminou. Você ainda pode continuar usando o Limiar com trechos e explicações essenciais. A versão essencial exibe anúncios e não inclui narração.")
-                            .font(.system(size: 18))
-                            .foregroundStyle(Color.softText)
-                            .lineSpacing(5)
-
-                        Text("Para remover anúncios, narrar os textos e ter maior variedade de trechos, assine o Limiar completo.")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color.sageButton)
-                            .lineSpacing(4)
+                    VStack(spacing: 0) {
+                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Pausa diária e bloqueio dos seus apps")
+                        Divider().overlay(Color.conversionDivider)
+                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "3 trechos por leitura, com explicações essenciais")
+                        Divider().overlay(Color.conversionDivider)
+                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Salvar trechos enquanto lê")
                     }
+                    .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
 
-                    VStack(alignment: .leading, spacing: 13) {
-                        TrialDisclosureRow(icon: "book.closed", text: "3 trechos e explicações essenciais continuam disponíveis")
-                        TrialDisclosureRow(icon: "rectangle.3.group", text: "Anúncios aparecem apenas no Modo Essencial")
-                        TrialDisclosureRow(icon: "speaker.wave.2", text: "Narração dos textos na versão completa")
-                        TrialDisclosureRow(icon: "arrow.triangle.2.circlepath", text: "Maior variedade e experiência sem anúncios na versão completa")
-                    }
-                    .padding(16)
-                    .limiarPanel()
+                    Text("O Essencial exibe anúncios e não inclui narração, a reflexão completa nem personalização. Você pode voltar ao completo quando quiser.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(3)
 
-                    if subscription.canShowPaywall {
-                        NavigationLink {
-                            PaywallView()
-                        } label: {
-                            HStack(spacing: 12) {
-                                Text("Ver planos")
-                                Image(systemName: "arrow.right")
-                            }
-                            .font(.system(size: 18, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 60)
-                            .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
-                            .foregroundStyle(Color.deepInk)
-                        }
-                    }
-
-                    Button("Continuar no Modo Essencial") {
+                    Button("Entendi, continuar") {
                         continueEssential()
                     }
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.sageButton)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.deepInk)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .frame(height: 56)
+                    .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
+
+                    NavigationLink {
+                        PaywallView()
+                    } label: {
+                        Text("Conhecer o Limiar completo")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.softText)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 58)
+                .padding(.horizontal, 30)
+                .padding(.top, 52)
                 .padding(.bottom, 30)
             }
         }
@@ -143,7 +122,7 @@ struct FreeTrialStartView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 22)
+                .padding(.horizontal, 30)
                 .padding(.top, 58)
                 .padding(.bottom, 30)
             }
@@ -153,70 +132,67 @@ struct FreeTrialStartView: View {
 
 struct TrialConversionView: View {
     @Environment(SubscriptionManager.self) private var subscription
+    @Environment(LimiarAppModel.self) private var model
     let continueTrial: () -> Void
 
     var body: some View {
+        @Bindable var subscription = subscription
+
         ZStack {
             LimiarBackground()
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(subscription.trialRemainingText.uppercased())
-                            .font(.system(size: 13, weight: .bold))
-                            .tracking(1.3)
-                            .foregroundStyle(Color.warmGold)
+                VStack(alignment: .leading, spacing: 16) {
+                    ConversionHeader(
+                        eyebrow: "SEU ACESSO COMPLETO TERMINA AMANHÃ",
+                        title: "Continue sem interrupção.",
+                        subtitle: "Você não precisa perder nada do que construiu nestes 7 dias."
+                    )
 
-                        Text("Continue sua jornada com o Limiar")
-                            .font(.system(size: 42, weight: .regular, design: .serif))
-                            .foregroundStyle(Color.ivory)
-                            .fixedSize(horizontal: false, vertical: true)
+                    TrialRhythmPanel(readings: model.history.count)
 
-                        Text("Você já começou a recuperar seu foco e criar uma rotina espiritual. Para continuar usando as pausas, leituras e reflexões personalizadas após o acesso inicial, assine o Limiar Premium.")
-                            .font(.system(size: 17))
-                            .foregroundStyle(Color.softText)
-                            .lineSpacing(5)
-                    }
+                    ConversionLossBlock(
+                        title: "Amanhã, sem o Premium, você perde:",
+                        finalItem: "Pausa limpa — passará a ver anúncios"
+                    )
 
-                    TrialMetricsPanel()
+                    ConversionTestimonials(startingIndex: 0)
 
-                    if subscription.canShowPaywall {
-                        NavigationLink {
-                            PaywallView()
-                        } label: {
-                            HStack(spacing: 12) {
-                                Text("Ver planos Premium")
-                                Image(systemName: "arrow.right")
-                            }
-                            .font(.system(size: 18, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 60)
-                            .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
-                            .foregroundStyle(Color.deepInk)
-                        }
-                        .disabled(subscription.isBusy)
-                    }
+                    ConversionPlanPicker(selection: $subscription.selectedPlan)
 
-                    Button("Continuar por enquanto") {
-                        continueTrial()
-                    }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.sageButton)
-                    .frame(maxWidth: .infinity)
-
-                    if !subscription.statusText.isEmpty {
-                        Text(subscription.statusText)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.softText)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                    }
+                    ConversionPurchaseSection(
+                        buttonTitle: "Continuar minha travessia",
+                        escapeTitle: "Decidir amanhã",
+                        escapeAction: continueTrial
+                    )
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 58)
+                .padding(.horizontal, 30)
+                .padding(.top, 52)
                 .padding(.bottom, 30)
             }
         }
+    }
+}
+
+private struct TrialRhythmPanel: View {
+    let readings: Int
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.warmGold)
+                .frame(width: 24)
+
+            Text("7 dias, **\(readings) travessias**, **\(readings * 3) trechos**. Seu ritmo está no melhor momento.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.ivory)
+                .lineSpacing(3)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
     }
 }
 

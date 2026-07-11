@@ -69,7 +69,11 @@ final class SubscriptionManager {
     private enum Constants {
         static let entitlementCacheKey = "limiar.subscription.hasActiveSubscription"
         static let trialStartDefaultsKey = "limiar.subscription.trialStartedAt"
+        static let reviewRequestDefaultsKeyPrefix = "limiar.review.requested"
         static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
+        static let reviewRequestMinimumTrialDuration: TimeInterval = 3 * 24 * 60 * 60
+        static let reviewRequestMinimumCompletedReadings = 3
+        static let reviewRequestMinimumActiveDays = 3
         static let productIDs = SubscriptionPlan.allCases
             .sorted { $0.sortOrder < $1.sortOrder }
             .map(\.productID)
@@ -82,7 +86,7 @@ final class SubscriptionManager {
     private(set) var activeProductIDs: Set<String> = []
     private(set) var state = SubscriptionPurchaseState.idle
     private(set) var message = ""
-    var selectedPlan = SubscriptionPlan.monthly
+    var selectedPlan = SubscriptionPlan.yearly
 
     @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
     @ObservationIgnored private var hasStarted = false
@@ -146,7 +150,37 @@ final class SubscriptionManager {
     }
 
     var shouldShowTrialConversion: Bool {
-        false
+        accessState == .trialActive && trialDaysRemaining == 1
+    }
+
+    /// Registra uma única solicitação de avaliação por versão quando a pessoa
+    /// já teve tempo de perceber valor no Limiar. O sistema ainda decide se o
+    /// alerta nativo será exibido e aplica os próprios limites da App Store.
+    func claimReviewRequestIfEligible(
+        history: [ReadingHistoryItem],
+        readingWasHealthy: Bool,
+        now: Date = Date()
+    ) -> Bool {
+        guard accessState == .trialActive,
+              let trialStartedAt,
+              now.timeIntervalSince(trialStartedAt) >= Constants.reviewRequestMinimumTrialDuration,
+              readingWasHealthy,
+              history.count >= Constants.reviewRequestMinimumCompletedReadings,
+              completedReadingsSpanAtLeastThreeDays(history, calendar: .current),
+              history.contains(where: { Calendar.current.isDate($0.completedAt, inSameDayAs: now) }) else {
+            return false
+        }
+
+        let key = reviewRequestDefaultsKey
+        guard defaults.object(forKey: key) == nil else { return false }
+
+        defaults.set(now, forKey: key)
+        LimiarEventLog(source: "app").log("review_request_requested", [
+            "completedReadings": "\(history.count)",
+            "activeDays": "\(activeReadingDayCount(history, calendar: .current))",
+            "appVersion": appVersion
+        ])
+        return true
     }
 
     var monthlyMarketingPrice: String {
@@ -196,6 +230,28 @@ final class SubscriptionManager {
     var trialRemainingText: String {
         guard let days = trialDaysRemaining else { return "" }
         return days == 1 ? "1 dia restante" : "\(days) dias restantes"
+    }
+
+    private var appVersion: String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "unknown"
+    }
+
+    private var reviewRequestDefaultsKey: String {
+        "\(Constants.reviewRequestDefaultsKeyPrefix).\(appVersion)"
+    }
+
+    private func completedReadingsSpanAtLeastThreeDays(
+        _ history: [ReadingHistoryItem],
+        calendar: Calendar
+    ) -> Bool {
+        activeReadingDayCount(history, calendar: calendar) >= Constants.reviewRequestMinimumActiveDays
+    }
+
+    private func activeReadingDayCount(
+        _ history: [ReadingHistoryItem],
+        calendar: Calendar
+    ) -> Int {
+        Set(history.map { calendar.startOfDay(for: $0.completedAt) }).count
     }
 
     var statusText: String {
@@ -294,7 +350,34 @@ final class SubscriptionManager {
             return products.isEmpty ? "Carregando oferta" : "Plano indisponível"
         }
 
+        // O StoreKit localiza corretamente o preço na App Store. Em builds de
+        // desenvolvimento, porém, o simulador pode usar a storefront dos EUA.
+        // Mantemos a comunicação do Limiar em reais nesses ambientes para que
+        // o paywall não misture dólar com a oferta brasileira.
+        if Self.isTestEnvironment, !product.displayPrice.contains("R$") {
+            return fallbackBrazilianPrice(for: plan)
+        }
+
         return product.displayPrice
+    }
+
+    func monthlyEquivalentPrice(for plan: SubscriptionPlan) -> String? {
+        guard plan == .yearly, let product = product(for: plan) else { return nil }
+
+        if Self.isTestEnvironment, !product.displayPrice.contains("R$") {
+            return "R$ 7,49"
+        }
+
+        return (product.price / Decimal(12)).formatted(product.priceFormatStyle)
+    }
+
+    private func fallbackBrazilianPrice(for plan: SubscriptionPlan) -> String {
+        switch plan {
+        case .monthly:
+            return "R$ 9,90"
+        case .yearly:
+            return "R$ 89,90"
+        }
     }
 
     func hasConfirmedFreeTrial(for plan: SubscriptionPlan) -> Bool {

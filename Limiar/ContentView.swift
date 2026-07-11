@@ -9,6 +9,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var dismissedTrialConversion = false
     @State private var dismissedEssentialModeIntro = false
+    @State private var dismissedPostTrialPaywall = false
 
     private static var forcePaywallForReviewScreenshot: Bool {
         #if DEBUG
@@ -18,12 +19,30 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forcedConversionScreen: String? {
+        #if DEBUG
+        guard let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-LimiarConversionScreen"),
+              ProcessInfo.processInfo.arguments.indices.contains(index + 1) else {
+            return nil
+        }
+        return ProcessInfo.processInfo.arguments[index + 1]
+        #else
+        return nil
+        #endif
+    }
+
     var body: some View {
         @Bindable var model = model
 
         NavigationStack {
             Group {
-                if Self.forcePaywallForReviewScreenshot {
+                if Self.forcedConversionScreen == "D6" {
+                    TrialConversionView {}
+                } else if Self.forcedConversionScreen == "D7" {
+                    EssentialModeIntroView {}
+                } else if Self.forcedConversionScreen == "D8" {
+                    PaywallView()
+                } else if Self.forcePaywallForReviewScreenshot {
                     PaywallView()
                 } else if !model.hasCompletedOnboarding {
                     OnboardingView()
@@ -33,8 +52,10 @@ struct ContentView: View {
                     TrialConversionView {
                         dismissedTrialConversion = true
                     }
-                } else if subscription.shouldShowPostTrialPaywall {
-                    PaywallView()
+                } else if subscription.shouldShowPostTrialPaywall && !dismissedPostTrialPaywall {
+                    PaywallView {
+                        dismissedPostTrialPaywall = true
+                    }
                 } else if subscription.isEssentialMode && !dismissedEssentialModeIntro {
                     EssentialModeIntroView {
                         dismissedEssentialModeIntro = true
@@ -76,6 +97,7 @@ struct ContentView: View {
 private struct DashboardView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
+    @Environment(\.requestReview) private var requestReview
     @StateObject private var narration = PassageNarrationService()
     @State private var showingPicker = false
     @State private var showingSettings = false
@@ -431,6 +453,7 @@ private struct DashboardView: View {
         unlockPhase = .opening
         unlockAnimationTick += 1
         model.finishReading()
+        requestReviewIfEligibleAfterCompletion()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             unlockPhase = .unlocked
@@ -439,6 +462,24 @@ private struct DashboardView: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
             unlockPhase = .locked
+        }
+    }
+
+    private func requestReviewIfEligibleAfterCompletion() {
+        let history = model.history
+        let readingWasHealthy = model.aiContentState != .fallback
+
+        // Aguarda o encerramento visual da travessia para não interromper a
+        // ação de concluir a leitura.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            guard subscription.claimReviewRequestIfEligible(
+                history: history,
+                readingWasHealthy: readingWasHealthy
+            ) else {
+                return
+            }
+
+            requestReview()
         }
     }
 }
