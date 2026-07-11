@@ -22,6 +22,8 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 
 **Testes:** `tests/ai-backend.test.js` (`npm run test:ai-backend`). CI em `.github/workflows/ci.yml` roda testes + validação do catálogo + build iOS.
 
+**Modo Essencial / conversão:** salvar trechos, histórico e lista de salvos são Premium; no Essencial, o toque abre o paywall e os favoritos antigos permanecem visíveis sem ser apagados. A Reflexão breve mostra um teaser trancado quando há conteúdo. Leituras e explicações essenciais continuam usando o backend de texto (há custo de IA); narração e reflexão completa permanecem bloqueadas. As listas D6/D8 citam “Salvar trechos e rever seu histórico”; a D7 não promete mais salvar no Essencial.
+
 ---
 
 ## 2. Catálogo de trechos bíblicos

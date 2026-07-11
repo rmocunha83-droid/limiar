@@ -108,7 +108,7 @@ struct ConversionLossBlock: View {
             "Reflexão completa: significado, aplicação e pergunta",
             "Narração com voz natural",
             "Tradição, profundidade e livros do seu jeito",
-            "Histórico e lista de trechos salvos",
+            "Salvar trechos e rever seu histórico",
             finalItem
         ]
     }
