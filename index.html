@@ -5,66 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Limiar - Pausa espiritual antes das distrações</title>
     <meta name="description" content="Limiar cria uma pausa espiritual antes dos apps que mais puxam sua atenção. Comece com acesso inicial completo e continue com Premium mensal ou anual.">
-    <!-- Meta Pixel Code -->
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1567751021802834');
-
-      (function () {
-        function cookieValue(name) {
-          var prefix = name + '=';
-          return document.cookie.split(';').map(function (value) { return value.trim(); }).find(function (value) {
-            return value.indexOf(prefix) === 0;
-          })?.slice(prefix.length) || '';
-        }
-
-        function eventID(prefix) {
-          var randomPart = window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
-          return prefix + '_' + Date.now() + '_' + randomPart;
-        }
-
-        function sendServerEvent(eventName, id) {
-          fetch('/api/meta-capi', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true,
-            body: JSON.stringify({
-              eventName: eventName,
-              eventID: id,
-              eventTime: Math.floor(Date.now() / 1000),
-              eventSourceURL: window.location.href,
-              fbp: cookieValue('_fbp'),
-              fbc: cookieValue('_fbc')
-            })
-          }).catch(function () {});
-        }
-
-        function trackEvent(eventName, prefix) {
-          var id = eventID(prefix);
-          fbq('track', eventName, {}, { eventID: id });
-          sendServerEvent(eventName, id);
-        }
-
-        window.addEventListener('DOMContentLoaded', function () {
-          trackEvent('PageView', 'page_view');
-          trackEvent('ViewContent', 'view_content');
-          document.querySelectorAll('a[href^="https://apps.apple.com/br/app/limiar/"]').forEach(function (link) {
-            link.addEventListener('click', function () {
-              trackEvent('Lead', 'app_store_click');
-            });
-          });
-        });
-      })();
-    </script>
-    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1567751021802834&ev=PageView&noscript=1"></noscript>
-    <!-- End Meta Pixel Code -->
+    <script src="meta-consent.js" defer></script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHYJ4E1Z92"></script>
     <script>

@@ -18,3 +18,7 @@ build/
 __MACOSX/
 node_modules
 outputs/
+pnpm-lock.yaml
+
+# Segredos locais injetados no build. Nunca versionar.
+Config/Secrets.xcconfig

@@ -199,7 +199,9 @@ struct DailyReadingSessionStore {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter.string(from: date)
+        formatter.timeZone = ScreenTimePolicyStore.morningTimeZone
+        let cycleStart = ScreenTimePolicyStore.currentMorningCycleStart(now: date)
+        return formatter.string(from: cycleStart)
     }
 
     func load(profileKey: String, dayKey: String = DailyReadingSessionStore.todayKey()) -> DailyReadingSessionSnapshot? {
@@ -264,9 +266,16 @@ struct RemoteAIBackendClient {
     var timeout: TimeInterval = 36
     var session: URLSession = .shared
 
-    // Segredo compartilhado com o backend (env LIMIAR_APP_SECRET no Vercel).
-    // Não é criptografia — apenas impede uso casual da API por terceiros.
-    private static let appKey = "ecd84911de218255c18e6551955558dbf09df77d26490f07"
+    // Opcional e injetado no build por LIMIAR_APP_SECRET. Nunca manter o valor
+    // no código-fonte: uma constante dentro do binário não é um segredo real.
+    private static var appKey: String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "LimiarAppSecret") as? String else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains("$(") else { return nil }
+        return trimmed
+    }
 
     private static var clientID: String {
         let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
@@ -295,7 +304,9 @@ struct RemoteAIBackendClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(Self.clientID, forHTTPHeaderField: "X-Limiar-Client-ID")
-        request.setValue(Self.appKey, forHTTPHeaderField: "X-Limiar-App-Key")
+        if let appKey = Self.appKey {
+            request.setValue(appKey, forHTTPHeaderField: "X-Limiar-App-Key")
+        }
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)
@@ -318,7 +329,9 @@ struct RemoteAIBackendClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(accept, forHTTPHeaderField: "Accept")
         request.setValue(Self.clientID, forHTTPHeaderField: "X-Limiar-Client-ID")
-        request.setValue(Self.appKey, forHTTPHeaderField: "X-Limiar-App-Key")
+        if let appKey = Self.appKey {
+            request.setValue(appKey, forHTTPHeaderField: "X-Limiar-App-Key")
+        }
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)

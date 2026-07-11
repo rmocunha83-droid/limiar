@@ -223,7 +223,7 @@ test("validates explanation items and rejects incomplete ones", () => {
   assert.throws(() => validateExplanationItems({ items: [explanation, explanation] }, 3), /fewer items/);
   assert.throws(
     () => validateExplanationFields({ ...explanation, homily: "" }),
-    /missing_homily/
+    (error) => error?.code === "missing_homily"
   );
 });
 

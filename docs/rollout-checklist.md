@@ -15,12 +15,11 @@
    `BLOB_READ_WRITE_TOKEN` é criado sozinho e o cache passa a funcionar no
    próximo deploy. Sem o store, o endpoint segue funcionando sem cache.
 
-3. **Segredo da API (`LIMIAR_APP_SECRET`)** — o app novo já envia o header
-   `X-Limiar-App-Key`. **NÃO configure o env ainda**: builds antigos do
-   TestFlight não enviam o header e passariam a receber 401. Quando a base
-   estiver no build novo, configure no Vercel:
-   `LIMIAR_APP_SECRET = ecd84911de218255c18e6551955558dbf09df77d26490f07`
-   (mesmo valor de `RemoteAIBackendClient.appKey` no app).
+3. **Proteção da API** — manter o rate limit ativo. Se `LIMIAR_APP_SECRET`
+   for usado temporariamente, seu valor deve ser injetado no build por uma
+   configuração local não versionada e rotacionado no Vercel. Uma chave
+   embutida no aplicativo não substitui App Attest e não deve ser tratada como
+   segredo permanente.
 
 ## Como validar depois do deploy
 
