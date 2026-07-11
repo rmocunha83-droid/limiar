@@ -10,6 +10,6 @@
     "validate:passages": "python3 scripts/validate_passages.py"
   },
   "dependencies": {
-    "@vercel/blob": "^0.27.0"
+    "@vercel/blob": "^2.3.0"
   }
 }
