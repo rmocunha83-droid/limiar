@@ -130,8 +130,9 @@ struct PassageRecommendationService {
         let scored: [(passage: ScripturePassage, score: Int)] = traditionMatches.map { passage in
             var score = 0
             if profile.favoriteBooks.contains(passage.book) { score += 4 }
+            if profile.refinedBooks?.contains(passage.book) == true { score += 8 }
             if profile.favoriteBibleSections.contains(passage.section) { score += 3 }
-            if profile.favoriteThemes.contains(passage.theme) { score += 2 }
+            if profile.favoriteThemes.contains(passage.theme) { score += 5 }
             if lastID?.contains(passage.id) == true { score -= 10 }
             if recentIDs.contains(passage.id) { score -= 12 }
             if passage.id == currentPassageID { score -= 8 }
@@ -372,6 +373,8 @@ struct RemoteAIProfilePayload: Codable {
     let favoriteSectionIDs: [String]
     let favoriteBooks: [String]
     let favoriteBookIDs: [String]
+    let priorityBooks: [String]
+    let priorityBookIDs: [String]
     let favoriteThemes: [String]
     let favoriteThemeIDs: [String]
     let explanationDepth: String
@@ -386,6 +389,8 @@ struct RemoteAIProfilePayload: Codable {
         favoriteSectionIDs = profile.selectedSectionOptionIds
         favoriteBooks = profile.favoriteBooks.map(\.title)
         favoriteBookIDs = profile.selectedBookOptionIds
+        priorityBooks = (profile.refinedBooks ?? []).map(\.title)
+        priorityBookIDs = profile.selectedPriorityBookOptionIds
         favoriteThemes = profile.favoriteThemes.map(\.title)
         favoriteThemeIDs = profile.selectedThemeOptionIds
         explanationDepth = profile.explanationDepth.remoteValue

@@ -221,7 +221,7 @@ struct BiblicalPreferencesView: View {
                 } header: {
                     Text("Afinar por livros específicos (opcional)")
                 } footer: {
-                    Text("Se marcar livros, suas leituras priorizam exatamente esses. Sem marcação, usamos todos os livros dos estilos escolhidos.")
+                    Text("Estes livros terão prioridade nas suas leituras diárias. Os demais livros dos estilos escolhidos continuam aparecendo para variar.")
                 }
             }
         }
