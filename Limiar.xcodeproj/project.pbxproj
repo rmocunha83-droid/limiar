@@ -281,9 +281,12 @@
 			};
 			buildConfigurationList = LIMI00000000000000000089 /* Build configuration list for PBXProject "Limiar" */;
 			compatibilityVersion = "Xcode 15.0";
-			developmentRegion = en;
+			developmentRegion = "pt-BR";
 			hasScannedForEncodings = 0;
-			knownRegions = (en, Base);
+			knownRegions = (
+				"pt-BR",
+				Base,
+			);
 			mainGroup = LIMI00000000000000000030;
 			packageReferences = (
 				LIMI00000000000000000201 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
