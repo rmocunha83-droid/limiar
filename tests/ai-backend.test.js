@@ -201,6 +201,73 @@ test("selection is deterministic for the same seed", () => {
   );
 });
 
+test("uses two priority-book passages and keeps a discovery passage", () => {
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({ favoriteBooks: ["Salmos", "Provérbios", "Mateus"], priorityBooks: ["Salmos"], explanationDepth: "média" }),
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 3,
+    seed: "priority-quota"
+  });
+  assert.equal(selection.priorityCount, 2);
+  assert.equal(selection.selected.filter((passage) => passage.book === "Salmos").length, 2);
+  assert.equal(selection.selected.some((passage) => passage.book !== "Salmos"), true);
+});
+
+test("degrades priority quota without repeating recent passages", () => {
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({ favoriteBooks: ["Salmos", "Provérbios", "Mateus"], priorityBooks: ["Salmos"], explanationDepth: "média" }),
+    passages: CATALOG,
+    recentPassageIDs: ["psalm-23", "psalm-121"],
+    count: 3,
+    seed: "priority-degrade"
+  });
+  assert.equal(selection.priorityCount, 0);
+  assert.equal(selection.reusedRecentCount, 0);
+  assert.equal(selection.selected.some((passage) => passage.id === "psalm-23" || passage.id === "psalm-121"), false);
+});
+
+test("keeps priority selection deterministic", () => {
+  const profile = normalizeProfile({ favoriteBooks: ["Salmos", "Provérbios", "Mateus"], priorityBooks: ["Salmos"], favoriteThemes: ["Propósito"], explanationDepth: "média" });
+  const first = selectSessionPassages({ profile, passages: CATALOG, recentPassageIDs: [], count: 3, seed: "priority-stable" });
+  const second = selectSessionPassages({ profile, passages: CATALOG, recentPassageIDs: [], count: 3, seed: "priority-stable" });
+  assert.deepEqual(first.selected.map((passage) => passage.id), second.selected.map((passage) => passage.id));
+});
+
+test("guarantees a favorite theme without replacing a priority passage", () => {
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({ favoriteBooks: ["Salmos", "Provérbios", "Mateus"], priorityBooks: ["Salmos"], favoriteThemes: ["Propósito"], explanationDepth: "média" }),
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 3,
+    seed: "theme-guarantee"
+  });
+  assert.equal(selection.favoriteThemeCount >= 1, true);
+  assert.equal(selection.selected.some((passage) => passage.theme === "Propósito"), true);
+  assert.equal(selection.selected.filter((passage) => passage.book === "Salmos").length, 2);
+});
+
+test("does not force a favorite theme when no fresh candidate exists", () => {
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({ favoriteBooks: ["Salmos", "Provérbios"], favoriteThemes: ["Propósito"], explanationDepth: "média" }),
+    passages: CATALOG.filter((passage) => passage.theme !== "Propósito"),
+    recentPassageIDs: [],
+    count: 3,
+    seed: "theme-absent"
+  });
+  assert.equal(selection.favoriteThemeCount, 0);
+  assert.equal(selection.reusedRecentCount, 0);
+});
+
+test("keeps up to forty normalized books", () => {
+  const books = Array.from({ length: 45 }, (_, index) => `Livro ${index}`);
+  const profile = normalizeProfile({ favoriteBooks: books, favoriteBookIDs: books, priorityBooks: books, avoidedBooks: books });
+  assert.equal(profile.favoriteBooks.length, 40);
+  assert.equal(profile.favoriteBookIDs.length, 40);
+  assert.equal(profile.priorityBooks.length, 40);
+  assert.equal(profile.avoidedBooks.length, 40);
+});
+
 test("builds an explanation prompt that fixes the passages and order", () => {
   const prompt = buildExplanationPrompt({
     profile: PROFILE_WITH_BOOKS,
