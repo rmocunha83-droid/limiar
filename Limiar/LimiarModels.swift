@@ -84,6 +84,24 @@ enum BibleBook: String, Codable, CaseIterable, Identifiable {
     case leviticus
     case numbers
     case deuteronomy
+    case mark
+    case job
+    case ecclesiastes
+    case songOfSongs
+    case galatians
+    case ephesians
+    case hebrews
+    case james
+    case peter
+    case jeremiah
+    case ezekiel
+    case daniel
+    case joshua
+    case judges
+    case ruth
+    case esther
+    case judith
+    case baruch
 
     var id: String { rawValue }
 
@@ -107,6 +125,24 @@ enum BibleBook: String, Codable, CaseIterable, Identifiable {
         case .leviticus: "Levítico / Vayikra"
         case .numbers: "Números / Bamidbar"
         case .deuteronomy: "Deuteronômio / Devarim"
+        case .mark: "Marcos"
+        case .job: "Jó"
+        case .ecclesiastes: "Eclesiastes"
+        case .songOfSongs: "Cantares"
+        case .galatians: "Gálatas"
+        case .ephesians: "Efésios"
+        case .hebrews: "Hebreus"
+        case .james: "Tiago"
+        case .peter: "Pedro"
+        case .jeremiah: "Jeremias"
+        case .ezekiel: "Ezequiel"
+        case .daniel: "Daniel"
+        case .joshua: "Josué"
+        case .judges: "Juízes"
+        case .ruth: "Rute"
+        case .esther: "Ester"
+        case .judith: "Judite"
+        case .baruch: "Baruque"
         }
     }
 }
@@ -240,6 +276,12 @@ struct TraditionReadingConfig {
         case .psalms: return "Salmos / Tehilim"
         case .proverbs: return "Provérbios / Mishlei"
         case .isaiah: return "Isaías / Yeshayahu"
+        case .jeremiah: return "Jeremias / Yirmiyahu"
+        case .ezekiel: return "Ezequiel / Yechezkel"
+        case .joshua: return "Josué / Yehoshua"
+        case .judges: return "Juízes / Shoftim"
+        case .job: return "Jó / Iyov"
+        case .ecclesiastes: return "Eclesiastes / Kohelet"
         default: return book.title
         }
     }
@@ -253,15 +295,15 @@ extension FaithTradition {
                 question: "O que você quer ler nas pausas?",
                 subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .mark, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos e cânticos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Jó, Sabedoria e Sirácida", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .wisdom, .sirach], defaultSelected: true),
-                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians]),
-                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías, Jeremias, Ezequiel e Daniel", sections: [.prophets], books: [.isaiah]),
-                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo, Josué e Juízes", sections: [.torah, .historicalBooks], books: [.genesis, .exodus]),
-                    ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Judite, Macabeus e Baruque", sections: [.deuterocanonical], books: [.tobias, .maccabees])
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Jó, Sabedoria e Sirácida", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .job, .ecclesiastes, .wisdom, .sirach], defaultSelected: true),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians, .galatians, .ephesians, .james, .peter]),
+                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías, Jeremias, Ezequiel e Daniel", sections: [.prophets], books: [.isaiah, .jeremiah, .ezekiel, .daniel]),
+                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo, Josué e Juízes", sections: [.torah, .historicalBooks], books: [.genesis, .exodus, .joshua, .judges]),
+                    ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Judite, Macabeus e Baruque", sections: [.deuterocanonical], books: [.tobias, .judith, .maccabees, .baruch])
                 ],
-                optionalBooks: [.genesis, .exodus, .psalms, .proverbs, .isaiah, .matthew, .luke, .john, .romans, .corinthians, .tobias, .wisdom, .sirach, .maccabees],
+                optionalBooks: [.genesis, .exodus, .joshua, .judges, .psalms, .proverbs, .job, .ecclesiastes, .wisdom, .sirach, .isaiah, .jeremiah, .ezekiel, .daniel, .matthew, .mark, .luke, .john, .romans, .corinthians, .galatians, .ephesians, .james, .peter, .tobias, .judith, .maccabees, .baruch],
                 minSelected: 1
             )
         case .protestant:
@@ -269,15 +311,15 @@ extension FaithTradition {
                 question: "O que você quer ler nas pausas?",
                 subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .mark, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e louvor", hint: "Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Jó, Eclesiastes e Cantares", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
-                    ReadingStyleCategory(id: "cartas", label: "Cartas de Paulo", hint: "Romanos, Coríntios, Gálatas e Efésios", sections: [.paulineLetters], books: [.romans, .corinthians]),
-                    ReadingStyleCategory(id: "cartas-apoc", label: "Cartas gerais e Apocalipse", hint: "Hebreus, Tiago, Pedro e Apocalipse", sections: [.paulineLetters], books: [.revelation]),
-                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías, Jeremias, Ezequiel e Daniel", sections: [.prophets], books: [.isaiah]),
-                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo e livros históricos", sections: [.torah, .historicalBooks], books: [.genesis, .exodus])
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Jó, Eclesiastes e Cantares", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .job, .ecclesiastes, .songOfSongs], defaultSelected: true),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas de Paulo", hint: "Romanos, Coríntios, Gálatas e Efésios", sections: [.paulineLetters], books: [.romans, .corinthians, .galatians, .ephesians]),
+                    ReadingStyleCategory(id: "cartas-apoc", label: "Cartas gerais e Apocalipse", hint: "Hebreus, Tiago, Pedro e Apocalipse", sections: [.paulineLetters], books: [.hebrews, .james, .peter, .revelation]),
+                    ReadingStyleCategory(id: "profetas", label: "Profetas", hint: "Isaías, Jeremias, Ezequiel e Daniel", sections: [.prophets], books: [.isaiah, .jeremiah, .ezekiel, .daniel]),
+                    ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo e livros históricos", sections: [.torah, .historicalBooks], books: [.genesis, .exodus, .joshua, .judges, .ruth, .esther])
                 ],
-                optionalBooks: [.genesis, .exodus, .psalms, .proverbs, .isaiah, .matthew, .luke, .john, .romans, .corinthians, .revelation],
+                optionalBooks: [.genesis, .exodus, .joshua, .judges, .ruth, .esther, .psalms, .proverbs, .job, .ecclesiastes, .songOfSongs, .isaiah, .jeremiah, .ezekiel, .daniel, .matthew, .mark, .luke, .john, .romans, .corinthians, .galatians, .ephesians, .hebrews, .james, .peter, .revelation],
                 minSelected: 1
             )
         case .jewish:
@@ -286,13 +328,13 @@ extension FaithTradition {
                 subtitle: "Vamos criar leituras próximas da sua tradição. Você pode mudar depois.",
                 categories: [
                     ReadingStyleCategory(id: "tora", label: "Torá — Leis e origens", hint: "Bereshit, Shemot, Vayikra e Devarim", sections: [.torah], books: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy], defaultSelected: true),
-                    ReadingStyleCategory(id: "neviim", label: "Profetas — Nevi\u{2019}im", hint: "Yeshayahu, Yirmiyahu e Yechezkel", sections: [.prophets], books: [.isaiah]),
-                    ReadingStyleCategory(id: "ketuvim", label: "Escritos — Ketuvim", hint: "Mishlei, Iyov, Kohelet e Ester", sections: [.ketuvim], books: [.psalms, .proverbs]),
+                    ReadingStyleCategory(id: "neviim", label: "Profetas — Nevi\u{2019}im", hint: "Yeshayahu, Yirmiyahu e Yechezkel", sections: [.prophets], books: [.isaiah, .jeremiah, .ezekiel, .joshua, .judges]),
+                    ReadingStyleCategory(id: "ketuvim", label: "Escritos — Ketuvim", hint: "Mishlei, Iyov, Kohelet e Ester", sections: [.ketuvim], books: [.psalms, .proverbs, .job, .ecclesiastes, .ruth, .esther, .daniel]),
                     ReadingStyleCategory(id: "tehilim", label: "Salmos e orações — Tehilim", hint: "Tehilim / Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria — Mishlei", hint: "Mishlei, Kohelet e Iyov", sections: [.proverbs, .wisdomBooks], books: [.proverbs], defaultSelected: true),
-                    ReadingStyleCategory(id: "etica", label: "Ética e vida prática", hint: "Trechos morais e de conduta", sections: [.ethicalWisdom], books: [.proverbs, .leviticus, .deuteronomy])
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria — Mishlei", hint: "Mishlei, Kohelet e Iyov", sections: [.proverbs, .wisdomBooks], books: [.proverbs, .ecclesiastes, .job], defaultSelected: true),
+                    ReadingStyleCategory(id: "etica", label: "Ética e vida prática", hint: "Trechos morais e de conduta", sections: [.ethicalWisdom], books: [.proverbs, .ecclesiastes, .leviticus, .deuteronomy])
                 ],
-                optionalBooks: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy, .psalms, .proverbs, .isaiah],
+                optionalBooks: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy, .joshua, .judges, .isaiah, .jeremiah, .ezekiel, .psalms, .proverbs, .job, .ecclesiastes, .ruth, .esther, .daniel],
                 minSelected: 1
             )
         case .spiritist:
@@ -300,13 +342,13 @@ extension FaithTradition {
                 question: "Quais textos inspiram sua leitura?",
                 subtitle: "Fontes que orientam suas reflexões. Você pode mudar depois.",
                 categories: [
-                    ReadingStyleCategory(id: "evangelho", label: "Evangelho de Jesus", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .luke, .john], defaultSelected: true),
+                    ReadingStyleCategory(id: "evangelho", label: "Evangelho de Jesus", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .mark, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "sermao", label: "Sermão da Montanha e parábolas", hint: "Mateus 5–7 e parábolas", sections: [.sermonOnMount, .parablesOfJesus], books: [.matthew, .luke], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos e cânticos", sections: [.psalms], books: [.psalms], defaultSelected: true),
-                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Eclesiastes e Jó", sections: [.proverbs], books: [.proverbs]),
-                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians])
+                    ReadingStyleCategory(id: "sabedoria", label: "Sabedoria e provérbios", hint: "Provérbios, Eclesiastes e Jó", sections: [.proverbs], books: [.proverbs, .ecclesiastes, .job]),
+                    ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians, .james, .peter])
                 ],
-                optionalBooks: [.matthew, .luke, .john, .psalms, .proverbs, .romans, .corinthians],
+                optionalBooks: [.matthew, .mark, .luke, .john, .psalms, .proverbs, .ecclesiastes, .job, .romans, .corinthians, .james, .peter],
                 minSelected: 1
             )
         }
@@ -402,12 +444,11 @@ struct UserFaithProfile: Codable, Equatable {
         refinedBooks?.contains(book) ?? false
     }
 
-    /// Livros elegíveis para a afinação opcional: interseção entre os livros
-    /// do config e a união das categorias selecionadas.
+    /// Livros elegíveis para a afinação opcional: todos os livros da tradição
+    /// com conteúdo no catálogo. As categorias são escolha em grupo; aqui a
+    /// pessoa escolhe individualmente, se quiser.
     var refinementBookPool: [BibleBook] {
-        let config = tradition.readingConfig
-        let unionBooks = Set(selectedCategories.flatMap(\.books))
-        return config.optionalBooks.filter { unionBooks.contains($0) }
+        tradition.readingConfig.optionalBooks
     }
 
     var selectedCategories: [ReadingStyleCategory] {
@@ -477,12 +518,15 @@ struct UserFaithProfile: Codable, Equatable {
 
         let unionBooks = Self.orderedUnion(selectedCategories.flatMap(\.books))
         let unionSections = Self.orderedUnion(selectedCategories.flatMap(\.sections))
-        let pool = Set(unionBooks)
+        // O afinamento aceita qualquer livro da tradição (escolha individual,
+        // independente das categorias) e, quando presente, vale como filtro
+        // forte no lugar da união — é o que a copy promete ao usuário.
+        let pool = Set(config.optionalBooks)
         let refined = Self.orderedUnion((refinedBooks ?? []).filter { pool.contains($0) })
         refinedBooks = refined.isEmpty ? nil : refined
 
         favoriteBibleSections = unionSections
-        favoriteBooks = Self.orderedUnion(unionBooks + refined)
+        favoriteBooks = refined.isEmpty ? unionBooks : refined
     }
 
     mutating func normalizeStandaloneThemesForCurrentTradition() {

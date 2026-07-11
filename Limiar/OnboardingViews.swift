@@ -910,12 +910,7 @@ struct OptionalBooksRefinement: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.softText)
 
-                    if pool.isEmpty {
-                        Text("Escolha um estilo acima para ver os livros.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.softText.opacity(0.8))
-                    } else {
-                        FlowLayout(spacing: 10) {
+                    FlowLayout(spacing: 10) {
                             ForEach(pool) { book in
                                 let isSelected = model.faithProfile.isRefinedBookSelected(book)
                                 Button {
@@ -944,7 +939,6 @@ struct OptionalBooksRefinement: View {
                                 .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                             }
                         }
-                    }
                 }
                 .padding(.horizontal, 4)
             }

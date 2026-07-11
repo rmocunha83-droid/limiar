@@ -28,6 +28,9 @@ BOOKS = {
     "genesis", "exodus", "psalms", "proverbs", "isaiah", "matthew", "luke",
     "john", "romans", "corinthians", "revelation", "tobias", "wisdom",
     "sirach", "maccabees", "leviticus", "numbers", "deuteronomy",
+    "mark", "job", "ecclesiastes", "songOfSongs", "galatians", "ephesians",
+    "hebrews", "james", "peter", "jeremiah", "ezekiel", "daniel",
+    "joshua", "judges", "ruth", "esther", "judith", "baruch",
 }
 
 # Seções aceitas por livro (inclui variações históricas do catálogo).
@@ -50,10 +53,28 @@ BOOK_SECTIONS = {
     "wisdom": {"deuterocanonical", "wisdomBooks"},
     "sirach": {"deuterocanonical", "wisdomBooks"},
     "maccabees": {"deuterocanonical", "historicalBooks"},
+    "mark": {"gospels", "parablesOfJesus"},
+    "job": {"wisdomBooks", "ketuvim"},
+    "ecclesiastes": {"wisdomBooks", "ketuvim", "ethicalWisdom", "proverbs"},
+    "songOfSongs": {"wisdomBooks", "ketuvim"},
+    "galatians": {"paulineLetters"},
+    "ephesians": {"paulineLetters"},
+    "hebrews": {"paulineLetters"},
+    "james": {"paulineLetters"},
+    "peter": {"paulineLetters"},
+    "jeremiah": {"prophets"},
+    "ezekiel": {"prophets"},
+    "daniel": {"prophets", "ketuvim"},
+    "joshua": {"historicalBooks", "prophets"},
+    "judges": {"historicalBooks", "prophets"},
+    "ruth": {"historicalBooks", "ketuvim"},
+    "esther": {"historicalBooks", "ketuvim"},
+    "judith": {"deuterocanonical", "historicalBooks"},
+    "baruch": {"deuterocanonical", "prophets"},
 }
 
-NEW_TESTAMENT_BOOKS = {"matthew", "luke", "john", "romans", "corinthians", "revelation"}
-DEUTEROCANONICAL_BOOKS = {"tobias", "wisdom", "sirach", "maccabees"}
+NEW_TESTAMENT_BOOKS = {"matthew", "mark", "luke", "john", "romans", "corinthians", "revelation", "galatians", "ephesians", "hebrews", "james", "peter"}
+DEUTEROCANONICAL_BOOKS = {"tobias", "wisdom", "sirach", "maccabees", "judith", "baruch"}
 
 
 def main() -> int:
