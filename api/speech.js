@@ -51,7 +51,10 @@ function cacheKey(body, config = speechConfig(body)) {
 }
 
 function blobEnabled() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  // Projetos conectados pelo fluxo atual do Vercel Blob usam OIDC e recebem
+  // BLOB_STORE_ID em vez de um token estático. O SDK reconhece ambos os
+  // modos; manter o token aqui preserva compatibilidade com conexões antigas.
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
 async function findCachedAudio(pathname, debugContext) {
