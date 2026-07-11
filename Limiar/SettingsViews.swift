@@ -9,6 +9,8 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @State private var showingPicker = false
     @State private var showingPaywall = false
+    @State private var showingHistory = false
+    @State private var showingFavorites = false
 
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
@@ -67,14 +69,20 @@ struct SettingsView: View {
                 }
 
                 Section("Histórico") {
-                    NavigationLink("Ver leituras") {
-                        HistoryView()
+                    Button("Ver leituras") {
+                        if subscription.hasPremiumAccess {
+                            showingHistory = true
+                        } else if subscription.canShowPaywall {
+                            showingPaywall = true
+                        }
                     }
-                    .disabled(!subscription.hasPremiumAccess)
-                    NavigationLink("Ver trechos salvos") {
-                        FavoritePassagesView()
+                    Button("Ver trechos salvos") {
+                        if subscription.hasPremiumAccess {
+                            showingFavorites = true
+                        } else if subscription.canShowPaywall {
+                            showingPaywall = true
+                        }
                     }
-                    .disabled(!subscription.hasPremiumAccess)
                     Button("Resetar histórico") {
                         model.resetHistory()
                     }
@@ -162,6 +170,8 @@ struct SettingsView: View {
             PaywallView()
                 .environment(subscription)
         }
+        .navigationDestination(isPresented: $showingHistory) { HistoryView() }
+        .navigationDestination(isPresented: $showingFavorites) { FavoritePassagesView() }
     }
 
     private var subscriptionStatusLabel: String {

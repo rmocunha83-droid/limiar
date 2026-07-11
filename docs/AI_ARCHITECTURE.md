@@ -13,7 +13,7 @@
 6. O app valida novamente o JSON recebido.
 7. Se qualquer etapa falhar, o app mostra uma mensagem simples de indisponibilidade sem expor erro técnico.
 
-Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: continuam vendo 3 trechos religiosos e usando o fluxo de pausa, mas não acionam chamadas remotas de reflexão nem narração. Anúncios do Google AdMob aparecem somente no Modo Essencial, após o fim do teste gratuito e sem assinatura ativa.
+Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: continuam vendo 3 trechos e explicações essenciais, gerados pelo backend de texto. Não acionam narração nem acessam a reflexão breve completa; anúncios do Google AdMob aparecem somente nesse modo, após o fim do teste gratuito e sem assinatura ativa.
 
 ## Modelo Comercial
 
@@ -28,7 +28,7 @@ Usuários com teste expirado e sem assinatura ativa entram no Modo Essencial: co
 - O backend mantém apenas rate limit por janela para proteção básica contra abuso ou loops.
 - A narração usa áudio gerado no backend por ElevenLabs, sem expor a chave no app iOS.
 - A narração nunca é pré-gerada: `/api/speech` só deve ser chamado quando a pessoa toca no botão de ouvir de um trecho específico.
-- No Modo Essencial, a interface mantém trechos e explicações essenciais, mas não aciona narração nem reflexões personalizadas remotas.
+- No Modo Essencial, a interface mantém trechos e explicações essenciais via backend de texto, mas não aciona narração nem libera a reflexão breve completa.
 - No Modo Essencial, o app mantém a experiência reduzida com anúncios e sem narração.
 
 ## Segurança
@@ -76,4 +76,4 @@ Esse teste valida o contrato JSON do backend. Para QA no app, testar:
 - repetição reduzida com histórico recente;
 - voz remota por `/api/speech` somente após toque no botão de ouvir de um trecho específico;
 - Modo Essencial sem chamadas para `/api/spiritual-reading`, `/api/reflection` ou `/api/speech`.
-- Modo Essencial sem chamadas remotas de reflexão personalizada, sem narração e com anúncios.
+- Modo Essencial com chamadas remotas para leituras e explicações essenciais, sem narração, com teaser da reflexão breve e anúncios.

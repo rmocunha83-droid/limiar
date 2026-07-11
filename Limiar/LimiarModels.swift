@@ -1330,18 +1330,6 @@ final class LimiarAppModel {
         )
     }
 
-    private func essentialReadingItems(for passages: [ScripturePassage]) -> [SpiritualReadingItem] {
-        passages.map { passage in
-            SpiritualReadingItem(
-                id: passage.id,
-                reference: passage.reference,
-                text: passage.text,
-                homily: "",
-                practicalConclusion: ""
-            )
-        }
-    }
-
     private func remoteAIRequestKey(for passages: [ScripturePassage], profile: UserFaithProfile) -> String {
         [
             passages.map(\.id).joined(separator: "+"),

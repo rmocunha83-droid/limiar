@@ -296,7 +296,11 @@ private struct DashboardView: View {
                         item: item,
                         isSaved: model.isFavorite(item),
                         saveAction: {
-                            model.toggleFavorite(item)
+                            if model.isEssentialMode && subscription.canShowPaywall {
+                                showingPaywall = true
+                            } else {
+                                model.toggleFavorite(item)
+                            }
                         },
                         listenAction: {
                             if model.isEssentialMode && subscription.canShowPaywall {
@@ -307,7 +311,8 @@ private struct DashboardView: View {
                         },
                         narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationSegments),
                         showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
-                        showsNarration: model.canNarrateCurrentReading || model.isEssentialMode
+                        showsNarration: model.canNarrateCurrentReading || model.isEssentialMode,
+                        isSaveLocked: model.isEssentialMode
                     )
 
                     if model.showsAds {

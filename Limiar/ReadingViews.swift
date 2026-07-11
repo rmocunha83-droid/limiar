@@ -125,6 +125,7 @@ struct SpiritualReadingCard: View {
     let narrationState: PassageNarrationButtonState
     var showsReflection = true
     var showsNarration = true
+    var isSaveLocked = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -137,14 +138,24 @@ struct SpiritualReadingCard: View {
                 Spacer()
 
                 Button(action: saveAction) {
-                    Image(systemName: isSaved ? "heart.fill" : "heart")
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundStyle(isSaved ? Color.sageButton : Color.ivory)
-                        .frame(width: 42, height: 42)
-                        .background(Color.white.opacity(0.08), in: Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                    ZStack(alignment: .bottomTrailing) {
+                        Image(systemName: isSaved ? "heart.fill" : "heart")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(isSaved ? Color.sageButton : Color.ivory)
+                        if isSaveLocked {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(Color.deepInk)
+                                .padding(4)
+                                .background(Color.warmGold, in: Circle())
+                                .offset(x: 5, y: 5)
+                        }
+                    }
+                    .frame(width: 42, height: 42)
+                    .background(Color.white.opacity(0.08), in: Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
                 }
-                .accessibilityLabel(isSaved ? "Remover trecho salvo" : "Salvar trecho")
+                .accessibilityLabel(isSaveLocked ? "Guardar trecho é um recurso Premium" : (isSaved ? "Remover trecho salvo" : "Salvar trecho"))
             }
 
             Text(item.text)
@@ -235,7 +246,9 @@ struct ReadingView: View {
                                 item: item,
                                 isSaved: model.isFavorite(item),
                                 saveAction: {
-                                    model.toggleFavorite(item)
+                                    if subscription.canShowPaywall {
+                                        showingPaywall = true
+                                    }
                                 },
                                 listenAction: {
                                     if subscription.canShowPaywall {
@@ -244,7 +257,8 @@ struct ReadingView: View {
                                 },
                                 narrationState: .idle,
                                 showsReflection: item.hasExplanationContent,
-                                showsNarration: true
+                                showsNarration: true,
+                                isSaveLocked: true
                             )
 
                             LimiarAdBannerSlot(label: "Publicidade")
@@ -263,6 +277,9 @@ struct ReadingView: View {
                             reflectionSection
                         }
                     } else if model.isEssentialMode {
+                        if !model.currentReflection.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            essentialReflectionTeaser
+                        }
                         essentialModeReadingNotice
                     }
                     readingGate
@@ -296,9 +313,13 @@ struct ReadingView: View {
     private var readingActions: some View {
         HStack(spacing: 12) {
             Button {
-                model.toggleFavoriteCurrentPassage()
+                if model.isEssentialMode && subscription.canShowPaywall {
+                    showingPaywall = true
+                } else {
+                    model.toggleFavoriteCurrentPassage()
+                }
             } label: {
-                Label(model.isCurrentPassageFavorite ? "Salvo" : "Salvar", systemImage: model.isCurrentPassageFavorite ? "heart.fill" : "heart")
+                Label(model.isCurrentPassageFavorite ? "Salvo" : "Salvar", systemImage: model.isEssentialMode ? "lock.fill" : (model.isCurrentPassageFavorite ? "heart.fill" : "heart"))
                     .lineLimit(1)
             }
             .buttonStyle(ReadingActionButtonStyle(isHighlighted: model.isCurrentPassageFavorite))
@@ -334,6 +355,30 @@ struct ReadingView: View {
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
             ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
         }
+    }
+
+    private var essentialReflectionTeaser: some View {
+        Button {
+            if subscription.canShowPaywall { showingPaywall = true }
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Reflexão breve", systemImage: "lock.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.warmGold)
+                Text(model.currentReflection.summary)
+                    .font(.system(size: 16, weight: .regular, design: .serif))
+                    .foregroundStyle(Color.ivory.opacity(0.58))
+                    .lineLimit(1)
+                    .blur(radius: 3)
+                    .mask(LinearGradient(colors: [.black, .black.opacity(0.35), .clear], startPoint: .leading, endPoint: .trailing))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .limiarPanel()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Reflexão breve bloqueada. Abrir Limiar completo")
     }
 
     private var essentialModeReadingNotice: some View {
