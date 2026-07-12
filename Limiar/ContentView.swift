@@ -389,6 +389,8 @@ private struct DashboardView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     if model.isEssentialMode {
                         NavigationLink {
@@ -406,6 +408,7 @@ private struct DashboardView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

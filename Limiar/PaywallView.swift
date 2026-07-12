@@ -20,14 +20,12 @@ struct PaywallView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     ConversionHeader(
                         eyebrow: "LIMIAR PREMIUM",
-                        title: "Ontem, sua travessia ficou menor.",
-                        subtitle: "Sua pausa continua — mas desde ontem ela vem sem a parte que fazia a diferença."
+                        title: "Quero voltar a ser premium",
+                        subtitle: nil
                     )
 
-                    ConversionContrastLine(text: "Você continua com a pausa, o bloqueio e os 3 trechos.")
-
                     ConversionLossBlock(
-                        title: "Desde ontem, você está sem:",
+                        title: "No plano essencial, você está sem:",
                         finalItem: "Pausa limpa — anúncios nos trechos e no dashboard"
                     )
 
@@ -62,7 +60,7 @@ struct PaywallView: View {
 struct ConversionHeader: View {
     let eyebrow: String
     let title: String
-    let subtitle: String
+    let subtitle: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -76,10 +74,12 @@ struct ConversionHeader: View {
                 .foregroundStyle(Color.ivory)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(subtitle)
-                .font(.system(size: 13))
-                .foregroundStyle(Color.softText)
-                .lineSpacing(4)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(4)
+            }
         }
     }
 }

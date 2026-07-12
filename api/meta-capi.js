@@ -27,12 +27,36 @@ function clientIP(req) {
 // atribuição dos anúncios — é limitar o volume por origem.
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_EVENTS = 30;
+const RATE_LIMIT_MAX_BUCKETS = 5_000;
+const RATE_BUCKET_CLEANUP_INTERVAL_MS = 60_000;
 const rateBuckets = globalThis.__limiarMetaCapiBuckets || new Map();
 globalThis.__limiarMetaCapiBuckets = rateBuckets;
+let lastRateBucketCleanupAt = Number(globalThis.__limiarMetaCapiBucketsLastCleanupAt) || 0;
+
+function cleanupRateBuckets(now) {
+  const isCleanupDue = now - lastRateBucketCleanupAt >= RATE_BUCKET_CLEANUP_INTERVAL_MS;
+  if (!isCleanupDue && rateBuckets.size < RATE_LIMIT_MAX_BUCKETS) return;
+
+  for (const [key, bucket] of rateBuckets) {
+    if (now > bucket.resetAt) rateBuckets.delete(key);
+  }
+
+  // Uma instância serverless pode permanecer viva por bastante tempo. Mantemos
+  // o mapa limitado mesmo se muitas origens diferentes chegarem no mesmo minuto.
+  while (rateBuckets.size >= RATE_LIMIT_MAX_BUCKETS) {
+    const oldestKey = rateBuckets.keys().next().value;
+    if (!oldestKey) break;
+    rateBuckets.delete(oldestKey);
+  }
+
+  lastRateBucketCleanupAt = now;
+  globalThis.__limiarMetaCapiBucketsLastCleanupAt = now;
+}
 
 function rateLimited(req) {
   const key = clientIP(req) || "unknown-client";
   const now = Date.now();
+  cleanupRateBuckets(now);
   const bucket = rateBuckets.get(key) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
   if (now > bucket.resetAt) {
     bucket.count = 0;

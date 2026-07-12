@@ -110,11 +110,11 @@ final class SubscriptionManager {
     }
 
     var hasPremiumAccess: Bool {
-        accessState.allowsPremiumFeatures
+        return accessState.allowsPremiumFeatures
     }
 
     var isEssentialMode: Bool {
-        accessState == .trialExpired && !hasActiveSubscription
+        return accessState == .trialExpired && !hasActiveSubscription
     }
 
     var canShowPaywall: Bool {
@@ -192,14 +192,19 @@ final class SubscriptionManager {
     }
 
     var marketingPricingLine: String {
-        let prices = availablePlanPrices()
+        let yearly = product(for: .yearly)
+        let monthly = product(for: .monthly)
 
-        if prices.count >= 2 {
-            return "Depois \(prices.joined(separator: " ou "))"
+        if yearly != nil, monthly != nil {
+            return "Depois \(displayPrice(for: .yearly))/Ano ou \(displayPrice(for: .monthly))/Mês"
         }
 
-        if let price = prices.first {
-            return "Depois \(price)"
+        if yearly != nil {
+            return "Depois \(displayPrice(for: .yearly))/Ano"
+        }
+
+        if monthly != nil {
+            return "Depois \(displayPrice(for: .monthly))/Mês"
         }
 
         return "Preço confirmado pela App Store antes da assinatura"

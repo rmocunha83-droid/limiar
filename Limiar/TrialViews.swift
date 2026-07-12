@@ -14,7 +14,7 @@ struct EssentialModeIntroView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 18) {
                     ConversionHeader(
-                        eyebrow: "MODO ESSENCIAL",
+                        eyebrow: "ATENÇÃO!",
                         title: "Seu acesso inicial terminou.",
                         subtitle: "Sua pausa diária continua funcionando, gratuita. Veja o que fica com você:"
                     )
@@ -46,10 +46,16 @@ struct EssentialModeIntroView: View {
                     NavigationLink {
                         PaywallView()
                     } label: {
-                        Text("Conhecer o Limiar completo")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.softText)
+                        Text("Quero o Limiar completo")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sageButton)
                             .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.sageButton.opacity(0.75), lineWidth: 1)
+                            )
                     }
                 }
                 .padding(.horizontal, 30)
@@ -115,7 +121,7 @@ struct FreeTrialStartView: View {
                         .foregroundStyle(Color.deepInk)
                     }
 
-                    Text("Você não está assinando agora. O acesso inicial começa localmente e o app pedirá assinatura somente depois dos 7 dias.")
+                    Text("Você não está assinando agora. O app Limiar pedirá assinatura somente depois dos 7 dias.")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -144,7 +150,7 @@ struct TrialConversionView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     ConversionHeader(
-                        eyebrow: "SEU ACESSO COMPLETO TERMINA AMANHÃ",
+                        eyebrow: "ATENÇÃO!",
                         title: "Continue sem interrupção.",
                         subtitle: "Você não precisa perder nada do que construiu nestes 7 dias."
                     )
