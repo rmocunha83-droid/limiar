@@ -270,13 +270,25 @@ function diagnosticEnabled() {
   return process.env.LIMIAR_AI_DEBUG === "1" || process.env.NODE_ENV !== "production";
 }
 
+// Provider/modelo efetivos por tipo de evento: eventos de narração carimbam o
+// motor de TTS ativo; os demais, o modelo textual. `details` pode sobrepor.
+function providerInfo(event = "") {
+  const isSpeechEvent = /^(tts_|azure_tts_|elevenlabs_)/.test(event);
+  if (!isSpeechEvent) {
+    return { provider: "openai", model: process.env.OPENAI_MODEL || DEFAULT_MODEL };
+  }
+  if (normalizeTTSProvider() === "azure") {
+    return { provider: "azure", model: "azure-speech", voice: azureSpeechVoice() };
+  }
+  return { provider: "elevenlabs", model: process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL };
+}
+
 function logAIDiagnostic(event, details = {}) {
   if (!diagnosticEnabled()) return;
   console.info("limiar_ai_diagnostic", {
     event,
-    ...details,
-    provider: "openai",
-    model: process.env.OPENAI_MODEL || DEFAULT_MODEL
+    ...providerInfo(event),
+    ...details
   });
 }
 
@@ -429,10 +441,14 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
   const byLeastRecentlyUsed = (lhs, rhs) =>
     rhs.lastUsedRank - lhs.lastUsedRank || byPreference(lhs, rhs);
 
+  const reusedIndexes = new Set();
   const addEntry = (entry, reusedRecent = false) => {
     selected.push(entry);
     selectedIndexes.add(entry.index);
-    if (reusedRecent) reusedRecentCount += 1;
+    if (reusedRecent) {
+      reusedRecentCount += 1;
+      reusedIndexes.add(entry.index);
+    }
   };
 
   // O afinamento é prioridade, não filtro: até dois trechos frescos vêm dos
@@ -444,7 +460,6 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     .slice(0, priorityQuota)) {
     addEntry(entry);
   }
-  const priorityCount = selected.filter((entry) => entry.inPriorityBooks).length;
 
   for (const tier of tiers) {
     const pool = candidates.filter(
@@ -469,8 +484,9 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     // rotaciona os menos recentemente usados DESTE nível. Só amplia quando o
     // nível não tem trechos suficientes no total — a explicação gerada é
     // sempre nova, então repetir um versículo antigo é melhor do que trazer
-    // um livro que o usuário não escolheu.
-    if (pool.length >= count) {
+    // um livro que o usuário não escolheu. A soma inclui os já selecionados
+    // pela cota de prioridade, que consome trechos deste mesmo nível.
+    if (selected.length + pool.length >= count) {
       const leastRecentFirst = pool
         .filter((entry) => !selectedIndexes.has(entry.index))
         .sort(byLeastRecentlyUsed);
@@ -494,12 +510,18 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     }
   }
 
-  // Rede de segurança para temas: troca apenas a janela de descoberta (nunca
-  // um trecho da cota de livros) por um candidato fresco do tema preferido.
+  // Rede de segurança para temas — apenas para perfis novos, que enviam
+  // priorityBooks: troca a janela de descoberta (nunca um trecho da cota) por
+  // um candidato fresco do tema preferido, sem sair dos livros escolhidos.
+  // Builds antigos (só favoriteBooks) mantêm o filtro forte original intacto.
   let favoriteThemeCount = selected.filter((entry) => favoriteThemes.has(normalizeContentIdentity(entry.passage.theme))).length;
-  if (favoriteThemes.size && favoriteThemeCount === 0) {
+  if (priorityBooks.size && favoriteThemes.size && favoriteThemeCount === 0) {
     const themeCandidate = candidates
-      .filter((entry) => !entry.isRecent && !selectedIndexes.has(entry.index) && favoriteThemes.has(normalizeContentIdentity(entry.passage.theme)))
+      .filter((entry) =>
+        !entry.isRecent &&
+        !selectedIndexes.has(entry.index) &&
+        favoriteThemes.has(normalizeContentIdentity(entry.passage.theme)) &&
+        (!favoriteBooks.size || entry.inFavoriteBooks || entry.inPriorityBooks))
       .sort(byPreference)[0];
     const replacement = selected
       .filter((entry) => !entry.inPriorityBooks)
@@ -507,6 +529,10 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     if (themeCandidate && replacement) {
       const replacementIndex = selected.indexOf(replacement);
       selectedIndexes.delete(replacement.index);
+      if (reusedIndexes.has(replacement.index)) {
+        reusedRecentCount -= 1;
+        reusedIndexes.delete(replacement.index);
+      }
       selected[replacementIndex] = themeCandidate;
       selectedIndexes.add(themeCandidate.index);
       favoriteThemeCount = 1;
@@ -988,7 +1014,6 @@ function classifyProviderError(prefix, status, data) {
 }
 
 function logAIError(endpoint, error, context = {}) {
-  const isSpeech = endpoint === "speech";
   console.error("limiar_ai_error", {
     endpoint,
     code: error.code || "ai_unknown_error",
@@ -996,10 +1021,7 @@ function logAIError(endpoint, error, context = {}) {
     message: error.message,
     requestID: context.requestID,
     clientID: context.clientID,
-    provider: isSpeech ? "elevenlabs" : "openai",
-    model: isSpeech
-      ? process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL
-      : process.env.OPENAI_MODEL || DEFAULT_MODEL
+    ...(endpoint === "speech" ? providerInfo("tts_error") : providerInfo())
   });
 }
 
@@ -1147,6 +1169,7 @@ module.exports = {
   logAIError,
   normalizeSpeechInput,
   normalizeTTSProvider,
+  normalizeTTSSpeed,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,

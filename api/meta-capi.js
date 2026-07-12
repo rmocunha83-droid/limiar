@@ -22,6 +22,27 @@ function clientIP(req) {
   return trimText(req.headers?.["x-forwarded-for"] || "", 120).split(",")[0].trim();
 }
 
+// Rate limit por IP: o endpoint é chamado pelo site público (sem o segredo do
+// app), então a única defesa contra spam de eventos falsos — que poluiria a
+// atribuição dos anúncios — é limitar o volume por origem.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_EVENTS = 30;
+const rateBuckets = globalThis.__limiarMetaCapiBuckets || new Map();
+globalThis.__limiarMetaCapiBuckets = rateBuckets;
+
+function rateLimited(req) {
+  const key = clientIP(req) || "unknown-client";
+  const now = Date.now();
+  const bucket = rateBuckets.get(key) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+  if (now > bucket.resetAt) {
+    bucket.count = 0;
+    bucket.resetAt = now + RATE_LIMIT_WINDOW_MS;
+  }
+  bucket.count += 1;
+  rateBuckets.set(key, bucket);
+  return bucket.count > RATE_LIMIT_MAX_EVENTS;
+}
+
 function validEventTime(value) {
   const eventTime = Number(value);
   const now = Math.floor(Date.now() / 1000);
@@ -38,6 +59,13 @@ module.exports = async function handler(req, res) {
     res.statusCode = 405;
     res.setHeader("Allow", "POST");
     res.end(JSON.stringify({ error: "method_not_allowed" }));
+    return;
+  }
+
+  if (rateLimited(req)) {
+    res.statusCode = 429;
+    res.setHeader("Retry-After", "60");
+    res.end(JSON.stringify({ error: "rate_limited" }));
     return;
   }
 

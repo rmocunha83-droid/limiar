@@ -267,6 +267,103 @@ test("does not force a favorite theme when no fresh candidate exists", () => {
   assert.equal(selection.reusedRecentCount, 0);
 });
 
+test("legacy profiles without priorityBooks keep the strong book filter even with themes", () => {
+  // Builds antigos enviam favoriteThemes mas não priorityBooks: a garantia de
+  // tema NÃO pode ejetar um livro escolhido para injetar Mateus (Propósito).
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({
+      favoriteBooks: ["Salmos", "Provérbios", "Isaías"],
+      favoriteThemes: ["Propósito"],
+      explanationDepth: "média"
+    }),
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 3,
+    seed: "legacy-theme"
+  });
+  for (const passage of selection.selected) {
+    assert.equal(["Salmos", "Provérbios", "Isaías"].includes(passage.book), true);
+  }
+  assert.equal(selection.favoriteThemeCount, 0);
+});
+
+test("theme guarantee never leaves the chosen books", () => {
+  // Presença só existe em Lucas, que não está nos livros escolhidos: a troca
+  // de tema não pode trazer um livro de fora da união.
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({
+      favoriteBooks: ["Salmos", "Provérbios"],
+      priorityBooks: ["Salmos"],
+      favoriteThemes: ["Presença"],
+      explanationDepth: "média"
+    }),
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 3,
+    seed: "theme-outside"
+  });
+  for (const passage of selection.selected) {
+    assert.equal(["Salmos", "Provérbios"].includes(passage.book), true);
+  }
+  assert.equal(selection.favoriteThemeCount, 0);
+});
+
+test("priority books rotate via LRU instead of widening when fresh ones run out", () => {
+  // favoritos == prioritários com 2 frescos e 2 recentes: a cota pega os 2
+  // frescos e a 3ª vaga rotaciona o Salmo mais antigo — nunca amplia para um
+  // livro que o usuário não escolheu.
+  const psalmCatalog = normalizePassages([
+    { id: "psalm-23", reference: "Salmo 23", text: "O Senhor é meu pastor.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
+    { id: "psalm-121", reference: "Salmo 121", text: "O Senhor te guarda.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
+    { id: "psalm-27", reference: "Salmo 27", text: "O Senhor é minha luz.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
+    { id: "psalm-91", reference: "Salmo 91", text: "Sob as asas do Altíssimo.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
+    { id: "matthew-6", reference: "Mateus 6, 33", text: "Buscai primeiro o Reino.", book: "Mateus", section: "Evangelhos", theme: "Propósito" },
+    { id: "luke-10", reference: "Lucas 10, 41-42", text: "Uma só coisa é necessária.", book: "Lucas", section: "Evangelhos", theme: "Presença" }
+  ]);
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({ favoriteBooks: ["Salmos"], priorityBooks: ["Salmos"], explanationDepth: "média" }),
+    passages: psalmCatalog,
+    recentPassageIDs: ["psalm-27", "psalm-91"],
+    count: 3,
+    seed: "priority-lru"
+  });
+  assert.equal(selection.selected.length, 3);
+  for (const passage of selection.selected) {
+    assert.equal(passage.book, "Salmos");
+  }
+  assert.equal(selection.selectionTier, "favorite-books");
+  assert.equal(selection.reusedRecentCount, 1);
+  assert.equal(selection.selected.some((passage) => passage.id === "psalm-91"), true);
+});
+
+test("speech cache key ignores client voice and speed on the Azure path", () => {
+  const speech = require("../api/speech");
+  const forged = speech.cacheKey({ text: "Bom dia", voice: "qualquer 0.92 coisa", speed: "9" });
+  const legit = speech.cacheKey({ text: "Bom dia" });
+  assert.equal(forged, legit);
+  const otherText = speech.cacheKey({ text: "Boa noite" });
+  assert.notEqual(legit, otherText);
+});
+
+test("speech cache key normalizes forged voice/speed on the ElevenLabs path", () => {
+  const speech = require("../api/speech");
+  const previous = process.env.TTS_PROVIDER;
+  process.env.TTS_PROVIDER = "elevenlabs";
+  try {
+    // Voz com espaços e velocidade não numérica não podem deslocar os campos
+    // da chave para colidir com a chave legítima de outro texto.
+    const forged = speech.cacheKey({ voice: "abc 0.92 Bom", speed: "x", text: "dia" });
+    const legit = speech.cacheKey({ voice: "abc", speed: 0.92, text: "Bom dia" });
+    assert.notEqual(forged, legit);
+    const config = speech.speechConfig({ voice: "a b\tc", speed: "5" });
+    assert.equal(config.voice.includes(" "), false);
+    assert.equal(Number(config.speed) <= 1.1, true);
+  } finally {
+    if (previous === undefined) delete process.env.TTS_PROVIDER;
+    else process.env.TTS_PROVIDER = previous;
+  }
+});
+
 test("keeps up to forty normalized books", () => {
   const books = Array.from({ length: 45 }, (_, index) => `Livro ${index}`);
   const profile = normalizeProfile({ favoriteBooks: books, favoriteBookIDs: books, priorityBooks: books, avoidedBooks: books });

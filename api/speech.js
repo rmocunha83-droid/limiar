@@ -14,7 +14,8 @@ const {
   logAIError,
   parseBody,
   requirePost,
-  normalizeTTSProvider
+  normalizeTTSProvider,
+  normalizeTTSSpeed
 } = require("./_limiar-ai");
 
 // Cache de áudio no Vercel Blob: cada combinação texto+voz+velocidade+modelo é
@@ -34,11 +35,15 @@ function speechConfig(body) {
     };
   }
 
+  // voice e speed vêm do cliente neste caminho: normalizamos antes de compor a
+  // chave de cache (voz sem espaços, velocidade numérica limitada) para que um
+  // valor forjado não consiga colidir com a chave de outro texto legítimo.
+  const rawVoice = String(body.voice || process.env.ELEVENLABS_VOICE_ID || DEFAULT_TTS_VOICE_ID);
   return {
     provider,
-    voice: String(body.voice || process.env.ELEVENLABS_VOICE_ID || DEFAULT_TTS_VOICE_ID),
-    speed: String(body.speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED),
-    model: String(process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL)
+    voice: rawVoice.replace(/\s+/g, "").slice(0, 80),
+    speed: String(normalizeTTSSpeed(body.speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED)),
+    model: String(process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL).replace(/\s+/g, "").slice(0, 80)
   };
 }
 
@@ -64,7 +69,9 @@ async function findCachedAudio(pathname, debugContext) {
     return existing?.url || null;
   } catch (error) {
     if (error?.name === "BlobNotFoundError") return null;
-    logAIDiagnostic("tts_cache_lookup_failed", { ...debugContext, error: String(error?.message || error) });
+    // console.warn: precisa aparecer em produção — cache degradado dobra o
+    // custo de síntese em silêncio se o aviso ficar restrito ao modo debug.
+    console.warn("limiar_tts_cache_lookup_failed", { ...debugContext, error: String(error?.message || error) });
     return null;
   }
 }
@@ -81,7 +88,7 @@ async function storeCachedAudio(pathname, audio, debugContext) {
     logAIDiagnostic("tts_cache_stored", { ...debugContext, pathname, bytes: audio.length });
     return true;
   } catch (error) {
-    logAIDiagnostic("tts_cache_store_failed", { ...debugContext, error: String(error?.message || error) });
+    console.warn("limiar_tts_cache_store_failed", { ...debugContext, error: String(error?.message || error) });
     if (debugContext?.throwOnCacheError) throw error;
     return false;
   }
@@ -118,8 +125,8 @@ async function handler(req, res) {
       ? await callAzureSpeech({ input: body.text, speed: config.speed, debugContext })
       : await callElevenLabsSpeech({
         input: body.text,
-        voice: body.voice,
-        speed: body.speed,
+        voice: config.voice,
+        speed: config.speed,
         debugContext
       });
 
