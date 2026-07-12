@@ -110,11 +110,11 @@ final class SubscriptionManager {
     }
 
     var hasPremiumAccess: Bool {
-        accessState.allowsPremiumFeatures
+        return accessState.allowsPremiumFeatures
     }
 
     var isEssentialMode: Bool {
-        accessState == .trialExpired && !hasActiveSubscription
+        return accessState == .trialExpired && !hasActiveSubscription
     }
 
     var canShowPaywall: Bool {
