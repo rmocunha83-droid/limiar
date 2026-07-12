@@ -115,7 +115,7 @@ struct FreeTrialStartView: View {
                         .foregroundStyle(Color.deepInk)
                     }
 
-                    Text("Você não está assinando agora. O acesso inicial começa localmente e o app pedirá assinatura somente depois dos 7 dias.")
+                    Text("Você não está assinando agora. O app Limiar pedirá assinatura somente depois dos 7 dias.")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
