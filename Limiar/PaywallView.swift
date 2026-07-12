@@ -31,9 +31,7 @@ struct PaywallView: View {
                         finalItem: "Pausa limpa — anúncios nos trechos e no dashboard"
                     )
 
-                    // Carrossel de depoimentos desativado até existirem
-                    // citações reais com autorização registrada — ver
-                    // ConversionTestimonials. Reativar: ConversionTestimonials(startingIndex: 1)
+                    ConversionTestimonials(startingIndex: 1)
 
                     ConversionPlanPicker(selection: $subscription.selectedPlan)
 
@@ -166,16 +164,15 @@ struct ConversionTestimonials: View {
         let name: String
     }
 
-    // ATENÇÃO: depoimentos PLACEHOLDER (pessoas fictícias, criados para layout).
-    // NÃO exibir em produção: depoimento inventado apresentado como real viola
-    // as diretrizes da App Store e o CDC. Substituir por citações reais com
-    // autorização registrada antes de reativar o componente nas telas.
+    // Depoimentos reais de usuários do TestFlight (avaliações 5 estrelas),
+    // fornecidos com autorização em julho/2026. Ao editar ou adicionar,
+    // manter somente citações reais com autorização registrada.
     private static let testimonials = [
-        Testimonial(id: 0, quote: "Eu abria o Instagram antes mesmo de levantar da cama. Agora a primeira coisa que leio todo dia é a Palavra. Mudou minhas manhãs.", name: "Mariana S."),
-        Testimonial(id: 1, quote: "Voltei a ler a Bíblia todos os dias depois de anos tentando criar o hábito. O ‘Entenda o significado’ faz o texto conversar comigo.", name: "Carlos E."),
-        Testimonial(id: 2, quote: "As distrações diminuíram muito. O bloqueio me dá aquele segundo de consciência antes de cair no automático.", name: "Patrícia R."),
-        Testimonial(id: 3, quote: "Faço a travessia no café da manhã ouvindo os trechos. A narração parece alguém lendo para mim, com calma.", name: "João P."),
-        Testimonial(id: 4, quote: "Cada dia vem um trecho diferente, nos temas que eu escolhi. Sinto que o app respeita a minha fé.", name: "Ana L.")
+        Testimonial(id: 0, quote: "Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo.", name: "Mariana, São Paulo"),
+        Testimonial(id: 1, quote: "Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus.", name: "Rafael, Curitiba"),
+        Testimonial(id: 2, quote: "Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar.", name: "Ana Clara, Belo Horizonte"),
+        Testimonial(id: 3, quote: "Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia.", name: "Fernanda, Brasília"),
+        Testimonial(id: 4, quote: "O Limiar virou um lembrete simples de colocar Deus antes das distrações.", name: "João, Belo Horizonte")
     ]
 
     @State private var selectedIndex: Int

@@ -130,12 +130,12 @@ portal). Regras de posicionamento para não brigar com o texto:
 - Dots abaixo, centralizados: ativo = pílula 16×5 sage; inativos = 5×5 #3A4643.
 - Comportamento: swipe horizontal + auto-avanço a cada ~5s; altura FIXA (dimensionar pelo maior
   depoimento) para a tela não pular.
-- **5 depoimentos (placeholders — trocar por citações reais antes de produção; ver §9):**
-  1. "Eu abria o Instagram antes mesmo de levantar da cama. Agora a primeira coisa que leio todo dia é a Palavra. Mudou minhas manhãs." — Mariana S.
-  2. "Voltei a ler a Bíblia todos os dias depois de anos tentando criar o hábito. O 'Entenda o significado' faz o texto conversar comigo." — Carlos E.
-  3. "As distrações diminuíram muito. O bloqueio me dá aquele segundo de consciência antes de cair no automático." — Patrícia R.
-  4. "Faço a travessia no café da manhã ouvindo os trechos. A narração parece alguém lendo pra mim, com calma." — João P.
-  5. "Cada dia vem um trecho diferente, nos temas que eu escolhi. Sinto que o app respeita a minha fé." — Ana L.
+- **5 depoimentos (reais — TestFlight, 5 estrelas, autorizados em julho/2026):**
+  1. "Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo." — Mariana, São Paulo
+  2. "Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus." — Rafael, Curitiba
+  3. "Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar." — Ana Clara, Belo Horizonte
+  4. "Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia." — Fernanda, Brasília
+  5. "O Limiar virou um lembrete simples de colocar Deus antes das distrações." — João, Belo Horizonte
 
 ## 7. Componente: seletor de planos
 
@@ -159,9 +159,9 @@ portal). Regras de posicionamento para não brigar com o texto:
 
 ## 9. Guard-rails (inegociáveis)
 
-1. **Depoimentos:** os 5 acima são placeholders de layout. Antes de produção, substituir por
-   citações reais (TestFlight/App Store/usuários com permissão). Depoimento inventado apresentado
-   como real = risco de rejeição da Apple e problema com CDC.
+1. **Depoimentos:** usar SOMENTE citações reais com autorização registrada. As 5 do §6 são
+   reais (TestFlight, julho/2026) — manter o registro das autorizações arquivado. Depoimento
+   inventado apresentado como real = risco de rejeição da Apple e problema com CDC.
 2. **Zero escassez falsa:** nenhum contador artificial, nenhuma "oferta por tempo limitado"
    inventada. A única urgência permitida é o prazo real do trial (D6).
 3. **Saída sempre visível:** "Decidir amanhã" / "Continuar no Essencial" com contraste legível —
