@@ -378,7 +378,12 @@ final class SubscriptionManager {
             return "R$ 0,25"
         }
 
-        return (product.price / Decimal(365)).formatted(product.priceFormatStyle)
+        // Arredonda o centavo para CIMA: a copy diz "menos de X por dia" e a
+        // afirmação precisa continuar verdadeira após o arredondamento.
+        var dailyPrice = Decimal()
+        var rawDaily = product.price / Decimal(365)
+        NSDecimalRound(&dailyPrice, &rawDaily, 2, .up)
+        return dailyPrice.formatted(product.priceFormatStyle)
     }
 
     private func fallbackBrazilianPrice(for plan: SubscriptionPlan) -> String {

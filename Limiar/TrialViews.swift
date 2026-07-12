@@ -156,7 +156,9 @@ struct TrialConversionView: View {
                         finalItem: "Pausa limpa — passará a ver anúncios"
                     )
 
-                    ConversionTestimonials(startingIndex: 0)
+                    // Carrossel de depoimentos desativado até existirem
+                    // citações reais com autorização registrada — ver
+                    // ConversionTestimonials. Reativar: ConversionTestimonials(startingIndex: 0)
 
                     ConversionPlanPicker(selection: $subscription.selectedPlan)
 

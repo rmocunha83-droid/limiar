@@ -31,7 +31,9 @@ struct PaywallView: View {
                         finalItem: "Pausa limpa — anúncios nos trechos e no dashboard"
                     )
 
-                    ConversionTestimonials(startingIndex: 1)
+                    // Carrossel de depoimentos desativado até existirem
+                    // citações reais com autorização registrada — ver
+                    // ConversionTestimonials. Reativar: ConversionTestimonials(startingIndex: 1)
 
                     ConversionPlanPicker(selection: $subscription.selectedPlan)
 
@@ -164,7 +166,10 @@ struct ConversionTestimonials: View {
         let name: String
     }
 
-    // Avaliações reais, autorizadas para uso no paywall sem foto do autor.
+    // ATENÇÃO: depoimentos PLACEHOLDER (pessoas fictícias, criados para layout).
+    // NÃO exibir em produção: depoimento inventado apresentado como real viola
+    // as diretrizes da App Store e o CDC. Substituir por citações reais com
+    // autorização registrada antes de reativar o componente nas telas.
     private static let testimonials = [
         Testimonial(id: 0, quote: "Eu abria o Instagram antes mesmo de levantar da cama. Agora a primeira coisa que leio todo dia é a Palavra. Mudou minhas manhãs.", name: "Mariana S."),
         Testimonial(id: 1, quote: "Voltei a ler a Bíblia todos os dias depois de anos tentando criar o hábito. O ‘Entenda o significado’ faz o texto conversar comigo.", name: "Carlos E."),

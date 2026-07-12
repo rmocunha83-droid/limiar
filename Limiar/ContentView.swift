@@ -296,16 +296,19 @@ private struct DashboardView: View {
                         item: item,
                         isSaved: model.isFavorite(item),
                         saveAction: {
-                            if model.isEssentialMode && subscription.canShowPaywall {
+                            // No Essencial o toque SEMPRE abre o paywall — sem
+                            // depender de canShowPaywall (que só liga no dia
+                            // seguinte ao fim do trial). Nunca muta favoritos.
+                            if model.isEssentialMode {
                                 showingPaywall = true
                             } else {
                                 model.toggleFavorite(item)
                             }
                         },
                         listenAction: {
-                            if model.isEssentialMode && subscription.canShowPaywall {
+                            if model.isEssentialMode {
                                 showingPaywall = true
-                            } else if !model.isEssentialMode {
+                            } else {
                                 narration.toggle(segments: narrationSegments)
                             }
                         },
@@ -319,8 +322,53 @@ private struct DashboardView: View {
                         LimiarAdBannerSlot(label: "Publicidade")
                     }
                 }
+
+                if model.hasPremiumAccess && model.hasVisibleReflection {
+                    reflectionSection
+                } else if model.isEssentialMode,
+                          !model.currentReflection.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    essentialReflectionTeaser
+                }
             }
         }
+    }
+
+    private var reflectionSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Reflexão breve", systemImage: "sparkle")
+                .font(.system(size: 13, weight: .bold))
+                .tracking(1.2)
+                .foregroundStyle(Color.warmGold)
+                .padding(.top, 4)
+            ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
+            ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
+            ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
+            ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
+        }
+    }
+
+    private var essentialReflectionTeaser: some View {
+        Button {
+            showingPaywall = true
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Reflexão breve", systemImage: "lock.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.warmGold)
+                Text(model.currentReflection.summary)
+                    .font(.system(size: 16, weight: .regular, design: .serif))
+                    .foregroundStyle(Color.ivory.opacity(0.58))
+                    .lineLimit(1)
+                    .blur(radius: 3)
+                    .mask(LinearGradient(colors: [.black, .black.opacity(0.35), .clear], startPoint: .leading, endPoint: .trailing))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .limiarPanel()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Reflexão breve bloqueada. Abrir Limiar completo")
     }
 
     private var essentialModeNotice: some View {
@@ -342,7 +390,7 @@ private struct DashboardView: View {
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
 
-                    if subscription.canShowPaywall {
+                    if model.isEssentialMode {
                         NavigationLink {
                             PaywallView()
                         } label: {

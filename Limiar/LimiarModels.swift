@@ -1305,6 +1305,9 @@ final class LimiarAppModel {
             profile.explanationDepth.rawValue,
             profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
+            // Afinamento entra na chave: mudar só os livros prioritários deve
+            // gerar sessão nova no mesmo dia, não recarregar a antiga.
+            (profile.refinedBooks ?? []).map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
         ].joined(separator: "|")
     }
@@ -1337,6 +1340,7 @@ final class LimiarAppModel {
             profile.explanationDepth.rawValue,
             profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
+            (profile.refinedBooks ?? []).map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
         ].joined(separator: "|")
     }

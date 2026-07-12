@@ -14,6 +14,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Sem lockfile no repo, npm install resolve as dependências declaradas.
+      # Hoje os testes só importam módulos node:*, mas qualquer import futuro
+      # de @vercel/blob num arquivo testado quebraria sem este passo.
+      - name: Instala dependências
+        run: npm install --no-audit --no-fund
       - name: Testes do backend de IA
         run: npm run test:ai-backend
       - name: Validação do catálogo de trechos

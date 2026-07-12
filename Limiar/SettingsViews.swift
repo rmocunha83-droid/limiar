@@ -70,16 +70,18 @@ struct SettingsView: View {
 
                 Section("Histórico") {
                     Button("Ver leituras") {
+                        // Sem depender de canShowPaywall: entre o fim do trial
+                        // e a meia-noite seguinte o botão ficaria mudo.
                         if subscription.hasPremiumAccess {
                             showingHistory = true
-                        } else if subscription.canShowPaywall {
+                        } else {
                             showingPaywall = true
                         }
                     }
                     Button("Ver trechos salvos") {
                         if subscription.hasPremiumAccess {
                             showingFavorites = true
-                        } else if subscription.canShowPaywall {
+                        } else {
                             showingPaywall = true
                         }
                     }
@@ -97,7 +99,7 @@ struct SettingsView: View {
                             .foregroundStyle(subscription.hasPremiumAccess || subscription.isEssentialMode ? Color.sageButton : .secondary)
                     }
 
-                    if !subscription.hasActiveSubscription && subscription.canShowPaywall {
+                    if !subscription.hasActiveSubscription && subscription.isEssentialMode {
                         Button("Assinar Premium") {
                             showingPaywall = true
                         }
