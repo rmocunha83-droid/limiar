@@ -260,6 +260,7 @@ enum PassageNarrationButtonState: Equatable {
     case idle
     case generating
     case playing
+    case paused
 
     var title: String {
         switch self {
@@ -268,7 +269,9 @@ enum PassageNarrationButtonState: Equatable {
         case .generating:
             "Gerando narração"
         case .playing:
-            "Parar narração"
+            "Pausar narração"
+        case .paused:
+            "Continuar narração"
         }
     }
 
@@ -279,7 +282,9 @@ enum PassageNarrationButtonState: Equatable {
         case .generating:
             "waveform"
         case .playing:
-            "stop.circle.fill"
+            "pause.circle.fill"
+        case .paused:
+            "play.circle.fill"
         }
     }
 
@@ -292,6 +297,7 @@ enum PassageNarrationButtonState: Equatable {
 final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isSpeaking = false
     @Published var isGenerating = false
+    @Published var isPaused = false
 
     private let speechService = RemoteAISpeechService()
     private var player: AVAudioPlayer?
@@ -310,7 +316,11 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     func toggle(segments: [String]) {
         let preparedSegments = preparedSegments(from: segments)
         let identifier = queueIdentifier(for: preparedSegments)
-        if (isSpeaking || isGenerating), activeSpeechText == identifier {
+        if activeSpeechText == identifier, isSpeaking {
+            pause()
+        } else if activeSpeechText == identifier, isPaused {
+            resume()
+        } else if activeSpeechText == identifier, isGenerating {
             stop()
         } else {
             speak(preparedSegments)
@@ -325,7 +335,37 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         guard activeSpeechText == queueIdentifier(for: preparedSegments(from: segments)) else { return .idle }
         if isGenerating { return .generating }
         if isSpeaking { return .playing }
+        if isPaused { return .paused }
         return .idle
+    }
+
+    func pause() {
+        guard isSpeaking, let player else { return }
+        player.pause()
+        isSpeaking = false
+        isPaused = true
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    func resume() {
+        guard isPaused, let player else {
+            finishQueue()
+            return
+        }
+
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try session.setActive(true)
+            guard player.play() else {
+                finishQueue()
+                return
+            }
+            isPaused = false
+            isSpeaking = true
+        } catch {
+            finishQueue()
+        }
     }
 
     func stop() {
@@ -342,6 +382,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         activeSpeechText = ""
         isSpeaking = false
         isGenerating = false
+        isPaused = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -354,6 +395,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         currentSegmentIndex = 0
         isGenerating = true
         isSpeaking = false
+        isPaused = false
         loadAndPlaySegment(at: 0)
     }
 
@@ -368,6 +410,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         let segment = queue[index]
         isGenerating = true
         isSpeaking = false
+        isPaused = false
         let service = speechService
 
         playbackTask = Task { [weak self] in
@@ -400,6 +443,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             currentSegmentIndex = index
             isGenerating = false
             isSpeaking = true
+            isPaused = false
             audioPlayer.play()
             prefetchSegment(after: index)
         } catch {
@@ -479,6 +523,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         activeSpeechText = ""
         isGenerating = false
         isSpeaking = false
+        isPaused = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
