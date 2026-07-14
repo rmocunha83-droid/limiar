@@ -19,6 +19,22 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceEssentialModeForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceEssential")
+        #else
+        false
+        #endif
+    }
+
+    private var effectiveHasPremiumAccess: Bool {
+        Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
+    }
+
+    private var effectiveIsEssentialMode: Bool {
+        Self.forceEssentialModeForDebugging ? true : subscription.isEssentialMode
+    }
+
     private static var forcedConversionScreen: String? {
         #if DEBUG
         guard let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-LimiarConversionScreen"),
@@ -44,6 +60,8 @@ struct ContentView: View {
                     PaywallView()
                 } else if Self.forcePaywallForReviewScreenshot {
                     PaywallView()
+                } else if Self.forceEssentialModeForDebugging {
+                    DashboardView()
                 } else if !model.hasCompletedOnboarding {
                     OnboardingView()
                 } else if subscription.accessState == .trialNotStarted {
@@ -72,8 +90,8 @@ struct ContentView: View {
             if phase == .active {
                 subscription.refreshAccessState()
                 model.updateAccess(
-                    hasPremiumAccess: subscription.hasPremiumAccess,
-                    isEssentialMode: subscription.isEssentialMode
+                    hasPremiumAccess: effectiveHasPremiumAccess,
+                    isEssentialMode: effectiveIsEssentialMode
                 )
                 model.prepareFreshPassageForForeground()
             }
@@ -81,14 +99,14 @@ struct ContentView: View {
         .task {
             subscription.start()
             model.updateAccess(
-                hasPremiumAccess: subscription.hasPremiumAccess,
-                isEssentialMode: subscription.isEssentialMode
+                hasPremiumAccess: effectiveHasPremiumAccess,
+                isEssentialMode: effectiveIsEssentialMode
             )
         }
         .onChange(of: subscription.accessState) { _, _ in
             model.updateAccess(
-                hasPremiumAccess: subscription.hasPremiumAccess,
-                isEssentialMode: subscription.isEssentialMode
+                hasPremiumAccess: effectiveHasPremiumAccess,
+                isEssentialMode: effectiveIsEssentialMode
             )
         }
     }
@@ -104,6 +122,14 @@ private struct DashboardView: View {
     @State private var showingPaywall = false
     @State private var unlockPhase = UnlockButtonPhase.locked
     @State private var unlockAnimationTick = 0
+
+    private static var forceEssentialBannerScreenshot: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarEssentialBannerScreenshot")
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -155,11 +181,17 @@ private struct DashboardView: View {
                         footer
                     }
                     .padding(.horizontal, 24)
+                    .containerRelativeFrame(.horizontal, alignment: .leading)
                     .padding(.top, 58)
                     .padding(.bottom, 30)
                 }
                 .onAppear {
                     proxy.scrollTo("readingTop", anchor: .top)
+                }
+                .task {
+                    guard Self.forceEssentialBannerScreenshot else { return }
+                    try? await Task.sleep(for: .seconds(3))
+                    proxy.scrollTo("firstEssentialAd", anchor: .center)
                 }
                 .onChange(of: model.readingTopResetID) { _, _ in
                     withAnimation(.easeOut(duration: 0.28)) {
@@ -320,6 +352,7 @@ private struct DashboardView: View {
 
                     if model.showsAds {
                         LimiarAdBannerSlot(label: "Publicidade")
+                            .id(index == 0 ? "firstEssentialAd" : "essentialAd-\(index)")
                     }
                 }
 
