@@ -24,6 +24,7 @@
 		LIMI00000000000000000110 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000112 /* SubscriptionManager.swift */; };
 		LIMI00000000000000000111 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000113 /* PaywallView.swift */; };
 		LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000121 /* AdMobBannerView.swift */; };
+		LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000320 /* ProfileImageStore.swift */; };
 		LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000202 /* GoogleMobileAds */; };
 		LIMI00000000000000000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000017 /* Assets.xcassets */; };
 		LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */; };
@@ -97,6 +98,7 @@
 		LIMI00000000000000000112 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000113 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000121 /* AdMobBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobBannerView.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000320 /* ProfileImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageStore.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		LIMI00000000000000000018 /* Limiar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Limiar.entitlements; sourceTree = "<group>"; };
 		LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -155,6 +157,7 @@
 				LIMI00000000000000000112 /* SubscriptionManager.swift */,
 				LIMI00000000000000000113 /* PaywallView.swift */,
 				LIMI00000000000000000121 /* AdMobBannerView.swift */,
+				LIMI00000000000000000320 /* ProfileImageStore.swift */,
 				LIMI00000000000000000018 /* Limiar.entitlements */,
 				LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */,
 				LIMI00000000000000000017 /* Assets.xcassets */,
@@ -345,6 +348,7 @@
 				LIMI00000000000000000110 /* SubscriptionManager.swift in Sources */,
 				LIMI00000000000000000111 /* PaywallView.swift in Sources */,
 				LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */,
+				LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

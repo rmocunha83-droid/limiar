@@ -13,7 +13,7 @@
 - Assets de App Store existem em:
   - `app-store/upload-ready/` para 6.7";
   - `app-store/upload-ready-6.5/` para 6.5".
-- Os cards visuais atuais usam a linguagem positiva do produto, como `apps que ativam o Limiar`, `pausa`, `leitura com IA` e `retomar com presença`.
+- Os cards visuais atuais usam a linguagem positiva do produto, como `apps que ativam o Limiar`, `pausa`, `leitura com propósito` e `retomar com presença`.
 
 ## Estado comprovado do build
 

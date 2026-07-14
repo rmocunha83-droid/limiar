@@ -609,6 +609,7 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
     let passageID: String
     let passageTitle: String
     let reference: String
+    let text: String?
     let savedAt: Date
 }
 
@@ -661,6 +662,7 @@ enum AIContentState: Equatable {
 final class LimiarAppModel {
     static let morningPauseHour = 5
 
+    let profileImageStore = ProfileImageStore()
     var hasCompletedOnboarding = false
     var hasSeenValueDemo = false
     var hasPremiumAccess = false
@@ -1090,12 +1092,16 @@ final class LimiarAppModel {
         if isCurrentPassageFavorite {
             favoritePassages.removeAll { $0.passageID == currentReadingSessionID }
         } else {
+            let passageText = currentSpiritualReadingItems.isEmpty
+                ? currentReadingPlan.map(\.text).joined(separator: "\n\n")
+                : currentSpiritualReadingItems.map(\.text).joined(separator: "\n\n")
             favoritePassages.insert(
                 FavoritePassageItem(
                     id: UUID(),
                     passageID: currentReadingSessionID,
                     passageTitle: currentReadingTitle,
                     reference: currentReadingReference,
+                    text: passageText,
                     savedAt: Date()
                 ),
                 at: 0
@@ -1108,6 +1114,26 @@ final class LimiarAppModel {
         favoritePassages.contains { $0.passageID == item.id }
     }
 
+    func favoritePassageText(for item: FavoritePassageItem) -> String {
+        if let storedText = item.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !storedText.isEmpty {
+            return storedText
+        }
+
+        let catalogText = item.passageID
+            .split(separator: "+")
+            .compactMap { recommender.passage(withID: String($0))?.text }
+            .joined(separator: "\n\n")
+        if !catalogText.isEmpty {
+            return catalogText
+        }
+
+        return recommender.passage(
+            matchingReference: item.reference,
+            tradition: faithProfile.tradition
+        )?.text ?? ""
+    }
+
     func toggleFavorite(_ item: SpiritualReadingItem) {
         if isFavorite(item) {
             favoritePassages.removeAll { $0.passageID == item.id }
@@ -1118,6 +1144,7 @@ final class LimiarAppModel {
                     passageID: item.id,
                     passageTitle: item.reference,
                     reference: item.reference,
+                    text: item.text,
                     savedAt: Date()
                 ),
                 at: 0

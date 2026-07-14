@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import FamilyControls
 import ManagedSettings
+import PhotosUI
 import SwiftUI
 
 struct SettingsView: View {
@@ -11,6 +12,7 @@ struct SettingsView: View {
     @State private var showingPaywall = false
     @State private var showingHistory = false
     @State private var showingFavorites = false
+    @State private var selectedProfilePhoto: PhotosPickerItem?
 
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
@@ -19,11 +21,63 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var model = model
+        let hasProfileImage = model.profileImageStore.image != nil
+        let profileImageActionTitle = hasProfileImage ? "Alterar foto" : "Adicionar foto"
+        let profileImageAccessibilityLabel = hasProfileImage
+            ? "Alterar foto do perfil"
+            : "Adicionar foto do perfil"
 
         ZStack {
             LimiarBackground()
 
             Form {
+                Section("Perfil") {
+                    VStack(spacing: 16) {
+                        ProfileAvatarView(
+                            store: model.profileImageStore,
+                            size: 104
+                        )
+
+                        PhotosPicker(
+                            selection: $selectedProfilePhoto,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            Label(
+                                profileImageActionTitle,
+                                systemImage: "photo.on.rectangle"
+                            )
+                            .font(.system(size: 15, weight: .semibold))
+                            .frame(minHeight: 44)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.sageButton)
+                        .foregroundStyle(Color.deepInk)
+                        .disabled(model.profileImageStore.isLoading)
+                        .accessibilityLabel(profileImageAccessibilityLabel)
+
+                        if hasProfileImage {
+                            Button(role: .destructive) {
+                                model.profileImageStore.removeImage()
+                            } label: {
+                                Label("Remover foto", systemImage: "trash")
+                                    .frame(minHeight: 44)
+                            }
+                            .accessibilityLabel("Remover foto do perfil")
+                        }
+
+                        if let errorMessage = model.profileImageStore.errorMessage {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(Color.conversionCoral)
+                                .multilineTextAlignment(.center)
+                                .accessibilityLabel("Erro: \(errorMessage)")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+
                 Section("Ativação") {
                     Toggle("Limiar ativo", isOn: $model.blockingEnabled)
                         .disabled(!model.hasPauseAccess)
@@ -158,6 +212,13 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Configurações")
+        .onChange(of: selectedProfilePhoto) { _, selectedPhoto in
+            guard let selectedPhoto else { return }
+            Task {
+                await model.profileImageStore.importImage(from: selectedPhoto)
+                selectedProfilePhoto = nil
+            }
+        }
         .onChange(of: model.blockingEnabled) { _, _ in
             model.saveProfile()
             model.applyBlocking()
@@ -313,8 +374,13 @@ struct FavoritePassagesView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.passageTitle)
                             .font(.headline)
-                        Text(item.reference)
-                            .foregroundStyle(.secondary)
+                        let passageText = model.favoritePassageText(for: item)
+                        if !passageText.isEmpty {
+                            Text(passageText)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                                .truncationMode(.tail)
+                        }
                         Text(item.savedAt.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption)
                             .foregroundStyle(.secondary)
