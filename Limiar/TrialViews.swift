@@ -46,16 +46,7 @@ struct EssentialModeIntroView: View {
                     NavigationLink {
                         PaywallView()
                     } label: {
-                        Text("Quero o Limiar completo")
-                            .conversionFont(15, weight: .semibold)
-                            .foregroundStyle(Color.sageButton)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.sageButton.opacity(0.75), lineWidth: 1)
-                            )
+                        ConversionSecondaryActionLabel(title: "Quero o Limiar completo")
                     }
                 }
                 .padding(.horizontal, 30)

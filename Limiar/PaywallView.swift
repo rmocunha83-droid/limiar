@@ -380,10 +380,9 @@ struct ConversionPurchaseSection: View {
             .disabled(!subscription.canPurchase(subscription.selectedPlan))
             .opacity(subscription.canPurchase(subscription.selectedPlan) ? 1 : 0.62)
 
-            Button(escapeTitle) { escapeAction?() }
-                .conversionFont(15, weight: .semibold)
-                .foregroundStyle(Color.softText)
-                .frame(maxWidth: .infinity)
+            Button { escapeAction?() } label: {
+                ConversionSecondaryActionLabel(title: escapeTitle)
+            }
 
             Text("Cancele quando quiser · A App Store confirma antes de cobrar")
                 .conversionFont(12, relativeTo: .footnote)
@@ -405,6 +404,24 @@ struct ConversionPurchaseSection: View {
                     .frame(maxWidth: .infinity)
             }
         }
+    }
+}
+
+struct ConversionSecondaryActionLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .conversionFont(15, weight: .semibold)
+            .foregroundStyle(Color.sageButton)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.sageButton.opacity(0.75), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
