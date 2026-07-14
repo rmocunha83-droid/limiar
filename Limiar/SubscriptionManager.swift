@@ -93,6 +93,10 @@ final class SubscriptionManager {
     @ObservationIgnored private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
 
     init() {
+        #if DEBUG
+        Self.assertTrialEndDayClassification()
+        #endif
+
         // Mantém o último entitlement verificado durante a restauração
         // assíncrona do StoreKit. A verificação atualizada continua sendo a
         // fonte de verdade e corrige este cache logo no start().
@@ -149,9 +153,58 @@ final class SubscriptionManager {
         return max(1, Int(ceil(remaining / 86_400)))
     }
 
-    var shouldShowTrialConversion: Bool {
-        accessState == .trialActive && trialDaysRemaining == 1
+    var trialEndsTomorrow: Bool {
+        guard accessState == .trialActive, let trialEndsAt else { return false }
+        return Self.trialEndDate(
+            trialEndsAt,
+            isDaysAfter: 1,
+            now: Date(),
+            calendar: .current
+        )
     }
+
+    var trialEndsToday: Bool {
+        guard accessState == .trialActive, let trialEndsAt else { return false }
+        return Self.trialEndDate(
+            trialEndsAt,
+            isDaysAfter: 0,
+            now: Date(),
+            calendar: .current
+        )
+    }
+
+    var shouldShowTrialConversion: Bool {
+        accessState == .trialActive && (trialEndsTomorrow || trialEndsToday)
+    }
+
+    private static func trialEndDate(
+        _ trialEndsAt: Date,
+        isDaysAfter dayOffset: Int,
+        now: Date,
+        calendar: Calendar
+    ) -> Bool {
+        let today = calendar.startOfDay(for: now)
+        guard let expectedDay = calendar.date(byAdding: .day, value: dayOffset, to: today) else {
+            return false
+        }
+        return calendar.startOfDay(for: trialEndsAt) == expectedDay
+    }
+
+    #if DEBUG
+    private static func assertTrialEndDayClassification() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_768_564_800) // 2026-01-16 12:00 UTC
+        let todayEnd = calendar.date(byAdding: .hour, value: 6, to: now)!
+        let tomorrowEnd = calendar.date(byAdding: .hour, value: 30, to: now)!
+        let laterEnd = calendar.date(byAdding: .hour, value: 54, to: now)!
+
+        assert(trialEndDate(todayEnd, isDaysAfter: 0, now: now, calendar: calendar))
+        assert(!trialEndDate(todayEnd, isDaysAfter: 1, now: now, calendar: calendar))
+        assert(trialEndDate(tomorrowEnd, isDaysAfter: 1, now: now, calendar: calendar))
+        assert(!trialEndDate(laterEnd, isDaysAfter: 1, now: now, calendar: calendar))
+    }
+    #endif
 
     /// Registra uma única solicitação de avaliação por versão quando a pessoa
     /// já teve tempo de perceber valor no Limiar. O sistema ainda decide se o
