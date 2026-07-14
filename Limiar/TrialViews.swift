@@ -30,14 +30,14 @@ struct EssentialModeIntroView: View {
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
 
                     Text("O Essencial exibe anúncios e não inclui narração, a reflexão completa nem personalização. Você pode voltar ao completo quando quiser.")
-                        .font(.system(size: 12))
+                        .conversionFont(14)
                         .foregroundStyle(Color.softText)
-                        .lineSpacing(3)
+                        .lineSpacing(4)
 
                     Button("Entendi, continuar") {
                         continueEssential()
                     }
-                    .font(.system(size: 17, weight: .semibold))
+                    .conversionFont(17, weight: .semibold, relativeTo: .headline)
                     .foregroundStyle(Color.deepInk)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
@@ -47,7 +47,7 @@ struct EssentialModeIntroView: View {
                         PaywallView()
                     } label: {
                         Text("Quero o Limiar completo")
-                            .font(.system(size: 15, weight: .semibold))
+                            .conversionFont(15, weight: .semibold)
                             .foregroundStyle(Color.sageButton)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -63,6 +63,7 @@ struct EssentialModeIntroView: View {
                 .padding(.bottom, 30)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -177,6 +178,7 @@ struct TrialConversionView: View {
                 .padding(.bottom, 30)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -186,14 +188,14 @@ private struct TrialRhythmPanel: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "flame.fill")
-                .font(.system(size: 17, weight: .semibold))
+                .conversionFont(17, weight: .semibold)
                 .foregroundStyle(Color.warmGold)
                 .frame(width: 24)
 
             Text("7 dias, **\(readings) travessias**, **\(readings * 3) trechos**. Seu ritmo está no melhor momento.")
-                .font(.system(size: 13))
+                .conversionFont(15)
                 .foregroundStyle(Color.ivory)
-                .lineSpacing(3)
+                .lineSpacing(4)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)

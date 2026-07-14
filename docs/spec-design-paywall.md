@@ -31,10 +31,14 @@ alavanca psicológica própria. **A ordem dos blocos muda por tela — é intenc
 | `warmGold` | Eyebrow, ícone de ritmo (chama), estrelas | #C98D4B / estrelas #E3B34C |
 | coral suave | Ícones ✕ das perdas | #D88A7A (não usar vermelho puro — é aviso, não erro) |
 | Painéis | Cards internos | fundo #111B1C, borda 1px #24312F, raio 12 |
-| Tipografia | Título: serif (a mesma do app), 26-27pt. Corpo: sistema, 13pt. Eyebrow: 11pt, tracking 2, caixa alta |
+| Tipografia | Título: serif, 27pt. Subtítulo: sistema, 15pt. Corpo essencial: 14-16pt. Eyebrow: 12pt, tracking 2, caixa alta. Depoimento: serif 16pt. Nome/links: 13pt. Letra miúda legítima: 12pt. |
 
 Espaçamentos: padding lateral da tela 20-22; gap entre blocos 14-18; itens de lista 9 vertical
 com divisor 1px #1D2827.
+
+Todo o funil usa tipografia escalável pelo Dynamic Type do iOS, com tamanhos-base relativos ao
+estilo semântico de cada texto. O container de D6, D7 e D8 limita o crescimento a `xxLarge` para
+preservar a composição. Textos corridos de 14-16pt usam `lineSpacing` de 3-4pt.
 
 ---
 
@@ -59,7 +63,7 @@ com divisor 1px #1D2827.
 7. **Planos** (ver §7) — Anual selecionado
 8. **CTA primário (sage):** `Continuar minha travessia`
 9. **Escape (texto discreto):** `Decidir amanhã`
-10. **Linha de segurança (11pt, softText):** `Cancele quando quiser · A App Store confirma antes de cobrar`
+10. **Linha de segurança (12pt, softText):** `Cancele quando quiser · A App Store confirma antes de cobrar`
 
 ---
 
@@ -74,7 +78,7 @@ com divisor 1px #1D2827.
    - `Pausa diária e bloqueio dos seus apps`
    - `3 trechos por leitura, com explicações essenciais`
    - `Salvar trechos enquanto lê`
-5. **Nota discreta (12pt, softText):** `O Essencial exibe anúncios e não inclui narração, a
+5. **Nota discreta (14pt, softText):** `O Essencial exibe anúncios e não inclui narração, a
    reflexão completa nem personalização. Você pode voltar ao completo quando quiser.`
 6. **CTA primário (sage):** `Entendi, continuar`
 7. **Link secundário:** `Conhecer o Limiar completo`
@@ -90,7 +94,7 @@ Sem carrossel, sem planos, sem contador. O botão primário é seguir grátis �
 1. **Eyebrow:** `LIMIAR PREMIUM`
 2. **Título:** `Ontem, sua travessia ficou menor.`
 3. **Subtítulo:** `Sua pausa continua — mas desde ontem ela vem sem a parte que fazia a diferença.`
-4. **Linha de contraste honesto** (✓ sage, 12pt): `Você continua com a pausa, o bloqueio e os 3 trechos.`
+4. **Linha de contraste honesto** (✓ sage, 14pt): `Você continua com a pausa, o bloqueio e os 3 trechos.`
 5. **Bloco de perdas — rótulo:** `Desde ontem, você está sem:`
    Mesma lista da D6 (✕ coral), com a última linha no passado:
    `Pausa limpa — anúncios nos trechos e no dashboard`
@@ -124,12 +128,14 @@ portal). Regras de posicionamento para não brigar com o texto:
 
 ## 6. Componente: carrossel de depoimentos
 
-- Card: fundo #111B1C, borda #24312F, raio 12. Conteúdo: ★★★★★ (dourado #E3B34C, 5 estrelas
-  sempre) → citação em **serif** ivory 13-14pt, entre aspas → nome discreto (`Mariana S.`,
-  12pt softText). **Sem foto/rosto** — se precisar de âncora visual, monograma em círculo.
+- Card: fundo #111B1C, borda #24312F, raio 12. Conteúdo: ★★★★★ (dourado #E3B34C, 15pt,
+  5 estrelas sempre) → citação em **serif** ivory 16pt, entre aspas → nome discreto
+  (`Mariana S.`, 13pt softText). **Sem foto/rosto** — se precisar de âncora visual,
+  monograma em círculo.
 - Dots abaixo, centralizados: ativo = pílula 16×5 sage; inativos = 5×5 #3A4643.
-- Comportamento: swipe horizontal + auto-avanço a cada ~5s; altura FIXA (dimensionar pelo maior
-  depoimento) para a tela não pular.
+- Comportamento: swipe horizontal + auto-avanço a cada ~5s; altura-base de 214pt, escalável com
+  Dynamic Type até `xxLarge`, dimensionada pelo maior depoimento para a tela não pular nem cortar
+  a citação.
 - **5 depoimentos (reais — TestFlight, 5 estrelas, autorizados em julho/2026):**
   1. "Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo." — Mariana, São Paulo
   2. "Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus." — Rafael, Curitiba
@@ -140,8 +146,8 @@ portal). Regras de posicionamento para não brigar com o texto:
 ## 7. Componente: seletor de planos
 
 - **Anual (pré-selecionado):** borda 2px sage, fundo levemente esverdeado (#16211F). Badge
-  flutuante no topo-esquerdo: `MAIS ESCOLHIDO` (sage, texto deepInk, 10pt, tracking 1).
-  Linha principal: `Anual` ↔ `R$ 7,49/mês`. Linha secundária (11pt softText):
+  flutuante no topo-esquerdo: `MAIS ESCOLHIDO` (sage, texto deepInk, 11pt, tracking 1).
+  Linha principal: `Anual` 17pt ↔ `R$ 7,49/mês` 16pt. Linha secundária (13pt medium, softText):
   `R$ 89,90 por ano · menos de R$ 0,25 por dia`.
 - **Mensal:** borda 1px #2B3735, sem preenchimento. `Mensal` ↔ preço (vem da App Store).
 - Nota para o dev (o designer não precisa resolver): preços e % de economia SEMPRE dinâmicos via
@@ -151,7 +157,7 @@ portal). Regras de posicionamento para não brigar com o texto:
 ## 8. Componente: bloco de perdas / ganhos
 
 - Card padrão (#111B1C / borda #24312F / raio 12), linhas com divisor interno 1px #1D2827.
-- Perda: ícone ✕ (15pt, coral #D88A7A) + texto 13pt #C9CEC9.
+- Perda: ícone ✕ (15pt, coral #D88A7A) + texto 15pt #C9CEC9. Título do bloco: 14pt semibold.
 - Ganho (D7 e linha de contraste): ✓ sage.
 - Máximo 5 linhas; texto de cada linha em 1 linha só (encurtar copy antes de quebrar linha).
 

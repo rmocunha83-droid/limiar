@@ -1,6 +1,46 @@
 import StoreKit
 import SwiftUI
 
+private struct ConversionScaledFontModifier: ViewModifier {
+    @ScaledMetric private var scaledSize: CGFloat
+
+    let weight: Font.Weight
+    let design: Font.Design
+
+    init(
+        size: CGFloat,
+        weight: Font.Weight,
+        design: Font.Design,
+        relativeTo textStyle: Font.TextStyle
+    ) {
+        _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: scaledSize, weight: weight, design: design))
+    }
+}
+
+extension View {
+    func conversionFont(
+        _ size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        modifier(
+            ConversionScaledFontModifier(
+                size: size,
+                weight: weight,
+                design: design,
+                relativeTo: textStyle
+            )
+        )
+    }
+}
+
 struct PaywallView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.openURL) private var openURL
@@ -53,6 +93,7 @@ struct PaywallView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .task { subscription.start() }
     }
 }
@@ -65,18 +106,18 @@ struct ConversionHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(eyebrow)
-                .font(.system(size: 11, weight: .bold))
+                .conversionFont(12, weight: .bold, relativeTo: .caption)
                 .tracking(2)
                 .foregroundStyle(Color.warmGold)
 
             Text(title)
-                .font(.system(size: 27, weight: .regular, design: .serif))
+                .conversionFont(27, design: .serif, relativeTo: .title)
                 .foregroundStyle(Color.ivory)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: 13))
+                    .conversionFont(15)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(4)
             }
@@ -90,11 +131,12 @@ struct ConversionContrastLine: View {
     var body: some View {
         HStack(alignment: .top, spacing: 9) {
             Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .bold))
+                .conversionFont(13, weight: .bold)
                 .foregroundStyle(Color.sageButton)
             Text(text)
-                .font(.system(size: 12, weight: .medium))
+                .conversionFont(14, weight: .medium)
                 .foregroundStyle(Color.softText)
+                .lineSpacing(3)
         }
     }
 }
@@ -116,7 +158,7 @@ struct ConversionLossBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .conversionFont(14, weight: .semibold)
                 .foregroundStyle(Color.ivory)
 
             VStack(spacing: 0) {
@@ -141,13 +183,13 @@ struct ConversionListRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
-                .font(.system(size: 13, weight: .bold))
+                .conversionFont(15, weight: .bold)
                 .foregroundStyle(color)
                 .frame(width: 18)
             Text(text)
-                .font(.system(size: 13))
+                .conversionFont(15)
                 .foregroundStyle(Color(red: 0.79, green: 0.81, blue: 0.79))
-                .lineLimit(2)
+                .lineSpacing(3)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 18)
@@ -157,6 +199,7 @@ struct ConversionListRow: View {
 
 struct ConversionTestimonials: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @ScaledMetric(relativeTo: .body) private var carouselHeight: CGFloat = 214
 
     struct Testimonial: Identifiable {
         let id: Int
@@ -190,7 +233,7 @@ struct ConversionTestimonials: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 176)
+            .frame(height: carouselHeight)
 
             HStack(spacing: 7) {
                 ForEach(Self.testimonials) { testimonial in
@@ -218,20 +261,20 @@ private struct TestimonialCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("★★★★★")
-                .font(.system(size: 15, weight: .semibold))
+                .conversionFont(15, weight: .semibold)
                 .tracking(2)
                 .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
 
             Text("“\(testimonial.quote)”")
-                .font(.system(size: 14, weight: .regular, design: .serif))
+                .conversionFont(16, design: .serif)
                 .foregroundStyle(Color.ivory)
-                .lineSpacing(3)
-                .lineLimit(5)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 0)
 
             Text(testimonial.name)
-                .font(.system(size: 12, weight: .medium))
+                .conversionFont(13, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(Color.softText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -255,7 +298,7 @@ struct ConversionPlanPicker: View {
                     VStack(alignment: .leading, spacing: 7) {
                         if plan == .yearly {
                             Text("MAIS ESCOLHIDO")
-                                .font(.system(size: 10, weight: .bold))
+                                .conversionFont(11, weight: .bold, relativeTo: .caption)
                                 .tracking(1)
                                 .foregroundStyle(Color.deepInk)
                                 .padding(.horizontal, 9)
@@ -263,20 +306,23 @@ struct ConversionPlanPicker: View {
                                 .background(Color.sageButton, in: Capsule())
                         }
 
-                        HStack {
+                        HStack(spacing: 8) {
                             Image(systemName: selection == plan ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(selection == plan ? Color.sageButton : Color.softText)
                             Text(plan.title)
-                                .font(.system(size: 16, weight: .semibold))
+                                .conversionFont(17, weight: .semibold, relativeTo: .headline)
                                 .foregroundStyle(Color.ivory)
-                            Spacer()
+                            Spacer(minLength: 8)
                             Text(mainPrice(for: plan))
-                                .font(.system(size: 15, weight: .semibold))
+                                .conversionFont(16, weight: .semibold, relativeTo: .headline)
                                 .foregroundStyle(Color.ivory)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.88)
+                                .layoutPriority(1)
                         }
 
                         Text(detail(for: plan))
-                            .font(.system(size: 11))
+                            .conversionFont(13, weight: .medium, relativeTo: .footnote)
                             .foregroundStyle(Color.softText)
                             .padding(.leading, 31)
                     }
@@ -328,7 +374,7 @@ struct ConversionPurchaseSection: View {
                     Text(buttonTitle)
                     Image(systemName: "arrow.right")
                 }
-                .font(.system(size: 17, weight: .semibold))
+                .conversionFont(17, weight: .semibold, relativeTo: .headline)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
@@ -338,25 +384,25 @@ struct ConversionPurchaseSection: View {
             .opacity(subscription.canPurchase(subscription.selectedPlan) ? 1 : 0.62)
 
             Button(escapeTitle) { escapeAction?() }
-                .font(.system(size: 13, weight: .semibold))
+                .conversionFont(15, weight: .semibold)
                 .foregroundStyle(Color.softText)
                 .frame(maxWidth: .infinity)
 
             Text("Cancele quando quiser · A App Store confirma antes de cobrar")
-                .font(.system(size: 11))
+                .conversionFont(12, relativeTo: .footnote)
                 .foregroundStyle(Color.softText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
             Text(subscription.renewalDisclosure(for: subscription.selectedPlan))
-                .font(.system(size: 11))
+                .conversionFont(12, relativeTo: .footnote)
                 .foregroundStyle(Color.softText.opacity(0.85))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
             if !subscription.statusText.isEmpty {
                 Text(subscription.statusText)
-                    .font(.system(size: 12, weight: .medium))
+                    .conversionFont(14, weight: .medium)
                     .foregroundStyle(Color.softText)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
@@ -377,7 +423,7 @@ struct ConversionLegalLinks: View {
                 Task { await subscription.restorePurchases() }
             } label: {
                 Label("Restaurar compra", systemImage: "arrow.clockwise")
-                    .font(.system(size: 13, weight: .semibold))
+                    .conversionFont(13, weight: .semibold, relativeTo: .footnote)
             }
             .disabled(subscription.isBusy)
 
@@ -385,7 +431,7 @@ struct ConversionLegalLinks: View {
                 Button("Termos de Uso") { openURL(termsURL) }
                 Button("Política de Privacidade") { openURL(privacyURL) }
             }
-            .font(.system(size: 12, weight: .medium))
+            .conversionFont(13, weight: .medium, relativeTo: .footnote)
             .foregroundStyle(Color.sageButton)
             .frame(maxWidth: .infinity)
         }
