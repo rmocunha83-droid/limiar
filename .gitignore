@@ -18,6 +18,7 @@ build/
 __MACOSX/
 node_modules
 outputs/
+preview/tone/*.mp3
 pnpm-lock.yaml
 
 # Segredos locais injetados no build. Nunca versionar.
