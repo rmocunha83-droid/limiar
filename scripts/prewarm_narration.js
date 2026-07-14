@@ -45,7 +45,7 @@ async function prewarmPassage(passage, stats) {
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const audio = await callAzureSpeech({ input: text, speed: config.speed, debugContext });
+      const audio = await callAzureSpeech({ input: text, debugContext });
       await storeCachedAudio(pathname, audio, { ...debugContext, throwOnCacheError: true });
       stats.generated += 1;
       return;

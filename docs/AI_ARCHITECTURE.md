@@ -16,11 +16,12 @@ Usuários com teste expirado e sem assinatura entram no **Modo Essencial**: cont
 
 ## Narração (TTS)
 
-- **Provedor padrão: Azure Cognitive Services Speech**, voz `pt-BR-AntonioNeural`, cadência `-8%`, saída MP3 24kHz. ElevenLabs (`eleven_flash_v2_5`) permanece como alternativa: `TTS_PROVIDER=elevenlabs` reverte sem deploy.
+- **Provedor padrão: Azure Cognitive Services Speech**, voz `pt-BR-AntonioNeural`, tom devocional sereno (`rate=-10%`, `pitch=-3%` e pausa de `500ms` entre referência e texto), saída MP3 24kHz. ElevenLabs (`eleven_flash_v2_5`) permanece como alternativa: `TTS_PROVIDER=elevenlabs` reverte sem deploy.
 - No caminho Azure, a voz e a velocidade enviadas pelo app são **ignoradas** — só as envs do servidor definem a voz efetiva (o app publicado ainda envia um voice ID do ElevenLabs; isso é esperado).
-- **Cache no Vercel Blob**: cada áudio (provedor+modelo+voz+cadência+texto) é sintetizado uma vez; acertos respondem 302 para o Blob. Conexão via OIDC (`BLOB_STORE_ID`) ou token estático (`BLOB_READ_WRITE_TOKEN`).
+- A referência do trecho é proclamada no SSML (`"Mateus 11, 28-30"` vira `"Mateus 11, versículos 28 a 30"`) sem alterar a referência exibida, o texto canônico ou o hash do texto.
+- **Cache no Vercel Blob**: cada áudio (provedor+modelo+voz+assinatura de tom+texto) é sintetizado uma vez; acertos respondem 302 para o Blob. A assinatura inclui rate, pitch, pausa e versão da fala da referência. Qualquer novo elemento SSML que mude o som precisa entrar nessa assinatura. Conexão via OIDC (`BLOB_STORE_ID`) ou token estático (`BLOB_READ_WRITE_TOKEN`).
 - **Narração segmentada**: o app narra por segmentos — o versículo usa a string canônica `"{reference}.\n{text}"` (formato fixado por teste; mudou = cache pré-aquecido invalidado) e a explicação é um segmento separado, sintetizado ao vivo.
-- **Pré-aquecimento**: `npm run prewarm:narration` narra o catálogo inteiro uma única vez para o Blob (idempotente; rodar de novo quando o catálogo crescer ou a voz mudar). Ou seja, a narração dos versículos **é pré-gerada por design**; só as explicações são sintetizadas sob demanda.
+- **Prévia e pré-aquecimento**: `npm run tone:preview` gera seis MP3 locais para aprovação humana, sem escrever no Blob. Depois da aprovação e do deploy, `npm run prewarm:narration` narra o catálogo inteiro para a assinatura ativa (idempotente; rodar de novo quando catálogo, voz ou tom mudar). Ou seja, a narração dos versículos **é pré-gerada por design**; só as explicações são sintetizadas sob demanda.
 
 ## Segurança
 
@@ -33,7 +34,7 @@ Usuários com teste expirado e sem assinatura entram no **Modo Essencial**: cont
 
 - `OPENAI_API_KEY` · `OPENAI_MODEL` (padrão `gpt-5.4-mini`) · `OPENAI_BASE_URL` · `OPENAI_REASONING_EFFORT` (padrão `none`) · `OPENAI_TIMEOUT_MS` (padrão `25000`).
 - `TTS_PROVIDER` (padrão `azure`; `elevenlabs` para reversão).
-- `AZURE_SPEECH_KEY` · `AZURE_SPEECH_REGION` (ex.: `brazilsouth`) · `AZURE_SPEECH_VOICE` (padrão `pt-BR-AntonioNeural`) · `AZURE_SPEECH_TIMEOUT_MS`.
+- `AZURE_SPEECH_KEY` · `AZURE_SPEECH_REGION` (ex.: `brazilsouth`) · `AZURE_SPEECH_VOICE` (padrão `pt-BR-AntonioNeural`) · `AZURE_SPEECH_RATE` (padrão `-10%`) · `AZURE_SPEECH_PITCH` (padrão `-3%`) · `AZURE_SPEECH_BREAK_MS` (padrão `500`) · `AZURE_SPEECH_TIMEOUT_MS`.
 - `ELEVENLABS_API_KEY` · `ELEVENLABS_TTS_MODEL` (padrão `eleven_flash_v2_5`) · `ELEVENLABS_VOICE_ID` · `ELEVENLABS_TTS_SPEED` (padrão `0.92`) · `ELEVENLABS_TTS_TIMEOUT_MS`.
 - `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` (cache de áudio; criado ao conectar o Blob Store).
 - `LIMIAR_APP_SECRET` (opcional, ver Segurança).

@@ -7,6 +7,9 @@ const {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
+  AZURE_REFERENCE_SPEECH_VERSION,
+  DEFAULT_AZURE_SPEECH_BREAK_MS,
+  DEFAULT_AZURE_SPEECH_PITCH,
   DEFAULT_AZURE_SPEECH_RATE,
   DEFAULT_AZURE_SPEECH_VOICE,
   SESSION_ITEM_COUNT,
@@ -26,6 +29,7 @@ const {
   parseProviderJSON,
   readingSessionExplanationSchema,
   selectSessionPassages,
+  spokenReference,
   validateExplanationFields,
   validateExplanationItems
 } = require("../api/_limiar-ai");
@@ -64,7 +68,10 @@ test("keeps ElevenLabs Flash as the economical default voice model", () => {
 test("uses Azure and Antonio Neural as the default speech path", () => {
   assert.equal(normalizeTTSProvider(""), "azure");
   assert.equal(normalizeTTSProvider("elevenlabs"), "elevenlabs");
-  assert.equal(DEFAULT_AZURE_SPEECH_RATE, "-8%");
+  assert.equal(DEFAULT_AZURE_SPEECH_RATE, "-10%");
+  assert.equal(DEFAULT_AZURE_SPEECH_PITCH, "-3%");
+  assert.equal(DEFAULT_AZURE_SPEECH_BREAK_MS, 500);
+  assert.equal(AZURE_REFERENCE_SPEECH_VERSION, "v1");
   assert.equal(DEFAULT_AZURE_SPEECH_VOICE, "pt-BR-AntonioNeural");
 });
 
@@ -73,6 +80,19 @@ test("fixes the canonical passage narration format used by the prewarmed cache",
     canonicalPassageNarrationText("Salmo 23", "O Senhor é meu pastor."),
     "Salmo 23.\nO Senhor é meu pastor."
   );
+});
+
+test("proclaims every reference format used by the catalog and preserves unknown formats", () => {
+  assert.equal(spokenReference("Salmo 23"), "Salmo 23");
+  assert.equal(spokenReference("Salmo 118, 24"), "Salmo 118, versículo 24");
+  assert.equal(spokenReference("Mateus 11, 28-30"), "Mateus 11, versículos 28 a 30");
+  assert.equal(spokenReference("Provérbios 3, 5-6"), "Provérbios 3, versículos 5 a 6");
+  assert.equal(spokenReference("Salmo 46:10"), "Salmo 46, versículo 10");
+  assert.equal(
+    spokenReference("Tehillim / Salmo 46:10"),
+    "Tehillim, Salmo 46, versículo 10"
+  );
+  assert.equal(spokenReference("Referência livre sem padrão"), "Referência livre sem padrão");
 });
 
 test("selects only preferred books when there are enough fresh passages", () => {
@@ -345,6 +365,35 @@ test("speech cache key ignores client voice and speed on the Azure path", () => 
   assert.notEqual(legit, otherText);
 });
 
+test("speech cache key changes when any effective Azure tone parameter changes", () => {
+  const speech = require("../api/speech");
+  const names = ["AZURE_SPEECH_RATE", "AZURE_SPEECH_PITCH", "AZURE_SPEECH_BREAK_MS"];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  const restore = () => {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  };
+
+  try {
+    for (const name of names) delete process.env[name];
+    const defaultKey = speech.cacheKey({ text: "Salmo 23.\nO Senhor é meu pastor." });
+    const cases = [
+      ["AZURE_SPEECH_RATE", "-12%"],
+      ["AZURE_SPEECH_PITCH", "-5%"],
+      ["AZURE_SPEECH_BREAK_MS", "700"]
+    ];
+    for (const [name, value] of cases) {
+      for (const resetName of names) delete process.env[resetName];
+      process.env[name] = value;
+      assert.notEqual(speech.cacheKey({ text: "Salmo 23.\nO Senhor é meu pastor." }), defaultKey);
+    }
+  } finally {
+    restore();
+  }
+});
+
 test("speech cache key normalizes forged voice/speed on the ElevenLabs path", () => {
   const speech = require("../api/speech");
   const previous = process.env.TTS_PROVIDER;
@@ -541,11 +590,27 @@ test("prepares speech text without technical markup", () => {
 });
 
 test("builds Azure SSML with escaped, normalized Portuguese speech text", () => {
-  const ssml = buildAzureSpeechSSML('### Olá & "paz" <sempre>', "pt-BR-AntonioNeural");
-  assert.match(ssml, /voice name='pt-BR-AntonioNeural'/);
-  assert.match(ssml, /rate='-8%'/);
-  assert.match(ssml, /Olá &amp; &quot;paz&quot; &lt;sempre&gt;/);
-  assert.doesNotMatch(ssml, /###/);
+  const names = ["AZURE_SPEECH_RATE", "AZURE_SPEECH_PITCH", "AZURE_SPEECH_BREAK_MS"];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+
+  try {
+    for (const name of names) delete process.env[name];
+    const ssml = buildAzureSpeechSSML(
+      'Salmo 118, 24.\n### Olá & "paz" <sempre>',
+      "pt-BR-AntonioNeural"
+    );
+    assert.match(ssml, /voice name='pt-BR-AntonioNeural'/);
+    assert.match(ssml, /rate='-10%'/);
+    assert.match(ssml, /pitch='-3%'/);
+    assert.match(ssml, /Salmo 118, versículo 24\.<break time='500ms'\/>/);
+    assert.match(ssml, /Olá &amp; &quot;paz&quot; &lt;sempre&gt;/);
+    assert.doesNotMatch(ssml, /###/);
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  }
 });
 
 test("normalizes depth synonyms and changes guidance clearly", () => {

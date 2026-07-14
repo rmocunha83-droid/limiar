@@ -10,7 +10,10 @@ const DEFAULT_TTS_SPEED = 0.92;
 // A escolha final do produto é uma voz masculina pt-BR. A variável de ambiente
 // permite trocá-la sem novo deploy.
 const DEFAULT_AZURE_SPEECH_VOICE = "pt-BR-AntonioNeural";
-const DEFAULT_AZURE_SPEECH_RATE = "-8%";
+const DEFAULT_AZURE_SPEECH_RATE = "-10%";
+const DEFAULT_AZURE_SPEECH_PITCH = "-3%";
+const DEFAULT_AZURE_SPEECH_BREAK_MS = 500;
+const AZURE_REFERENCE_SPEECH_VERSION = "v1";
 const DEFAULT_TIMEOUT_MS = 25000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 24;
@@ -848,6 +851,48 @@ function azureSpeechVoice() {
   return trimText(process.env.AZURE_SPEECH_VOICE || DEFAULT_AZURE_SPEECH_VOICE, 160);
 }
 
+function normalizeAzureProsodyPercent(value, fallback) {
+  const normalized = String(value ?? "").trim();
+  return /^[+-]?\d+(?:\.\d+)?%$/.test(normalized) ? normalized : fallback;
+}
+
+function normalizeAzureBreakMS(value, fallback = DEFAULT_AZURE_SPEECH_BREAK_MS) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.min(5000, Math.round(parsed)));
+}
+
+// Fonte única dos parâmetros efetivos do SSML. Overrides existem somente para
+// a prévia A/B local; produção, endpoint e prewarm usam os envs/defaults daqui.
+function azureSpeechTone(overrides = {}) {
+  const has = (key) => Object.prototype.hasOwnProperty.call(overrides, key);
+  const rate = normalizeAzureProsodyPercent(
+    has("rate") ? overrides.rate : process.env.AZURE_SPEECH_RATE,
+    DEFAULT_AZURE_SPEECH_RATE
+  );
+  const pitchSource = has("pitch") ? overrides.pitch : process.env.AZURE_SPEECH_PITCH;
+  const pitch = pitchSource === null || pitchSource === false
+    ? null
+    : normalizeAzureProsodyPercent(pitchSource, DEFAULT_AZURE_SPEECH_PITCH);
+  const breakMs = normalizeAzureBreakMS(
+    has("breakMs") ? overrides.breakMs : process.env.AZURE_SPEECH_BREAK_MS
+  );
+  const proclaimReference = has("proclaimReference") ? Boolean(overrides.proclaimReference) : true;
+  const referenceSpeechVersion = String(
+    has("referenceSpeechVersion")
+      ? overrides.referenceSpeechVersion
+      : proclaimReference ? AZURE_REFERENCE_SPEECH_VERSION : "legacy"
+  );
+  const signature = [
+    `rate:${rate}`,
+    `pitch:${pitch || "none"}`,
+    `break:${breakMs}`,
+    `ref-speech:${referenceSpeechVersion}`
+  ].join("|");
+
+  return { rate, pitch, breakMs, proclaimReference, referenceSpeechVersion, signature };
+}
+
 function normalizeTTSProvider(value = process.env.TTS_PROVIDER) {
   return String(value || "azure").trim().toLowerCase() === "elevenlabs" ? "elevenlabs" : "azure";
 }
@@ -866,6 +911,38 @@ function canonicalPassageNarrationText(reference, text) {
   return `${canonicalReference}.\n${canonicalText}`;
 }
 
+function parsedSpokenReference(reference) {
+  const original = String(reference ?? "");
+  const normalized = original.trim();
+  if (!normalized) return { recognized: false, value: original };
+
+  const withSpokenSlash = normalized.replace(/\s*\/\s*/g, ", ");
+  const verseMatch = withSpokenSlash.match(/^(.+?\s+\d+)\s*[, :]\s*(\d+)(?:\s*-\s*(\d+))?$/);
+  if (verseMatch) {
+    const [, bookAndChapter, firstVerse, lastVerse] = verseMatch;
+    return {
+      recognized: true,
+      value: lastVerse
+        ? `${bookAndChapter}, versículos ${firstVerse} a ${lastVerse}`
+        : `${bookAndChapter}, versículo ${firstVerse}`
+    };
+  }
+
+  const isChapterOnly = !/[, :]/.test(normalized) && /^.+\s+\d+$/.test(normalized);
+  const isSlashChapterOnly = normalized.includes("/") && /^.+\s*\/\s*.+\s+\d+$/.test(normalized);
+  if (isChapterOnly || isSlashChapterOnly) {
+    return { recognized: true, value: withSpokenSlash };
+  }
+
+  return { recognized: false, value: original };
+}
+
+// Ajusta somente a forma falada. Referência exibida, texto canônico e hash do
+// cache continuam recebendo a string original sem qualquer transformação.
+function spokenReference(reference) {
+  return parsedSpokenReference(reference).value;
+}
+
 function escapeXML(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -875,7 +952,7 @@ function escapeXML(value) {
     .replace(/'/g, "&apos;");
 }
 
-function buildAzureSpeechSSML(input, voice = azureSpeechVoice()) {
+function buildAzureSpeechSSML(input, voice = azureSpeechVoice(), toneOverrides = {}) {
   const cleanInput = normalizeSpeechInput(input);
   if (!cleanInput) {
     const error = new Error("Speech input is empty");
@@ -884,10 +961,23 @@ function buildAzureSpeechSSML(input, voice = azureSpeechVoice()) {
     throw error;
   }
 
-  return `<speak version='1.0' xml:lang='pt-BR'><voice name='${escapeXML(voice)}'><prosody rate='${DEFAULT_AZURE_SPEECH_RATE}'>${escapeXML(cleanInput)}</prosody></voice></speak>`;
+  const tone = azureSpeechTone(toneOverrides);
+  const canonicalMatch = cleanInput.match(/^([^\n]+)\.\n([\s\S]+)$/);
+  let spokenContent = escapeXML(cleanInput);
+  if (canonicalMatch && tone.proclaimReference) {
+    const [, reference, passageText] = canonicalMatch;
+    const proclaimed = parsedSpokenReference(reference);
+    if (proclaimed.recognized) {
+      const pause = tone.breakMs > 0 ? `<break time='${tone.breakMs}ms'/>` : "";
+      spokenContent = `${escapeXML(proclaimed.value)}.${pause}${escapeXML(passageText)}`;
+    }
+  }
+  const pitchAttribute = tone.pitch ? ` pitch='${escapeXML(tone.pitch)}'` : "";
+
+  return `<speak version='1.0' xml:lang='pt-BR'><voice name='${escapeXML(voice)}'><prosody rate='${escapeXML(tone.rate)}'${pitchAttribute}>${spokenContent}</prosody></voice></speak>`;
 }
 
-async function callAzureSpeech({ input, speed, debugContext = {} }) {
+async function callAzureSpeech({ input, speed, tone: toneOverrides = {}, debugContext = {} }) {
   const apiKey = process.env.AZURE_SPEECH_KEY;
   const region = trimText(process.env.AZURE_SPEECH_REGION || "", 80);
   if (!apiKey || !region) {
@@ -899,9 +989,10 @@ async function callAzureSpeech({ input, speed, debugContext = {} }) {
 
   const voice = azureSpeechVoice();
   const cleanInput = normalizeSpeechInput(input);
-  const ssml = buildAzureSpeechSSML(cleanInput, voice);
-  // A velocidade recebida é mantida apenas para diagnóstico. A Azure usa a
-  // cadência pastoral fixa definida no SSML, sem herdar o valor do cliente iOS.
+  const tone = azureSpeechTone(toneOverrides);
+  const ssml = buildAzureSpeechSSML(cleanInput, voice, tone);
+  // A velocidade recebida é mantida apenas para diagnóstico. A Azure usa o tom
+  // efetivo do servidor no SSML, sem herdar o valor enviado pelo cliente iOS.
   const requestedSpeed = normalizeTTSSpeed(speed ?? DEFAULT_TTS_SPEED);
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -916,7 +1007,10 @@ async function callAzureSpeech({ input, speed, debugContext = {} }) {
       clientID: debugContext.clientID,
       inputLength: cleanInput.length,
       voice,
-      rate: DEFAULT_AZURE_SPEECH_RATE,
+      rate: tone.rate,
+      pitch: tone.pitch,
+      breakMs: tone.breakMs,
+      referenceSpeechVersion: tone.referenceSpeechVersion,
       requestedSpeed
     });
 
@@ -1147,6 +1241,9 @@ module.exports = {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE_ID,
   DEFAULT_TTS_SPEED,
+  AZURE_REFERENCE_SPEECH_VERSION,
+  DEFAULT_AZURE_SPEECH_BREAK_MS,
+  DEFAULT_AZURE_SPEECH_PITCH,
   DEFAULT_AZURE_SPEECH_RATE,
   DEFAULT_AZURE_SPEECH_VOICE,
   SESSION_ITEM_COUNT,
@@ -1159,6 +1256,7 @@ module.exports = {
   callAzureSpeech,
   callElevenLabsSpeech,
   azureSpeechVoice,
+  azureSpeechTone,
   buildAzureSpeechSSML,
   canonicalPassageNarrationText,
   depthGuidance,
@@ -1181,6 +1279,7 @@ module.exports = {
   requirePost,
   selectSessionPassages,
   selectionSeed,
+  spokenReference,
   spiritualReadingExplanationSchema,
   validateExplanationFields,
   validateExplanationItems
