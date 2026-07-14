@@ -196,15 +196,15 @@ final class SubscriptionManager {
         let monthly = product(for: .monthly)
 
         if yearly != nil, monthly != nil {
-            return "Depois \(displayPrice(for: .yearly))/Ano ou \(displayPrice(for: .monthly))/Mês"
+            return "Depois \(displayPrice(for: .yearly))/ano ou \(displayPrice(for: .monthly))/mês"
         }
 
         if yearly != nil {
-            return "Depois \(displayPrice(for: .yearly))/Ano"
+            return "Depois \(displayPrice(for: .yearly))/ano"
         }
 
         if monthly != nil {
-            return "Depois \(displayPrice(for: .monthly))/Mês"
+            return "Depois \(displayPrice(for: .monthly))/mês"
         }
 
         return "Preço confirmado pela App Store antes da assinatura"
@@ -366,16 +366,6 @@ final class SubscriptionManager {
         return product.displayPrice
     }
 
-    func monthlyEquivalentPrice(for plan: SubscriptionPlan) -> String? {
-        guard plan == .yearly, let product = product(for: plan) else { return nil }
-
-        if Self.isTestEnvironment, !product.displayPrice.contains("R$") {
-            return "R$ 7,49"
-        }
-
-        return (product.price / Decimal(12)).formatted(product.priceFormatStyle)
-    }
-
     func dailyEquivalentPrice(for plan: SubscriptionPlan) -> String? {
         guard plan == .yearly, let product = product(for: plan) else { return nil }
 
@@ -441,10 +431,11 @@ final class SubscriptionManager {
         }
 
         let price = displayPrice(for: plan)
+        let period = plan == .yearly ? "por ano" : "por mês"
         if hasConfirmedFreeTrial(for: plan) {
-            return "\(trialText(for: plan)). Depois \(price). Cancele quando quiser."
+            return "\(trialText(for: plan)). Depois, \(price) \(period). Cancele quando quiser."
         }
-        return "Depois \(price). Cancele quando quiser."
+        return "Depois, \(price) \(period). Cancele quando quiser."
     }
 
     func primaryButtonTitle(for plan: SubscriptionPlan) -> String {

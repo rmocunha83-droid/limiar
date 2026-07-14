@@ -65,9 +65,17 @@ enum PassageCatalog {
 
 struct PassageRecommendationService {
     private let passages: [ScripturePassage]
+    private let passagesByID: [String: ScripturePassage]
+    private let passagesByTraditionAndReference: [String: ScripturePassage]
 
     init(passages: [ScripturePassage] = PassageCatalog.shared) {
         self.passages = passages
+        self.passagesByID = passages.reduce(into: [:]) { result, passage in
+            result[passage.id] = passage
+        }
+        self.passagesByTraditionAndReference = passages.reduce(into: [:]) { result, passage in
+            result[Self.referenceKey(passage.reference, tradition: passage.tradition)] = passage
+        }
     }
 
     func nextPassage(
@@ -162,14 +170,15 @@ struct PassageRecommendationService {
     }
 
     func passage(withID id: String) -> ScripturePassage? {
-        passages.first { $0.id == id }
+        passagesByID[id]
     }
 
     func passage(matchingReference reference: String, tradition: FaithTradition) -> ScripturePassage? {
-        let normalized = Self.normalizedReference(reference)
-        return passages.first { passage in
-            passage.tradition == tradition && Self.normalizedReference(passage.reference) == normalized
-        }
+        passagesByTraditionAndReference[Self.referenceKey(reference, tradition: tradition)]
+    }
+
+    private static func referenceKey(_ reference: String, tradition: FaithTradition) -> String {
+        "\(tradition.rawValue)|\(normalizedReference(reference))"
     }
 
     static func normalizedReference(_ value: String) -> String {

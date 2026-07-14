@@ -65,6 +65,16 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - **Observabilidade:** `LimiarEventLog` (App Group) grava eventos do app e da extensão; tela **Configurações → Sobre → Diagnóstico técnico** mostra os eventos (`monitor.interval_did_start` às 5h = extensão viva; `monitor.shield_reapplied` = rearmado). `os.Logger` no lugar dos `debugPrint`.
 - Fix de cold start: `init()` não limpa mais o shield antes do StoreKit restaurar a assinatura (`SubscriptionManager` cacheia o entitlement no App Group).
 
+## 5b. Release 1.3 · build 110 — correções antes do envio
+
+- **Preço sem ambiguidade:** o plano anual destaca o valor integral localizado pelo StoreKit com `/ano`, informa que a cobrança ocorre uma vez por ano e mantém o equivalente diário como apoio. O mensal usa `/mês`, e a renovação também explicita o período. Esta correção é bloqueadora para o envio à App Store.
+- **Modo Essencial / AdMob:** o banner adaptativo agora recebe somente a largura real do container, sem realimentar o layout com o próprio `bounds`. A altura vem do `adSize`, é reservada antes do carregamento e o anúncio não é mais recortado. Validado em iPhone SE e Pro Max sem conteúdo deslocado ou texto cortado.
+- **Início dos 7 dias:** a tela virou uma boas-vindas sem preços, cartão ou pressão antecipada. O botão continua chamando o mesmo `startFreeTrial()` e deixa claro que nenhuma assinatura começa nessa etapa.
+- **Legibilidade:** FreeTrial, D6, D7 e D8 usam uma única régua escalável com Dynamic Type limitado a `xxLarge`; textos essenciais partem de 14pt, depoimentos usam 16pt e o carrossel cresce para não truncar.
+- **Narração:** referências somente com capítulo, como `Salmo 23`, recebem a pausa devocional correta; `break=0` preserva separação. Pausar durante a emenda de 600ms segura a fila e a retomada continua no próximo segmento.
+- **Acabamentos:** remoção de foto exige confirmação e o processamento de fotos grandes ocorre fora da MainActor; narração bloqueada ganha cadeado no Essencial; código morto de favoritos foi removido e a busca do catálogo passou a usar índices em memória.
+- **Validação:** screenshots ficam em `docs/screenshots/`; testes do backend e build iOS devem estar verdes antes de criar a build no Xcode Cloud.
+
 ---
 
 ## 6. Marketing / rastreamento Meta (site — JÁ EM PRODUÇÃO)

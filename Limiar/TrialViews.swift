@@ -30,14 +30,14 @@ struct EssentialModeIntroView: View {
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
 
                     Text("O Essencial exibe anúncios e não inclui narração, a reflexão completa nem personalização. Você pode voltar ao completo quando quiser.")
-                        .font(.system(size: 12))
+                        .conversionFont(14)
                         .foregroundStyle(Color.softText)
-                        .lineSpacing(3)
+                        .lineSpacing(4)
 
                     Button("Entendi, continuar") {
                         continueEssential()
                     }
-                    .font(.system(size: 17, weight: .semibold))
+                    .conversionFont(17, weight: .semibold, relativeTo: .headline)
                     .foregroundStyle(Color.deepInk)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
@@ -47,7 +47,7 @@ struct EssentialModeIntroView: View {
                         PaywallView()
                     } label: {
                         Text("Quero o Limiar completo")
-                            .font(.system(size: 15, weight: .semibold))
+                            .conversionFont(15, weight: .semibold)
                             .foregroundStyle(Color.sageButton)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -63,6 +63,7 @@ struct EssentialModeIntroView: View {
                 .padding(.bottom, 30)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -81,28 +82,26 @@ struct FreeTrialStartView: View {
                         .frame(width: 58, height: 58)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("ACESSO INICIAL")
-                            .font(.system(size: 13, weight: .bold))
+                        Text("SUA JORNADA COMEÇA")
+                            .conversionFont(12, weight: .bold, relativeTo: .caption)
                             .tracking(1.3)
                             .foregroundStyle(Color.warmGold)
 
                         Text("Comece com 7 dias de acesso completo")
-                            .font(.system(size: 44, weight: .regular, design: .serif))
+                            .conversionFont(44, design: .serif, relativeTo: .largeTitle)
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Use o Limiar completo por 7 dias. Depois desse período, será necessária uma assinatura mensal ou anual para continuar usando as pausas, leituras e reflexões personalizadas.")
-                            .font(.system(size: 18))
+                        Text("Sete dias com tudo: leituras personalizadas, narração e reflexões. Sem pagamento, sem cartão — é só começar.")
+                            .conversionFont(18)
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
                     }
 
                     VStack(alignment: .leading, spacing: 13) {
-                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias de acesso completo")
-                        TrialDisclosureRow(icon: "creditcard", text: subscription.marketingPricingLine)
-                        TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
-                        TrialDisclosureRow(icon: "checkmark.shield", text: "Nenhuma assinatura é iniciada nesta etapa")
-                        TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária depois para continuar na versão completa")
+                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias de acesso completo, grátis")
+                        TrialDisclosureRow(icon: "checkmark.shield", text: "Nada é cobrado — nenhuma assinatura começa agora")
+                        TrialDisclosureRow(icon: "leaf", text: "Depois, você escolhe: continuar completo ou seguir no Essencial gratuito")
                     }
                     .padding(16)
                     .limiarPanel()
@@ -111,18 +110,18 @@ struct FreeTrialStartView: View {
                         subscription.startFreeTrial()
                     } label: {
                         HStack(spacing: 12) {
-                            Text("Começar acesso inicial")
+                            Text("Começar minha travessia")
                             Image(systemName: "arrow.right")
                         }
-                        .font(.system(size: 18, weight: .semibold))
+                        .conversionFont(18, weight: .semibold, relativeTo: .headline)
                         .frame(maxWidth: .infinity)
                         .frame(height: 60)
                         .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
                         .foregroundStyle(Color.deepInk)
                     }
 
-                    Text("Você não está assinando agora. O app Limiar pedirá assinatura somente depois dos 7 dias.")
-                        .font(.system(size: 13))
+                    Text("Você não está assinando nada agora. Ao fim dos 7 dias, o Limiar mostra as opções e você decide.")
+                        .conversionFont(14)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                         .multilineTextAlignment(.center)
@@ -133,6 +132,7 @@ struct FreeTrialStartView: View {
                 .padding(.bottom, 30)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -177,6 +177,7 @@ struct TrialConversionView: View {
                 .padding(.bottom, 30)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -186,14 +187,14 @@ private struct TrialRhythmPanel: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "flame.fill")
-                .font(.system(size: 17, weight: .semibold))
+                .conversionFont(17, weight: .semibold)
                 .foregroundStyle(Color.warmGold)
                 .frame(width: 24)
 
             Text("7 dias, **\(readings) travessias**, **\(readings * 3) trechos**. Seu ritmo está no melhor momento.")
-                .font(.system(size: 13))
+                .conversionFont(15)
                 .foregroundStyle(Color.ivory)
-                .lineSpacing(3)
+                .lineSpacing(4)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
@@ -209,12 +210,12 @@ struct TrialDisclosureRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .conversionFont(15, weight: .semibold)
                 .foregroundStyle(Color.warmGold)
                 .frame(width: 24)
 
             Text(text)
-                .font(.system(size: 15, weight: .medium))
+                .conversionFont(15, weight: .medium)
                 .foregroundStyle(Color.ivory)
                 .fixedSize(horizontal: false, vertical: true)
         }
