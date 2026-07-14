@@ -3,9 +3,9 @@ const {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_SPEED,
   DEFAULT_TTS_VOICE_ID,
-  DEFAULT_AZURE_SPEECH_RATE,
   applyAudioHeaders,
   applyCommonHeaders,
+  azureSpeechTone,
   azureSpeechVoice,
   callAzureSpeech,
   callElevenLabsSpeech,
@@ -18,19 +18,21 @@ const {
   normalizeTTSSpeed
 } = require("./_limiar-ai");
 
-// Cache de áudio no Vercel Blob: cada combinação texto+voz+velocidade+modelo é
-// sintetizada uma única vez. Requer o env BLOB_READ_WRITE_TOKEN (criado
-// automaticamente ao conectar um Blob Store ao projeto). Sem o token, o
-// endpoint funciona como antes, sintetizando a cada chamada.
+// Cache de áudio no Vercel Blob: cada combinação de texto, voz, modelo e
+// assinatura de tom é sintetizada uma única vez. Requer BLOB_READ_WRITE_TOKEN
+// ou BLOB_STORE_ID (criado
+// automaticamente ao conectar um Blob Store ao projeto). Sem credencial de
+// Blob, o endpoint funciona como antes, sintetizando a cada chamada.
 function speechConfig(body) {
   const provider = normalizeTTSProvider();
   if (provider === "azure") {
     // O app publicado ainda envia uma voz do ElevenLabs. No Azure ela nunca é
     // reutilizada: somente AZURE_SPEECH_VOICE define a voz efetiva.
+    const tone = azureSpeechTone();
     return {
       provider,
       voice: azureSpeechVoice(),
-      speed: DEFAULT_AZURE_SPEECH_RATE,
+      cadence: tone.signature,
       model: "azure-speech"
     };
   }
@@ -39,18 +41,22 @@ function speechConfig(body) {
   // chave de cache (voz sem espaços, velocidade numérica limitada) para que um
   // valor forjado não consiga colidir com a chave de outro texto legítimo.
   const rawVoice = String(body.voice || process.env.ELEVENLABS_VOICE_ID || DEFAULT_TTS_VOICE_ID);
+  const speed = String(normalizeTTSSpeed(body.speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED));
   return {
     provider,
     voice: rawVoice.replace(/\s+/g, "").slice(0, 80),
-    speed: String(normalizeTTSSpeed(body.speed ?? process.env.ELEVENLABS_TTS_SPEED ?? DEFAULT_TTS_SPEED)),
+    speed,
+    cadence: speed,
     model: String(process.env.ELEVENLABS_TTS_MODEL || DEFAULT_TTS_MODEL).replace(/\s+/g, "").slice(0, 80)
   };
 }
 
 function cacheKey(body, config = speechConfig(body)) {
+  // Tudo que altera o áudio precisa entrar em `cadence`: rate, pitch, pausas,
+  // volume, estilo e versões de fala. Omitir algo aqui mistura tons no Blob.
   const digest = crypto
     .createHash("sha256")
-    .update([config.provider, config.model, config.voice, config.speed, String(body.text || "")].join(" "))
+    .update([config.provider, config.model, config.voice, config.cadence, String(body.text || "")].join(" "))
     .digest("hex");
   return `tts/${digest}.mp3`;
 }
@@ -122,7 +128,7 @@ async function handler(req, res) {
     }
 
     const audio = config.provider === "azure"
-      ? await callAzureSpeech({ input: body.text, speed: config.speed, debugContext })
+      ? await callAzureSpeech({ input: body.text, speed: body.speed, debugContext })
       : await callElevenLabsSpeech({
         input: body.text,
         voice: config.voice,

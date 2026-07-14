@@ -19,8 +19,9 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 **Endurecimento e performance:**
 - `vercel.json`: região **`gru1`** (São Paulo) — funções perto dos usuários.
 - **Proteção do backend**: o rate limit permanece obrigatório. `LIMIAR_APP_SECRET` é opcional e, quando usado temporariamente, deve ser injetado no build sem entrar no Git. Uma chave estática no binário não substitui App Attest.
-- **Cache de TTS** (`api/speech.js`) via Vercel Blob: cada áudio é sintetizado uma vez e reusado. A chave inclui provedor e voz efetiva, então uma troca Azure/ElevenLabs não entrega áudio antigo. Requer criar um **Blob Store** no painel do Vercel (gera `BLOB_READ_WRITE_TOKEN`). Sem o token, funciona como antes (sintetiza sempre).
-- **Pré-aquecimento do catálogo:** `npm run prewarm:narration` narra os 977 trechos fixos no Blob, de forma idempotente. A string canônica é exatamente `"{reference}.\n{text}"`; não inclua número da sessão, perfil ou data. O custo único estimado é de 200–400 mil caracteres (poucas dezenas de reais na Azure, conforme o plano). Rode de novo quando o catálogo ganhar trechos. Se `AZURE_SPEECH_VOICE` ou `DEFAULT_AZURE_SPEECH_RATE` mudar, a chave de cache muda e o catálogo precisa ser pré-aquecido novamente.
+- **Cache de TTS** (`api/speech.js`) via Vercel Blob: cada áudio é sintetizado uma vez e reusado. A chave inclui provedor, voz efetiva e a assinatura completa do tom (`rate`, `pitch`, pausa e versão da fala da referência), então uma troca de motor ou prosódia não entrega áudio antigo. Qualquer parâmetro futuro de SSML que altere o som também deve entrar nessa assinatura. Requer criar um **Blob Store** no painel do Vercel (gera `BLOB_READ_WRITE_TOKEN`). Sem o token, funciona como antes (sintetiza sempre).
+- **Tom sereno e referência proclamada:** o Antônio usa por padrão `rate=-10%`, `pitch=-3%` e pausa respirada de `500ms` entre referência e texto. A referência é ajustada somente no SSML (por exemplo, `Mateus 11, 28-30` é falado como `Mateus 11, versículos 28 a 30`); a string canônica `"{reference}.\n{text}"`, a tela e o hash do texto permanecem intocados.
+- **Ativação obrigatoriamente em três etapas:** (1) executar `npm run tone:preview` e ouvir/aprovar os seis MP3 locais; (2) fazer merge/deploy; (3) somente então executar `npm run prewarm:narration` para os 977 trechos. **Não executar o prewarm antes da aprovação humana.** O custo único estimado do novo lote é de **R$ 20–30**. Os áudios da assinatura anterior ficam órfãos no Blob, mas são inofensivos; as explicações sintetizadas ao vivo adotam o tom novo automaticamente no deploy. Rode o prewarm novamente sempre que catálogo, voz, tom ou regra de fala mudar.
 
 **Testes:** `tests/ai-backend.test.js` (`npm run test:ai-backend`). CI em `.github/workflows/ci.yml` roda testes + validação do catálogo + build iOS.
 
@@ -92,7 +93,7 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 ## Variáveis de ambiente do backend (referência)
 
 `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `OPENAI_REASONING_EFFORT`, `OPENAI_TIMEOUT_MS`,
-`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` (ex.: `brazilsouth`), `AZURE_SPEECH_VOICE` (padrão `pt-BR-AntonioNeural`), `AZURE_SPEECH_TIMEOUT_MS`, `TTS_PROVIDER` (padrão `azure`; use `elevenlabs` para reversão),
+`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` (ex.: `brazilsouth`), `AZURE_SPEECH_VOICE` (padrão `pt-BR-AntonioNeural`), `AZURE_SPEECH_RATE` (padrão `-10%`), `AZURE_SPEECH_PITCH` (padrão `-3%`), `AZURE_SPEECH_BREAK_MS` (padrão `500`), `AZURE_SPEECH_TIMEOUT_MS`, `TTS_PROVIDER` (padrão `azure`; use `elevenlabs` para reversão),
 `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL`, `ELEVENLABS_TTS_SPEED`, `ELEVENLABS_TTS_TIMEOUT_MS`,
 `LIMIAR_APP_SECRET`, `LIMIAR_AI_RATE_LIMIT_MAX_REQUESTS`, `LIMIAR_AI_RATE_LIMIT_WINDOW_MS`,
 `BLOB_READ_WRITE_TOKEN` (auto ao criar Blob Store), `META_CAPI_ACCESS_TOKEN`.
