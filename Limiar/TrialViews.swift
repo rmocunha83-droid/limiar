@@ -81,7 +81,7 @@ struct FreeTrialStartView: View {
                         .frame(width: 58, height: 58)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("ACESSO INICIAL")
+                        Text("SUA JORNADA COMEÇA")
                             .font(.system(size: 13, weight: .bold))
                             .tracking(1.3)
                             .foregroundStyle(Color.warmGold)
@@ -91,18 +91,16 @@ struct FreeTrialStartView: View {
                             .foregroundStyle(Color.ivory)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Use o Limiar completo por 7 dias. Depois desse período, será necessária uma assinatura mensal ou anual para continuar usando as pausas, leituras e reflexões personalizadas.")
+                        Text("Sete dias com tudo: leituras personalizadas, narração e reflexões. Sem pagamento, sem cartão — é só começar.")
                             .font(.system(size: 18))
                             .foregroundStyle(Color.softText)
                             .lineSpacing(5)
                     }
 
                     VStack(alignment: .leading, spacing: 13) {
-                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias de acesso completo")
-                        TrialDisclosureRow(icon: "creditcard", text: subscription.marketingPricingLine)
-                        TrialDisclosureRow(icon: "xmark.circle", text: "Cancelamento a qualquer momento")
-                        TrialDisclosureRow(icon: "checkmark.shield", text: "Nenhuma assinatura é iniciada nesta etapa")
-                        TrialDisclosureRow(icon: "lock.open", text: "Assinatura necessária depois para continuar na versão completa")
+                        TrialDisclosureRow(icon: "calendar.badge.clock", text: "7 dias de acesso completo, grátis")
+                        TrialDisclosureRow(icon: "checkmark.shield", text: "Nada é cobrado — nenhuma assinatura começa agora")
+                        TrialDisclosureRow(icon: "leaf", text: "Depois, você escolhe: continuar completo ou seguir no Essencial gratuito")
                     }
                     .padding(16)
                     .limiarPanel()
@@ -111,7 +109,7 @@ struct FreeTrialStartView: View {
                         subscription.startFreeTrial()
                     } label: {
                         HStack(spacing: 12) {
-                            Text("Começar acesso inicial")
+                            Text("Começar minha travessia")
                             Image(systemName: "arrow.right")
                         }
                         .font(.system(size: 18, weight: .semibold))
@@ -121,8 +119,8 @@ struct FreeTrialStartView: View {
                         .foregroundStyle(Color.deepInk)
                     }
 
-                    Text("Você não está assinando agora. O app Limiar pedirá assinatura somente depois dos 7 dias.")
-                        .font(.system(size: 13))
+                    Text("Você não está assinando nada agora. Ao fim dos 7 dias, o Limiar mostra as opções e você decide.")
+                        .font(.system(size: 14))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                         .multilineTextAlignment(.center)

@@ -27,6 +27,14 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceFreeTrialStartForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceFreeTrialStart")
+        #else
+        false
+        #endif
+    }
+
     private var effectiveHasPremiumAccess: Bool {
         Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
     }
@@ -52,7 +60,9 @@ struct ContentView: View {
 
         NavigationStack {
             Group {
-                if Self.forcedConversionScreen == "D6" {
+                if Self.forceFreeTrialStartForDebugging {
+                    FreeTrialStartView()
+                } else if Self.forcedConversionScreen == "D6" {
                     TrialConversionView {}
                 } else if Self.forcedConversionScreen == "D7" {
                     EssentialModeIntroView {}
