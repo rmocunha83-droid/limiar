@@ -306,6 +306,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     private var activeSpeechText = ""
     private var queue: [String] = []
     private var currentSegmentIndex = 0
+    private var pendingSegmentIndex: Int?
     private var prefetchedAudio: Data?
     private var prefetchedSegmentIndex: Int?
 
@@ -340,15 +341,30 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     }
 
     func pause() {
-        guard isSpeaking, let player else { return }
-        player.pause()
+        guard isSpeaking else { return }
+        if let player {
+            player.pause()
+        } else if pendingSegmentIndex != nil {
+            playbackTask?.cancel()
+            playbackTask = nil
+        } else {
+            return
+        }
         isSpeaking = false
         isPaused = true
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     func resume() {
-        guard isPaused, let player else {
+        guard isPaused else { return }
+
+        if let pendingSegmentIndex, player == nil {
+            isPaused = false
+            playPendingSegment(at: pendingSegmentIndex)
+            return
+        }
+
+        guard let player else {
             finishQueue()
             return
         }
@@ -377,6 +393,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         player = nil
         queue = []
         currentSegmentIndex = 0
+        pendingSegmentIndex = nil
         prefetchedAudio = nil
         prefetchedSegmentIndex = nil
         activeSpeechText = ""
@@ -441,6 +458,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             audioPlayer.prepareToPlay()
             player = audioPlayer
             currentSegmentIndex = index
+            pendingSegmentIndex = nil
             isGenerating = false
             isSpeaking = true
             isPaused = false
@@ -481,6 +499,12 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             return
         }
 
+        pendingSegmentIndex = nextIndex
+        guard !isPaused else {
+            isSpeaking = false
+            return
+        }
+
         let expectedIdentifier = activeSpeechText
         // Guardada em playbackTask: stop() precisa cancelá-la, senão um
         // reinício da mesma fila em menos de 600ms sobrepõe dois áudios.
@@ -489,14 +513,25 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self, self.activeSpeechText == expectedIdentifier else { return }
-                if self.prefetchedSegmentIndex == nextIndex, let audio = self.prefetchedAudio {
-                    self.prefetchedAudio = nil
-                    self.prefetchedSegmentIndex = nil
-                    self.play(audio, at: nextIndex)
-                } else {
-                    self.loadAndPlaySegment(at: nextIndex)
-                }
+                guard !self.isPaused, self.pendingSegmentIndex == nextIndex else { return }
+                self.playPendingSegment(at: nextIndex)
             }
+        }
+    }
+
+    private func playPendingSegment(at index: Int) {
+        guard queue.indices.contains(index) else {
+            finishQueue()
+            return
+        }
+
+        pendingSegmentIndex = index
+        if prefetchedSegmentIndex == index, let audio = prefetchedAudio {
+            prefetchedAudio = nil
+            prefetchedSegmentIndex = nil
+            play(audio, at: index)
+        } else {
+            loadAndPlaySegment(at: index)
         }
     }
 
@@ -520,6 +555,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         queue = []
         prefetchedAudio = nil
         prefetchedSegmentIndex = nil
+        pendingSegmentIndex = nil
         activeSpeechText = ""
         isGenerating = false
         isSpeaking = false

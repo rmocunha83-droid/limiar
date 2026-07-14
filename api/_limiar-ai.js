@@ -917,7 +917,7 @@ function parsedSpokenReference(reference) {
   if (!normalized) return { recognized: false, value: original };
 
   const withSpokenSlash = normalized.replace(/\s*\/\s*/g, ", ");
-  const verseMatch = withSpokenSlash.match(/^(.+?\s+\d+)\s*[, :]\s*(\d+)(?:\s*-\s*(\d+))?$/);
+  const verseMatch = withSpokenSlash.match(/^(.+?\s+\d+)\s*[,:]\s*(\d+)(?:\s*-\s*(\d+))?$/);
   if (verseMatch) {
     const [, bookAndChapter, firstVerse, lastVerse] = verseMatch;
     return {
@@ -928,7 +928,7 @@ function parsedSpokenReference(reference) {
     };
   }
 
-  const isChapterOnly = !/[, :]/.test(normalized) && /^.+\s+\d+$/.test(normalized);
+  const isChapterOnly = !/[,:]/.test(normalized) && /^.+\s+\d+$/.test(normalized);
   const isSlashChapterOnly = normalized.includes("/") && /^.+\s*\/\s*.+\s+\d+$/.test(normalized);
   if (isChapterOnly || isSlashChapterOnly) {
     return { recognized: true, value: withSpokenSlash };
@@ -968,7 +968,7 @@ function buildAzureSpeechSSML(input, voice = azureSpeechVoice(), toneOverrides =
     const [, reference, passageText] = canonicalMatch;
     const proclaimed = parsedSpokenReference(reference);
     if (proclaimed.recognized) {
-      const pause = tone.breakMs > 0 ? `<break time='${tone.breakMs}ms'/>` : "";
+      const pause = tone.breakMs > 0 ? `<break time='${tone.breakMs}ms'/>` : " ";
       spokenContent = `${escapeXML(proclaimed.value)}.${pause}${escapeXML(passageText)}`;
     }
   }

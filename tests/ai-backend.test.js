@@ -613,6 +613,22 @@ test("builds Azure SSML with escaped, normalized Portuguese speech text", () => 
   }
 });
 
+test("adds the devotional pause after chapter-only references and preserves separation at zero", () => {
+  const withPause = buildAzureSpeechSSML(
+    "Salmo 23.\nO Senhor é meu pastor.",
+    "pt-BR-AntonioNeural"
+  );
+  assert.match(withPause, /Salmo 23\.<break time='500ms'\/>O Senhor/);
+
+  const withoutBreak = buildAzureSpeechSSML(
+    "Salmo 23.\nO Senhor é meu pastor.",
+    "pt-BR-AntonioNeural",
+    { breakMs: 0 }
+  );
+  assert.match(withoutBreak, /Salmo 23\. O Senhor/);
+  assert.doesNotMatch(withoutBreak, /Salmo 23\.O Senhor/);
+});
+
 test("normalizes depth synonyms and changes guidance clearly", () => {
   assert.equal(normalizeProfile({ explanationDepth: "curta" }).explanationDepth, "curta");
   assert.equal(normalizeProfile({ explanationDepth: "média" }).explanationDepth, "média");
