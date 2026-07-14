@@ -75,7 +75,7 @@ Política de Privacidade: https://limiar-five.vercel.app/privacy.html
 Enviar em ordem:
 
 1. Pausa consciente: `app-store/upload-ready-6.5/01-pausa-antes-do-impulso.png`
-2. Leitura com IA: `app-store/upload-ready-6.5/02-leitura-com-proposito.png`
+2. Leitura com propósito: `app-store/upload-ready-6.5/02-leitura-com-proposito.png`
 3. Tempo de Uso: `app-store/upload-ready-6.5/03-protecao-nativa.png`
 4. Leitura pessoal: `app-store/upload-ready-6.5/04-tradicao-espiritual.png`
 5. Continue melhor: `app-store/upload-ready-6.5/05-retome-consciente.png`
@@ -127,4 +127,4 @@ Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O acesso inicial e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
-Recursos Premium: geração completa por IA, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e uso completo da versão completa do Limiar.
+Recursos Premium: reflexões completas, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e uso completo da versão completa do Limiar.

@@ -120,7 +120,7 @@ def make_app_store_board() -> Path:
     cards = sorted(APP_STORE.glob("[0-9][0-9]-*.png"))
     labels = [
         "pausa consciente",
-        "leitura com IA",
+        "leitura com propósito",
         "apps que ativam o Limiar",
         "tradição espiritual",
         "continuar com calma",

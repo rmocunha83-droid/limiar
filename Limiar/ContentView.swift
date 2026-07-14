@@ -135,12 +135,12 @@ private struct DashboardView: View {
                             Button {
                                 showingSettings = true
                             } label: {
-                                Image(systemName: "person")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .frame(width: 46, height: 46)
-                                    .glassCircle()
+                                ProfileAvatarView(
+                                    store: model.profileImageStore,
+                                    size: 46
+                                )
                             }
-                            .accessibilityLabel("Abrir configurações")
+                            .accessibilityLabel("Abrir perfil")
                         }
 
                         blockedAppsStrip
