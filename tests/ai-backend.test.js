@@ -15,6 +15,7 @@ const {
   SESSION_ITEM_COUNT,
   assembleReadingItems,
   assembleReflection,
+  azureSpeechCadence,
   buildExplanationPrompt,
   buildAzureSpeechSSML,
   canonicalPassageNarrationText,
@@ -392,6 +393,33 @@ test("speech cache key changes when any effective Azure tone parameter changes",
   } finally {
     restore();
   }
+});
+
+test("invalidates only chapter-only narration after the proclaimed pause fix", () => {
+  const speech = require("../api/speech");
+  const chapterText = canonicalPassageNarrationText("Salmo 23", "O Senhor é meu pastor.");
+  const slashChapterText = canonicalPassageNarrationText(
+    "Tehillim / Salmo 121",
+    "Elevo os meus olhos para os montes."
+  );
+  const verseText = canonicalPassageNarrationText("Salmo 118, 24", "Este é o dia do Senhor.");
+  const chapterConfig = speech.speechConfig({ text: chapterText });
+  const slashChapterConfig = speech.speechConfig({ text: slashChapterText });
+  const verseConfig = speech.speechConfig({ text: verseText });
+
+  assert.match(chapterConfig.cadence, /\|chapter-break-fix:v1$/);
+  assert.match(slashChapterConfig.cadence, /\|chapter-break-fix:v1$/);
+  assert.equal(verseConfig.cadence, azureSpeechCadence(verseText));
+  assert.doesNotMatch(verseConfig.cadence, /chapter-break-fix/);
+
+  const legacyChapterConfig = {
+    ...chapterConfig,
+    cadence: chapterConfig.cadence.replace("|chapter-break-fix:v1", "")
+  };
+  assert.notEqual(
+    speech.cacheKey({ text: chapterText }, chapterConfig),
+    speech.cacheKey({ text: chapterText }, legacyChapterConfig)
+  );
 });
 
 test("speech cache key normalizes forged voice/speed on the ElevenLabs path", () => {

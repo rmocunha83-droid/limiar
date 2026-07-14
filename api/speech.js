@@ -5,6 +5,7 @@ const {
   DEFAULT_TTS_VOICE_ID,
   applyAudioHeaders,
   applyCommonHeaders,
+  azureSpeechCadence,
   azureSpeechTone,
   azureSpeechVoice,
   callAzureSpeech,
@@ -32,7 +33,7 @@ function speechConfig(body) {
     return {
       provider,
       voice: azureSpeechVoice(),
-      cadence: tone.signature,
+      cadence: azureSpeechCadence(body.text, tone),
       model: "azure-speech"
     };
   }

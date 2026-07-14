@@ -914,7 +914,7 @@ function canonicalPassageNarrationText(reference, text) {
 function parsedSpokenReference(reference) {
   const original = String(reference ?? "");
   const normalized = original.trim();
-  if (!normalized) return { recognized: false, value: original };
+  if (!normalized) return { recognized: false, kind: "unknown", value: original };
 
   const withSpokenSlash = normalized.replace(/\s*\/\s*/g, ", ");
   const verseMatch = withSpokenSlash.match(/^(.+?\s+\d+)\s*[,:]\s*(\d+)(?:\s*-\s*(\d+))?$/);
@@ -922,6 +922,7 @@ function parsedSpokenReference(reference) {
     const [, bookAndChapter, firstVerse, lastVerse] = verseMatch;
     return {
       recognized: true,
+      kind: "verse",
       value: lastVerse
         ? `${bookAndChapter}, versículos ${firstVerse} a ${lastVerse}`
         : `${bookAndChapter}, versículo ${firstVerse}`
@@ -931,10 +932,25 @@ function parsedSpokenReference(reference) {
   const isChapterOnly = !/[,:]/.test(normalized) && /^.+\s+\d+$/.test(normalized);
   const isSlashChapterOnly = normalized.includes("/") && /^.+\s*\/\s*.+\s+\d+$/.test(normalized);
   if (isChapterOnly || isSlashChapterOnly) {
-    return { recognized: true, value: withSpokenSlash };
+    return { recognized: true, kind: "chapter", value: withSpokenSlash };
   }
 
-  return { recognized: false, value: original };
+  return { recognized: false, kind: "unknown", value: original };
+}
+
+// A pausa das referências só de capítulo foi corrigida depois do primeiro
+// prewarm. Marcar apenas esses textos evita reaproveitar os quatro MP3 antigos
+// sem invalidar o restante do catálogo. Toda mudança futura que altere o som
+// de um subconjunto deve ganhar um marcador equivalente na chave do cache.
+function azureSpeechCadence(input, tone = azureSpeechTone()) {
+  const cleanInput = normalizeSpeechInput(input);
+  const canonicalMatch = cleanInput.match(/^([^\n]+)\.\n([\s\S]+)$/);
+  if (!canonicalMatch || !tone.proclaimReference) return tone.signature;
+
+  const proclaimed = parsedSpokenReference(canonicalMatch[1]);
+  return proclaimed.kind === "chapter"
+    ? `${tone.signature}|chapter-break-fix:v1`
+    : tone.signature;
 }
 
 // Ajusta somente a forma falada. Referência exibida, texto canônico e hash do
@@ -1255,6 +1271,7 @@ module.exports = {
   callTextModel,
   callAzureSpeech,
   callElevenLabsSpeech,
+  azureSpeechCadence,
   azureSpeechVoice,
   azureSpeechTone,
   buildAzureSpeechSSML,

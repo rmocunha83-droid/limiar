@@ -72,6 +72,7 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - **Início dos 7 dias:** a tela virou uma boas-vindas sem preços, cartão ou pressão antecipada. O botão continua chamando o mesmo `startFreeTrial()` e deixa claro que nenhuma assinatura começa nessa etapa.
 - **Legibilidade:** FreeTrial, D6, D7 e D8 usam uma única régua escalável com Dynamic Type limitado a `xxLarge`; textos essenciais partem de 14pt, depoimentos usam 16pt e o carrossel cresce para não truncar.
 - **Narração:** referências somente com capítulo, como `Salmo 23`, recebem a pausa devocional correta; `break=0` preserva separação. Pausar durante a emenda de 600ms segura a fila e a retomada continua no próximo segmento.
+- **Cache da narração:** a correção da pausa adiciona `chapter-break-fix:v1` somente à chave de referências só de capítulo. Assim os quatro MP3 afetados são regenerados sob demanda sem reaquecer nem invalidar os outros 973 trechos.
 - **Acabamentos:** remoção de foto exige confirmação e o processamento de fotos grandes ocorre fora da MainActor; narração bloqueada ganha cadeado no Essencial; código morto de favoritos foi removido e a busca do catálogo passou a usar índices em memória.
 - **Validação:** screenshots ficam em `docs/screenshots/`; testes do backend e build iOS devem estar verdes antes de criar a build no Xcode Cloud.
 
