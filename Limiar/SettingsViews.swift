@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var showingHistory = false
     @State private var showingFavorites = false
     @State private var selectedProfilePhoto: PhotosPickerItem?
+    @State private var showingRemoveProfilePhotoConfirmation = false
 
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
@@ -58,11 +59,13 @@ struct SettingsView: View {
 
                         if hasProfileImage {
                             Button(role: .destructive) {
-                                model.profileImageStore.removeImage()
+                                showingRemoveProfilePhotoConfirmation = true
                             } label: {
                                 Label("Remover foto", systemImage: "trash")
                                     .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
                             }
+                            .buttonStyle(.borderless)
                             .accessibilityLabel("Remover foto do perfil")
                         }
 
@@ -235,6 +238,18 @@ struct SettingsView: View {
         }
         .navigationDestination(isPresented: $showingHistory) { HistoryView() }
         .navigationDestination(isPresented: $showingFavorites) { FavoritePassagesView() }
+        .confirmationDialog(
+            "Remover foto do perfil?",
+            isPresented: $showingRemoveProfilePhotoConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Remover foto", role: .destructive) {
+                model.profileImageStore.removeImage()
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("O Limiar voltará a mostrar o ícone padrão de perfil.")
+        }
     }
 
     private var subscriptionStatusLabel: String {

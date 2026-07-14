@@ -31,14 +31,18 @@ final class ProfileImageStore {
         defer { isLoading = false }
 
         do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let selectedImage = UIImage(data: data) else {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
                 throw ProfileImageError.invalidImage
             }
 
-            let preparedImage = resizedImage(selectedImage, maximumDimension: 1_024)
-            guard let compressedData = preparedImage.jpegData(compressionQuality: 0.82) else {
-                throw ProfileImageError.encodingFailed
+            // Fotos recentes podem ter dezenas de megapixels. Decodificação,
+            // redimensionamento e compressão ficam fora da MainActor para não
+            // congelar a tela de perfil durante a importação.
+            let compressedData = try await Task.detached(priority: .userInitiated) {
+                try Self.processImageData(data)
+            }.value
+            guard let preparedImage = UIImage(data: compressedData) else {
+                throw ProfileImageError.invalidImage
             }
 
             let directoryURL = try profileDirectoryURL()
@@ -99,7 +103,18 @@ final class ProfileImageStore {
         return applicationSupportURL.appendingPathComponent("Profile", isDirectory: true)
     }
 
-    private func resizedImage(_ source: UIImage, maximumDimension: CGFloat) -> UIImage {
+    private nonisolated static func processImageData(_ data: Data) throws -> Data {
+        guard let selectedImage = UIImage(data: data) else {
+            throw ProfileImageError.invalidImage
+        }
+        let preparedImage = resizedImage(selectedImage, maximumDimension: 1_024)
+        guard let compressedData = preparedImage.jpegData(compressionQuality: 0.82) else {
+            throw ProfileImageError.encodingFailed
+        }
+        return compressedData
+    }
+
+    private nonisolated static func resizedImage(_ source: UIImage, maximumDimension: CGFloat) -> UIImage {
         let longestSide = max(source.size.width, source.size.height)
         guard longestSide > maximumDimension else { return source }
 

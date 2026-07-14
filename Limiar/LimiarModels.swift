@@ -763,10 +763,6 @@ final class LimiarAppModel {
         min(120, max(75, TimeInterval(currentReadingEstimatedMinutes * 10)))
     }
 
-    var isCurrentPassageFavorite: Bool {
-        favoritePassages.contains { $0.passageID == currentReadingSessionID }
-    }
-
     var currentReadingSessionID: String {
         currentReadingPlan.map(\.id).joined(separator: "+")
     }
@@ -1086,28 +1082,6 @@ final class LimiarAppModel {
 
     func endReadingSession() {
         isReadingSessionActive = false
-    }
-
-    func toggleFavoriteCurrentPassage() {
-        if isCurrentPassageFavorite {
-            favoritePassages.removeAll { $0.passageID == currentReadingSessionID }
-        } else {
-            let passageText = currentSpiritualReadingItems.isEmpty
-                ? currentReadingPlan.map(\.text).joined(separator: "\n\n")
-                : currentSpiritualReadingItems.map(\.text).joined(separator: "\n\n")
-            favoritePassages.insert(
-                FavoritePassageItem(
-                    id: UUID(),
-                    passageID: currentReadingSessionID,
-                    passageTitle: currentReadingTitle,
-                    reference: currentReadingReference,
-                    text: passageText,
-                    savedAt: Date()
-                ),
-                at: 0
-            )
-        }
-        policyStore.saveFavorites(favoritePassages)
     }
 
     func isFavorite(_ item: SpiritualReadingItem) -> Bool {

@@ -357,7 +357,8 @@ private struct DashboardView: View {
                         narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationSegments),
                         showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
                         showsNarration: model.canNarrateCurrentReading || model.isEssentialMode,
-                        isSaveLocked: model.isEssentialMode
+                        isSaveLocked: model.isEssentialMode,
+                        isNarrationLocked: model.isEssentialMode
                     )
 
                     if model.showsAds {

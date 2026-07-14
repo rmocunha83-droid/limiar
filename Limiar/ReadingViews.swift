@@ -126,6 +126,7 @@ struct SpiritualReadingCard: View {
     var showsReflection = true
     var showsNarration = true
     var isSaveLocked = false
+    var isNarrationLocked = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -193,7 +194,18 @@ struct SpiritualReadingCard: View {
                                 .controlSize(.small)
                                 .tint(Color.sageButton)
                         } else {
-                            Image(systemName: narrationState.systemImage)
+                            ZStack(alignment: .bottomTrailing) {
+                                Image(systemName: narrationState.systemImage)
+                                if isNarrationLocked {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 7, weight: .bold))
+                                        .foregroundStyle(Color.deepInk)
+                                        .padding(3)
+                                        .background(Color.warmGold, in: Circle())
+                                        .offset(x: 5, y: 5)
+                                }
+                            }
+                            .frame(width: 24, height: 24)
                         }
 
                         Text(narrationState.title)
@@ -201,6 +213,7 @@ struct SpiritualReadingCard: View {
                     }
                 }
                 .buttonStyle(ReadingActionButtonStyle(isHighlighted: narrationState.isHighlighted))
+                .accessibilityLabel(isNarrationLocked ? "Ouvir este trecho é um recurso Premium" : narrationState.title)
             }
         }
         .padding(18)
