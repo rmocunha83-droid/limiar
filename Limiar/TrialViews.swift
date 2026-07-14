@@ -46,16 +46,7 @@ struct EssentialModeIntroView: View {
                     NavigationLink {
                         PaywallView()
                     } label: {
-                        Text("Quero o Limiar completo")
-                            .conversionFont(15, weight: .semibold)
-                            .foregroundStyle(Color.sageButton)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.sageButton.opacity(0.75), lineWidth: 1)
-                            )
+                        ConversionSecondaryActionLabel(title: "Quero o Limiar completo")
                     }
                 }
                 .padding(.horizontal, 30)
@@ -141,6 +132,15 @@ struct TrialConversionView: View {
     @Environment(LimiarAppModel.self) private var model
     let continueTrial: () -> Void
 
+    private var endsToday: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarTrialEndsToday") {
+            return true
+        }
+        #endif
+        return subscription.trialEndsToday
+    }
+
     var body: some View {
         @Bindable var subscription = subscription
 
@@ -150,15 +150,21 @@ struct TrialConversionView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     ConversionHeader(
-                        eyebrow: "ATENÇÃO!",
+                        eyebrow: endsToday
+                            ? "SEU ACESSO COMPLETO TERMINA HOJE"
+                            : "SEU ACESSO COMPLETO TERMINA AMANHÃ",
                         title: "Continue sem interrupção.",
-                        subtitle: "Você não precisa perder nada do que construiu nestes 7 dias."
+                        subtitle: endsToday
+                            ? "Hoje é o último dia do seu acesso completo. Você não precisa perder nada do que construiu."
+                            : "Você não precisa perder nada do que construiu nestes 7 dias."
                     )
 
                     TrialRhythmPanel(readings: model.history.count)
 
                     ConversionLossBlock(
-                        title: "Amanhã, sem o Premium, você perde:",
+                        title: endsToday
+                            ? "Sem o Premium, você perde:"
+                            : "Amanhã, sem o Premium, você perde:",
                         finalItem: "Pausa limpa — passará a ver anúncios"
                     )
 
@@ -168,7 +174,7 @@ struct TrialConversionView: View {
 
                     ConversionPurchaseSection(
                         buttonTitle: "Continuar minha travessia",
-                        escapeTitle: "Decidir amanhã",
+                        escapeTitle: endsToday ? "Agora não" : "Decidir amanhã",
                         escapeAction: continueTrial
                     )
                 }

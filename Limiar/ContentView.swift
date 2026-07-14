@@ -113,7 +113,12 @@ struct ContentView: View {
                 isEssentialMode: effectiveIsEssentialMode
             )
         }
-        .onChange(of: subscription.accessState) { _, _ in
+        .onChange(of: subscription.accessState) { _, newAccessState in
+            if newAccessState == .trialExpired && dismissedTrialConversion {
+                // Se o teste expirar depois de dispensar o D6 nesta sessão,
+                // deixa o D7 para a próxima abertura em vez de empilhá-lo.
+                dismissedEssentialModeIntro = true
+            }
             model.updateAccess(
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode
