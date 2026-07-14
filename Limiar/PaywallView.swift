@@ -291,19 +291,21 @@ struct ConversionPlanPicker: View {
     }
 
     private func mainPrice(for plan: SubscriptionPlan) -> String {
-        if plan == .yearly, let monthly = subscription.monthlyEquivalentPrice(for: plan) {
-            return "\(monthly)/mês"
+        switch plan {
+        case .yearly:
+            return "\(subscription.displayPrice(for: plan))/ano"
+        case .monthly:
+            return "\(subscription.displayPrice(for: plan))/mês"
         }
-        return subscription.displayPrice(for: plan)
     }
 
     private func detail(for plan: SubscriptionPlan) -> String {
         switch plan {
         case .yearly:
             guard let daily = subscription.dailyEquivalentPrice(for: plan) else {
-                return "\(subscription.displayPrice(for: plan)) por ano"
+                return "Cobrado uma vez por ano"
             }
-            return "\(subscription.displayPrice(for: plan)) por ano · menos de \(daily) por dia"
+            return "Menos de \(daily) por dia · cobrado uma vez por ano"
         case .monthly:
             return "Renovação mensal · cancele quando quiser"
         }
