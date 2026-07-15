@@ -146,6 +146,14 @@ private struct DashboardView: View {
         #endif
     }
 
+    private static var forceEssentialMiddleScreenshot: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarEssentialMiddleScreenshot")
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         @Bindable var model = model
 
@@ -189,10 +197,13 @@ private struct DashboardView: View {
                         readingRequirementHeader
                         essentialModeNotice
                         readingItemsList
+                        if model.showsAds {
+                            LimiarMRECAdSlot()
+                                .id("essentialMREC")
+                        }
                         chooseAppsButton
                         completionExplanation
                         unlockButton
-                        footerAdBanner
                         footer
                     }
                     .padding(.horizontal, 24)
@@ -204,15 +215,31 @@ private struct DashboardView: View {
                     proxy.scrollTo("readingTop", anchor: .top)
                 }
                 .task {
-                    guard Self.forceEssentialBannerScreenshot else { return }
-                    try? await Task.sleep(for: .seconds(3))
-                    proxy.scrollTo("firstEssentialAd", anchor: .center)
+                    guard Self.forceEssentialBannerScreenshot || Self.forceEssentialMiddleScreenshot else { return }
+                    if Self.forceEssentialBannerScreenshot {
+                        // O MREC pode levar mais tempo para responder no primeiro
+                        // boot de um simulador novo; a espera existe apenas no
+                        // caminho DEBUG usado pelas capturas automatizadas.
+                        try? await Task.sleep(for: .seconds(24))
+                        proxy.scrollTo("essentialMREC", anchor: .center)
+                    } else {
+                        try? await Task.sleep(for: .seconds(7))
+                        proxy.scrollTo("essentialMiddle", anchor: .center)
+                    }
                 }
                 .onChange(of: model.readingTopResetID) { _, _ in
                     withAnimation(.easeOut(duration: 0.28)) {
                         proxy.scrollTo("readingTop", anchor: .top)
                     }
                 }
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if model.showsAds {
+                // O safeAreaInset mantem o anuncio fixo e reduz a area rolavel
+                // pela altura real do slot. Assim o CTA nunca fica encoberto.
+                LimiarAnchoredAdSlot()
+                    .background(Color.deepInk.opacity(0.98))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -365,11 +392,8 @@ private struct DashboardView: View {
                         isSaveLocked: model.isEssentialMode,
                         isNarrationLocked: model.isEssentialMode
                     )
+                    .id(index == 1 ? "essentialMiddle" : "reading-\(item.id)")
 
-                    if model.showsAds {
-                        LimiarAdBannerSlot(label: "Publicidade")
-                            .id(index == 0 ? "firstEssentialAd" : "essentialAd-\(index)")
-                    }
                 }
 
                 if model.hasPremiumAccess && model.hasVisibleReflection {
@@ -458,15 +482,6 @@ private struct DashboardView: View {
                         .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    private var footerAdBanner: some View {
-        Group {
-            if model.showsAds {
-                LimiarAdBannerSlot(label: "Publicidade")
-                    .padding(.top, 4)
             }
         }
     }
