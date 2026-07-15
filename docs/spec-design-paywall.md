@@ -18,6 +18,14 @@ alavanca psicológica própria. **A ordem dos blocos muda por tela — é intenc
 | D7 — dia do fim | `EssentialModeIntroView` | Nenhuma venda — honestidade | Suave, informativo |
 | D8 — um dia depois | `PaywallView` | Perda já vivida + recuperação | Empático, concreto |
 
+Cada tela é apresentada automaticamente **no máximo uma vez por ciclo de teste**, no seu
+momento natural. A dispensa de D6, D7 e D8 é persistida separadamente. Também há no máximo
+um interstício do funil por abertura: se outra tela estiver pendente quando uma for fechada,
+ela só poderá aparecer na próxima abertura. Assim, no pós-teste, a sequência esperada é D8
+na primeira abertura, D7 na segunda e Dashboard direto da terceira em diante. Um novo teste
+iniciado limpa as três dispensas. Assinantes ativos não recebem interstícios automáticos, e
+os caminhos sob demanda para conhecer o Premium continuam disponíveis sempre que acionados.
+
 ---
 
 ## 2. Tokens visuais (usar os do app)
