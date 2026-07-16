@@ -85,6 +85,13 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - Não existe hoje um lembrete diário independente no app; portanto não há outro agendamento de notificação a sincronizar.
 - Copy ajustada: “Sua travessia de cada manhã, sempre gratuita” → “Sua travessia diária, sempre gratuita”; “disponíveis até a próxima manhã” → “disponíveis até o próximo ciclo”; os horários de retorno da pausa agora derivam do turno escolhido.
 
+## 5d. Retry do banner ancorado — build 114
+
+- O banner ancorado do Modo Essencial tenta novamente após **30s**, depois **60s** e, persistindo a falha, a cada **120s** enquanto o dashboard estiver visível.
+- Os timers são cancelados ao sair da tela e nunca rodam depois de um anúncio carregado; atualização de anúncio ativo continua sob responsabilidade exclusiva do auto-refresh do AdMob.
+- O MREC preserva o comportamento anterior: uma única nova tentativa suave após 4s.
+- `admob_banner_failed` e `admob_banner_loaded` registram `position` e número da tentativa; falhas também registram o próximo intervalo previsto.
+
 ---
 
 ## 6. Marketing / rastreamento Meta (site — JÁ EM PRODUÇÃO)

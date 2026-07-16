@@ -79,6 +79,7 @@ private struct LimiarAdSlot: View {
     let placement: LimiarAdPlacement
 
     @State private var loadedAdHeight: CGFloat = 0
+    @State private var placementIsVisible = true
 
     private var isLoaded: Bool {
         loadedAdHeight > 0
@@ -109,6 +110,7 @@ private struct LimiarAdSlot: View {
                 LimiarBannerView(
                     placement: placement,
                     availableWidth: adWidth,
+                    isVisible: placementIsVisible,
                     onLoadStateChange: updateLoadState
                 )
                 .frame(width: requestedSize.size.width, height: requestedSize.size.height)
@@ -124,6 +126,8 @@ private struct LimiarAdSlot: View {
         }
         .frame(height: visibleHeight)
         .animation(.easeOut(duration: 0.24), value: visibleHeight)
+        .onAppear { placementIsVisible = true }
+        .onDisappear { placementIsVisible = false }
     }
 
     private func updateLoadState(isLoaded: Bool, height: CGFloat) {
@@ -136,13 +140,18 @@ private struct LimiarAdSlot: View {
 private struct LimiarBannerView: UIViewRepresentable {
     let placement: LimiarAdPlacement
     let availableWidth: CGFloat
+    let isVisible: Bool
     let onLoadStateChange: @MainActor (Bool, CGFloat) -> Void
 
     @MainActor
     final class Coordinator: NSObject, BannerViewDelegate {
         let placement: LimiarAdPlacement
         var configuredWidth: CGFloat = 0
-        var hasRetried = false
+        var retryCount = 0
+        var retryTask: Task<Void, Never>?
+        var isVisible = true
+        var hasLoadedAd = false
+        var isRequestInFlight = false
         var onLoadStateChange: @MainActor (Bool, CGFloat) -> Void
 
         init(
@@ -154,14 +163,42 @@ private struct LimiarBannerView: UIViewRepresentable {
         }
 
         func prepareForReload() {
+            retryTask?.cancel()
+            retryTask = nil
+            hasLoadedAd = false
+            isRequestInFlight = false
             onLoadStateChange(false, 0)
         }
 
+        func updateVisibility(_ visible: Bool, bannerView: BannerView) {
+            isVisible = visible
+            if !visible {
+                retryTask?.cancel()
+                retryTask = nil
+            } else if !hasLoadedAd, !isRequestInFlight, retryCount > 0 {
+                scheduleRetry(for: bannerView)
+            }
+        }
+
+        func stop() {
+            isVisible = false
+            retryTask?.cancel()
+            retryTask = nil
+            isRequestInFlight = false
+        }
+
         func bannerViewDidReceiveAd(_ bannerView: BannerView) {
+            isRequestInFlight = false
+            hasLoadedAd = true
+            retryTask?.cancel()
+            retryTask = nil
             onLoadStateChange(true, bannerView.adSize.size.height)
             LimiarAIDiagnostics.log(
                 "admob_banner_loaded",
-                values: ["position": placement.rawValue]
+                values: [
+                    "position": placement.rawValue,
+                    "attempt": "\(retryCount + 1)"
+                ]
             )
         }
 
@@ -170,25 +207,59 @@ private struct LimiarBannerView: UIViewRepresentable {
             didFailToReceiveAdWithError error: Error
         ) {
             let nsError = error as NSError
+            isRequestInFlight = false
+            hasLoadedAd = false
             onLoadStateChange(false, 0)
+            let retryDelay = nextRetryDelay
             LimiarAIDiagnostics.log(
                 "admob_banner_failed",
                 values: [
                     "position": placement.rawValue,
+                    "attempt": "\(retryCount + 1)",
                     "code": "\(nsError.code)",
-                    "reason": Self.errorName(for: nsError.code)
+                    "reason": Self.errorName(for: nsError.code),
+                    "nextRetrySeconds": retryDelay.map { "\(Int($0))" } ?? "none"
                 ]
             )
 
-            // No maximo uma tentativa suave por ciclo de vida do placement.
-            // O Coordinator nasce novamente quando o placement reaparece.
-            guard !hasRetried else { return }
-            hasRetried = true
-            Task { @MainActor [weak bannerView] in
-                try? await Task.sleep(for: .seconds(4))
-                guard let bannerView else { return }
-                bannerView.load(Request())
+            scheduleRetry(for: bannerView)
+        }
+
+        private var nextRetryDelay: TimeInterval? {
+            switch placement {
+            case .anchored:
+                if retryCount == 0 { return 30 }
+                if retryCount == 1 { return 60 }
+                return 120
+            case .mrec:
+                return retryCount == 0 ? 4 : nil
             }
+        }
+
+        private func scheduleRetry(for bannerView: BannerView) {
+            guard isVisible, !hasLoadedAd, !isRequestInFlight, retryTask == nil,
+                  let delay = nextRetryDelay
+            else { return }
+
+            retryCount += 1
+            retryTask = Task { @MainActor [weak self, weak bannerView] in
+                try? await Task.sleep(for: .seconds(delay))
+                guard !Task.isCancelled,
+                      let self,
+                      self.isVisible,
+                      !self.hasLoadedAd,
+                      let bannerView
+                else { return }
+
+                self.retryTask = nil
+                self.load(bannerView)
+            }
+        }
+
+        func load(_ bannerView: BannerView) {
+            guard isVisible, !hasLoadedAd, !isRequestInFlight else { return }
+            isRequestInFlight = true
+            bannerView.load(Request())
         }
 
         private static func errorName(for code: Int) -> String {
@@ -225,13 +296,15 @@ private struct LimiarBannerView: UIViewRepresentable {
         banner.rootViewController = UIApplication.shared.limiarRootViewController
         banner.delegate = context.coordinator
         context.coordinator.configuredWidth = width
-        banner.load(Request())
+        context.coordinator.updateVisibility(isVisible, bannerView: banner)
+        context.coordinator.load(banner)
         return banner
     }
 
     func updateUIView(_ banner: BannerView, context: Context) {
         let width = max(1, availableWidth)
         context.coordinator.onLoadStateChange = onLoadStateChange
+        context.coordinator.updateVisibility(isVisible, bannerView: banner)
 
         // A largura real do container e a unica fonte de verdade. Qualquer
         // realimentacao por bounds/intrinsicContentSize faria o dashboard crescer.
@@ -239,10 +312,15 @@ private struct LimiarBannerView: UIViewRepresentable {
             context.coordinator.prepareForReload()
             banner.adSize = placement.adSize(availableWidth: width)
             context.coordinator.configuredWidth = width
-            banner.load(Request())
+            context.coordinator.load(banner)
         }
 
         banner.rootViewController = UIApplication.shared.limiarRootViewController
+    }
+
+    static func dismantleUIView(_ banner: BannerView, coordinator: Coordinator) {
+        coordinator.stop()
+        banner.delegate = nil
     }
 
     func sizeThatFits(
