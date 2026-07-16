@@ -7,9 +7,19 @@ struct ContentView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.scenePhase) private var scenePhase
-    @State private var dismissedTrialConversion = false
-    @State private var dismissedEssentialModeIntro = false
-    @State private var dismissedPostTrialPaywall = false
+    @AppStorage(
+        ConversionFunnelPersistence.d6DismissedKey,
+        store: UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+    ) private var dismissedTrialConversion = false
+    @AppStorage(
+        ConversionFunnelPersistence.d7DismissedKey,
+        store: UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+    ) private var dismissedEssentialModeIntro = false
+    @AppStorage(
+        ConversionFunnelPersistence.d8DismissedKey,
+        store: UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+    ) private var dismissedPostTrialPaywall = false
+    @State private var presentedFunnelInterstitialThisSession = false
 
     private static var forcePaywallForReviewScreenshot: Bool {
         #if DEBUG
@@ -76,17 +86,26 @@ struct ContentView: View {
                     OnboardingView()
                 } else if subscription.accessState == .trialNotStarted {
                     FreeTrialStartView()
-                } else if subscription.shouldShowTrialConversion && !dismissedTrialConversion {
+                } else if !presentedFunnelInterstitialThisSession,
+                          subscription.shouldShowTrialConversion,
+                          !dismissedTrialConversion {
                     TrialConversionView {
                         dismissedTrialConversion = true
+                        presentedFunnelInterstitialThisSession = true
                     }
-                } else if subscription.shouldShowPostTrialPaywall && !dismissedPostTrialPaywall {
+                } else if !presentedFunnelInterstitialThisSession,
+                          subscription.shouldShowPostTrialPaywall,
+                          !dismissedPostTrialPaywall {
                     PaywallView {
                         dismissedPostTrialPaywall = true
+                        presentedFunnelInterstitialThisSession = true
                     }
-                } else if subscription.isEssentialMode && !dismissedEssentialModeIntro {
+                } else if !presentedFunnelInterstitialThisSession,
+                          subscription.isEssentialMode,
+                          !dismissedEssentialModeIntro {
                     EssentialModeIntroView {
                         dismissedEssentialModeIntro = true
+                        presentedFunnelInterstitialThisSession = true
                     }
                 } else {
                     DashboardView()
@@ -113,12 +132,9 @@ struct ContentView: View {
                 isEssentialMode: effectiveIsEssentialMode
             )
         }
-        .onChange(of: subscription.accessState) { _, newAccessState in
-            if newAccessState == .trialExpired && dismissedTrialConversion {
-                // Se o teste expirar depois de dispensar o D6 nesta sessão,
-                // deixa o D7 para a próxima abertura em vez de empilhá-lo.
-                dismissedEssentialModeIntro = true
-            }
+        .onChange(of: subscription.accessState) { _, _ in
+            // A trava efêmera acima impede que outro interstício do funil seja
+            // empilhado nesta abertura; flags persistentes só mudam no dismiss.
             model.updateAccess(
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode

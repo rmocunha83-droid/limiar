@@ -63,6 +63,18 @@ enum SubscriptionAccessState: Equatable {
     }
 }
 
+enum ConversionFunnelPersistence {
+    static let d6DismissedKey = "funnel.d6.dismissed"
+    static let d7DismissedKey = "funnel.d7.dismissed"
+    static let d8DismissedKey = "funnel.d8.dismissed"
+
+    static func resetDismissals(in defaults: UserDefaults) {
+        defaults.removeObject(forKey: d6DismissedKey)
+        defaults.removeObject(forKey: d7DismissedKey)
+        defaults.removeObject(forKey: d8DismissedKey)
+    }
+}
+
 @MainActor
 @Observable
 final class SubscriptionManager {
@@ -379,6 +391,7 @@ final class SubscriptionManager {
 
         if trialStartedAt == nil {
             let now = Date()
+            ConversionFunnelPersistence.resetDismissals(in: defaults)
             trialStartedAt = now
             TrialStartStore.save(now)
             defaults.set(now, forKey: Constants.trialStartDefaultsKey)
@@ -392,6 +405,7 @@ final class SubscriptionManager {
         guard Self.isTestEnvironment else { return }
 
         let now = Date()
+        ConversionFunnelPersistence.resetDismissals(in: defaults)
         trialStartedAt = now
         TrialStartStore.save(now)
         defaults.set(now, forKey: Constants.trialStartDefaultsKey)
