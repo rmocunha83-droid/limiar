@@ -53,16 +53,16 @@ Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend
 
 Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usuário (`LimiarModels.swift`, `DailyReadingSessionStore` em `PassageServices.swift`):
 - **Onboarding:** dispara a geração ao entrar no passo ATIVAÇÃO (enquanto o usuário autoriza o Tempo de Uso). Dashboard abre com conteúdo pronto.
-- **Manhã seguinte:** após concluir a travessia do dia, pré-gera a sessão do **próximo ciclo** e persiste (chave do dia seguinte). App abre instantâneo às 5h, mesmo em cold start.
+- **Próximo ciclo:** após concluir a travessia, pré-gera a sessão do **próximo ciclo** e persiste pela chave ancorada na hora do turno escolhido (padrão 5h). O app abre instantaneamente mesmo em cold start.
 - Fallback: se as preferências mudarem ou a pré-geração falhar, cai no fluxo ao vivo normal.
 
 ---
 
 ## 5. Shield matinal (Screen Time) — confiabilidade
 
-- **Entitlement Family Controls adicionado às 3 extensões** (DeviceActivityMonitor, ShieldAction, ShieldConfiguration) — era a causa raiz de o shield não rearmar às 5h. **Já aprovado pela Apple** (build 80 aprovada na App Store com isso).
-- `ScreenTimeController` / `DeviceActivityMonitorExtension`: timezone do dispositivo (era São Paulo fixo), cálculo do ciclo das 5h robusto a horário de verão, botão do shield com copy correta pré-iOS 26.5.
-- **Observabilidade:** `LimiarEventLog` (App Group) grava eventos do app e da extensão; tela **Configurações → Sobre → Diagnóstico técnico** mostra os eventos (`monitor.interval_did_start` às 5h = extensão viva; `monitor.shield_reapplied` = rearmado). `os.Logger` no lugar dos `debugPrint`.
+- **Entitlement Family Controls adicionado às 3 extensões** (DeviceActivityMonitor, ShieldAction, ShieldConfiguration) — era a causa raiz de o shield não rearmar no início do ciclo. **Já aprovado pela Apple** (build 80 aprovada na App Store com isso).
+- `ScreenTimeController` / `DeviceActivityMonitorExtension`: timezone do dispositivo (era São Paulo fixo), cálculo do ciclo na hora do turno escolhido robusto a horário de verão, botão do shield com copy correta pré-iOS 26.5.
+- **Observabilidade:** `LimiarEventLog` (App Group) grava eventos do app e da extensão; tela **Configurações → Sobre → Diagnóstico técnico** mostra os eventos (`monitor.interval_did_start` na hora escolhida = extensão viva; `monitor.shield_reapplied` = rearmado). `os.Logger` no lugar dos `debugPrint`.
 - Fix de cold start: `init()` não limpa mais o shield antes do StoreKit restaurar a assinatura (`SubscriptionManager` cacheia o entitlement no App Group).
 
 ## 5b. Release 1.3 · build 110 — correções antes do envio
@@ -75,6 +75,15 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - **Cache da narração:** a correção da pausa adiciona `chapter-break-fix:v1` somente à chave de referências só de capítulo. Assim os quatro MP3 afetados são regenerados sob demanda sem reaquecer nem invalidar os outros 973 trechos.
 - **Acabamentos:** remoção de foto exige confirmação e o processamento de fotos grandes ocorre fora da MainActor; narração bloqueada ganha cadeado no Essencial; código morto de favoritos foi removido e a busca do catálogo passou a usar índices em memória.
 - **Validação:** screenshots ficam em `docs/screenshots/`; testes do backend e build iOS devem estar verdes antes de criar a build no Xcode Cloud.
+
+## 5c. Turno da pausa diária — build 114
+
+- O usuário escolhe **Manhã (5h)**, **Tarde (13h)** ou **Noite (19h)** no novo passo do onboarding e pode alterar depois em Configurações.
+- A preferência `cycleStartHour` fica no App Group `group.com.romeucunha.Limiar`, acessível ao app e à extensão de `DeviceActivity`. Perfis existentes ou sem a chave continuam em **Manhã/5h**.
+- Uma troca de turno é futura: a seleção é salva imediatamente, mas o corte efetivo só ocorre no próximo ciclo. O shield corrente e uma travessia já concluída não são reabertos.
+- `currentCycleStart`, a chave da sessão diária, a pré-geração e o monitor usam a mesma hora efetiva. No turno da noite, 23h e 1h pertencem ao mesmo ciclo; a chave só vira às 19h seguintes.
+- Não existe hoje um lembrete diário independente no app; portanto não há outro agendamento de notificação a sincronizar.
+- Copy ajustada: “Sua travessia de cada manhã, sempre gratuita” → “Sua travessia diária, sempre gratuita”; “disponíveis até a próxima manhã” → “disponíveis até o próximo ciclo”; os horários de retorno da pausa agora derivam do turno escolhido.
 
 ---
 
