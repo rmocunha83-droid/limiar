@@ -660,14 +660,13 @@ enum AIContentState: Equatable {
 @MainActor
 @Observable
 final class LimiarAppModel {
-    static let morningPauseHour = 5
-
     let profileImageStore = ProfileImageStore()
     var hasCompletedOnboarding = false
     var hasSeenValueDemo = false
     var hasPremiumAccess = false
     var isEssentialMode = false
     var faithProfile = UserFaithProfile.starter
+    var pauseCycleTurn = PauseCycleTurn.morning
     var blockingEnabled = true
     var selection = FamilyActivitySelection()
     var currentReadingPlan: [ScripturePassage] = []
@@ -715,11 +714,15 @@ final class LimiarAppModel {
     private var aiGenerationID = UUID()
 
     init() {
+#if DEBUG
+        ScreenTimePolicyStore.runCycleMathDebugAssertions()
+#endif
         var savedProfile = policyStore.loadFaithProfile() ?? .starter
         savedProfile.normalizeReadingPreferencesForTradition()
         savedProfile.normalizeStandaloneThemesForCurrentTradition()
         policyStore.saveFaithProfile(savedProfile)
         faithProfile = savedProfile
+        pauseCycleTurn = policyStore.loadSelectedCycleTurn()
         hasCompletedOnboarding = policyStore.loadOnboardingState()
         hasSeenValueDemo = policyStore.loadValueDemoSeen()
         blockingEnabled = policyStore.loadBlockingEnabled()
@@ -745,7 +748,7 @@ final class LimiarAppModel {
 
     var lockState: LockState {
         guard blockingEnabled else { return .availableToday }
-        if policyStore.hasCompletedMorningPauseToday() {
+        if policyStore.hasCompletedPauseInCurrentCycle() {
             return .availableToday
         }
         return history.isEmpty ? .readingPause : .locked
@@ -844,7 +847,7 @@ final class LimiarAppModel {
     }
 
     var unlockDurationDescription: String {
-        "Uma pausa por manhã, às 5h"
+        "\(pauseCycleTurn.title), a partir das \(pauseCycleTurn.hourLabel)"
     }
 
     var hasBlockedAppsSelection: Bool {
@@ -917,7 +920,7 @@ final class LimiarAppModel {
         policyStore.saveSelection(selection)
         policyStore.savePauseAccessEnabled(hasPauseAccess)
         var values = LimiarAIDiagnostics.profileSnapshot(faithProfile)
-        values["morningPauseHour"] = "\(Self.morningPauseHour)"
+        values["cycleStartHour"] = "\(pauseCycleTurn.rawValue)"
         values["blockingEnabled"] = "\(blockingEnabled)"
         values["hasBlockedAppsSelection"] = "\(hasBlockedAppsSelection)"
         LimiarAIDiagnostics.log("preferences_saved", values: values)
@@ -966,6 +969,19 @@ final class LimiarAppModel {
         saveProfile()
     }
 
+    func selectPauseCycleTurn(_ turn: PauseCycleTurn) {
+        guard pauseCycleTurn != turn else { return }
+        pauseCycleTurn = turn
+        policyStore.saveSelectedCycleTurn(turn)
+        // O monitor acompanha o novo horário, mas a conclusão e o shield do
+        // ciclo corrente permanecem intactos até a próxima janela.
+        screenTimeController.scheduleDailyMonitoring()
+        LimiarAIDiagnostics.log(
+            "pause_cycle_turn_changed",
+            values: ["hour": "\(turn.rawValue)", "effective": "next_cycle"]
+        )
+    }
+
     func beginNewReading(avoidingCurrent: Bool = false) {
         readingProgress = 0
         readingStartedAt = Date()
@@ -991,7 +1007,7 @@ final class LimiarAppModel {
     /// Pré-gera e persiste uma sessão em background, sem tocar no que está em
     /// tela. Usada (1) no passo de ativação do onboarding, enquanto o usuário
     /// autoriza o Tempo de Uso, e (2) após concluir a travessia, para que a
-    /// manhã seguinte abra instantânea mesmo em cold start.
+    /// o próximo ciclo abra instantaneamente mesmo em cold start.
     func prewarmSessionIfNeeded(dayKey: String = DailyReadingSessionStore.todayKey()) {
         let profile = faithProfile
         let profileKey = sessionProfileKey(for: profile)
@@ -1156,15 +1172,13 @@ final class LimiarAppModel {
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
         if blockingEnabled && hasBlockedAppsSelection {
-            screenTimeController.scheduleShieldReapplicationForNextMorning(now: completedAt)
+            screenTimeController.scheduleShieldReapplicationForNextCycle(now: completedAt)
         }
-        unlockNote = ScreenTimePolicyStore.nextMorningCycleStart(after: completedAt) > completedAt.addingTimeInterval(6 * 3600)
-            ? "Travessia de hoje concluída. A pausa volta amanhã às 5h."
-            : "Travessia concluída. A pausa volta às 5h."
-        // Pré-gera a sessão do próximo ciclo em background: amanhã às 5h o
-        // app abre com a travessia pronta, mesmo em cold start.
+        unlockNote = "Travessia concluída. A pausa volta no próximo ciclo, às \(pauseCycleTurn.hourLabel)."
+        // Pré-gera a sessão do próximo ciclo em background para o app abrir
+        // com a travessia pronta, mesmo em cold start.
         let nextCycleDayKey = DailyReadingSessionStore.todayKey(
-            ScreenTimePolicyStore.nextMorningCycleStart(after: completedAt)
+            ScreenTimePolicyStore.nextCycleStart(after: completedAt)
         )
         prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
     }
@@ -1187,9 +1201,9 @@ final class LimiarAppModel {
             return
         }
 
-        if policyStore.hasCompletedMorningPauseToday() {
+        if policyStore.hasCompletedPauseInCurrentCycle() {
             screenTimeController.clearShield()
-            screenTimeController.scheduleShieldReapplicationForNextMorning()
+            screenTimeController.scheduleShieldReapplicationForNextCycle()
             return
         }
 
@@ -1214,9 +1228,9 @@ final class LimiarAppModel {
             return
         }
 
-        if policyStore.hasCompletedMorningPauseToday() {
+        if policyStore.hasCompletedPauseInCurrentCycle() {
             screenTimeController.clearShield()
-            screenTimeController.scheduleShieldReapplicationForNextMorning()
+            screenTimeController.scheduleShieldReapplicationForNextCycle()
         } else {
             screenTimeController.applyShield(selection: selection)
         }

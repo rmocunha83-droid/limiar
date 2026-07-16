@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Tela de diagnóstico em campo: mostra os eventos registrados pelo app e pela
 /// extensão de monitoramento (aplicações de shield, agendamentos, falhas).
-/// Essencial para investigar o rearme das 5h sem depender do Xcode.
+/// Essencial para investigar o rearme do ciclo sem depender do Xcode.
 struct DiagnosticsView: View {
     @State private var entries: [LimiarEventLog.Entry] = []
 

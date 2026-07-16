@@ -198,20 +198,15 @@ struct DailyReadingSessionSnapshot: Codable {
 }
 
 /// Guarda até duas sessões: a de hoje e a pré-gerada para o próximo ciclo
-/// (criada em background após a travessia ser concluída). Assim a manhã
-/// seguinte abre instantânea mesmo em cold start.
+/// (criada em background após a travessia ser concluída). Assim o próximo
+/// ciclo abre instantaneamente mesmo em cold start.
 struct DailyReadingSessionStore {
     private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
     private let key = "limiar.dailyReadingSession.v2"
     private let legacyKey = "limiar.dailyReadingSession.v1"
 
     static func todayKey(_ date: Date = Date()) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = ScreenTimePolicyStore.morningTimeZone
-        let cycleStart = ScreenTimePolicyStore.currentMorningCycleStart(now: date)
-        return formatter.string(from: cycleStart)
+        ScreenTimePolicyStore.cycleDayKey(now: date)
     }
 
     func load(profileKey: String, dayKey: String = DailyReadingSessionStore.todayKey()) -> DailyReadingSessionSnapshot? {

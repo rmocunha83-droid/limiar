@@ -11,7 +11,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         eventLog.log("interval_did_start", ["activity": activity.rawValue])
         // A conclusão expira naturalmente pela comparação com o início do
-        // ciclo das 5h. Apagá-la aqui faria um re-registro do monitor pausar
+        // ciclo escolhido. Apagá-la aqui faria um re-registro do monitor pausar
         // novamente os apps no mesmo dia.
         reapplyShieldIfNeeded()
     }
@@ -34,7 +34,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return
         }
 
-        if policyStore.hasCompletedMorningPauseToday() {
+        if policyStore.hasCompletedPauseInCurrentCycle() {
             settingsStore.clearAllSettings()
             eventLog.log("shield_skipped", ["reason": "pause_completed_today"])
             return
@@ -60,6 +60,12 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 }
 
 private struct ExtensionPolicyStore {
+    private static let defaultCycleStartHour = 5
+    private static let cycleStartHourKey = "cycleStartHour"
+    private static let activeCycleStartHourKey = "cycleStartHour.active"
+    private static let cycleStartHourEffectiveAtKey = "cycleStartHour.effectiveAt"
+    private static let validCycleStartHours = Set([5, 13, 19])
+
     private static var morningCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
@@ -80,23 +86,42 @@ private struct ExtensionPolicyStore {
         defaults.object(forKey: "morningPauseCompletedAt") as? Date
     }
 
-    func hasCompletedMorningPauseToday(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Bool {
+    func hasCompletedPauseInCurrentCycle(now: Date = Date(), calendar: Calendar = Self.morningCalendar) -> Bool {
         guard let completedAt = loadMorningPauseCompletedAt() else { return false }
-        return completedAt >= currentMorningCycleStart(now: now, calendar: calendar)
+        return completedAt >= currentCycleStart(now: now, calendar: calendar)
     }
 
-    private func currentMorningCycleStart(now: Date, calendar: Calendar) -> Date {
+    private func currentCycleStart(now: Date, calendar: Calendar) -> Date {
+        let hour = effectiveCycleStartHour(now: now)
         let todayStart = calendar.startOfDay(for: now)
-        let fiveToday = calendar.date(
-            bySettingHour: 5,
+        let boundaryToday = calendar.date(
+            bySettingHour: hour,
             minute: 0,
             second: 0,
             of: todayStart
         ) ?? todayStart
-        if now >= fiveToday {
-            return fiveToday
+        if now >= boundaryToday {
+            return boundaryToday
         }
-        return calendar.date(byAdding: .day, value: -1, to: fiveToday) ?? fiveToday
+        return calendar.date(byAdding: .day, value: -1, to: boundaryToday) ?? boundaryToday
+    }
+
+    private func effectiveCycleStartHour(now: Date) -> Int {
+        let selected = normalizedHour(defaults.object(forKey: Self.cycleStartHourKey) as? Int)
+        let active = normalizedHour(defaults.object(forKey: Self.activeCycleStartHourKey) as? Int)
+        guard let effectiveAt = defaults.object(forKey: Self.cycleStartHourEffectiveAtKey) as? Date,
+              now < effectiveAt
+        else {
+            return selected
+        }
+        return active
+    }
+
+    private func normalizedHour(_ hour: Int?) -> Int {
+        guard let hour, Self.validCycleStartHours.contains(hour) else {
+            return Self.defaultCycleStartHour
+        }
+        return hour
     }
 
     func loadSelection() -> FamilyActivitySelection {

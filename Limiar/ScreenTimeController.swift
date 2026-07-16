@@ -38,8 +38,9 @@ struct ScreenTimeController {
 
     func scheduleDailyMonitoring() {
         let center = DeviceActivityCenter()
+        let selectedTurn = ScreenTimePolicyStore().loadSelectedCycleTurn()
         var start = DateComponents()
-        start.hour = 5
+        start.hour = selectedTurn.rawValue
         start.minute = 0
 
         var end = DateComponents()
@@ -57,14 +58,22 @@ struct ScreenTimeController {
         // ativo e preserva a conclusão registrada para o ciclo atual.
         do {
             try center.startMonitoring(.limiarDaily, during: schedule)
-            eventLog.log("daily_monitor_scheduled", ["start": "05:00", "end": "23:59"])
+            eventLog.log("daily_monitor_scheduled", [
+                "start": String(format: "%02d:00", selectedTurn.rawValue),
+                "end": "23:59"
+            ])
         } catch {
             eventLog.log("daily_monitor_failed", ["error": "\(error)"])
         }
     }
 
-    func scheduleShieldReapplicationForNextMorning(now: Date = Date()) {
+    func scheduleShieldReapplicationForNextCycle(now: Date = Date()) {
         scheduleDailyMonitoring()
+    }
+
+    // Compatibilidade com os chamadores antigos durante a migração de nomenclatura.
+    func scheduleShieldReapplicationForNextMorning(now: Date = Date()) {
+        scheduleShieldReapplicationForNextCycle(now: now)
     }
 }
 

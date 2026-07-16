@@ -10,7 +10,7 @@
 3. **A seleção dos 3 trechos é determinística e feita pelo servidor** (`selectSessionPassages`): tiers livros favoritos → seções → pool completo, rotação LRU dos menos recentes, cota de prioridade (até 2 trechos dos `priorityBooks` afinados + 1 de descoberta) e garantia de tema favorito (mínimo 1 trecho por sessão, apenas para perfis que enviam `priorityBooks`, sem sair dos livros escolhidos). Livros evitados nunca entram. A IA **não escolhe nem reescreve versículos** — só gera as explicações.
 4. O backend gera texto com GPT-5.4 mini (`reasoning effort: none`) usando `OPENAI_API_KEY`, exige JSON estruturado (schema estrito) e valida o resultado; o app valida de novo.
 5. Se qualquer etapa falhar, o app usa o fallback local e mostra mensagem simples, sem expor erro técnico.
-6. O app pré-gera a sessão em tempo morto (passo de ativação do onboarding e após concluir a travessia, para o ciclo seguinte) — a manhã abre sem espera.
+6. O app pré-gera a sessão em tempo morto (passo de ativação do onboarding e após concluir a travessia, para o ciclo seguinte) — a hora do turno escolhido abre sem espera; o padrão de migração é 5h.
 
 Usuários com teste expirado e sem assinatura entram no **Modo Essencial**: continuam vendo 3 trechos com explicações essenciais **gerados pelo backend de texto (esse custo de IA existe e está no plano de negócio)**, mas sem narração, sem a reflexão breve completa (aparece só um teaser trancado) e com anúncios. Toques em recursos Premium abrem o paywall.
 

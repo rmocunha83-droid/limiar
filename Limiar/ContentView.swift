@@ -535,7 +535,7 @@ private struct DashboardView: View {
     }
 
     private var completionExplanation: some View {
-        Text("Após concluir a leitura, os apps selecionados ficarão disponíveis até a próxima manhã.")
+        Text("Após concluir a leitura, os apps selecionados ficarão disponíveis até o próximo ciclo.")
             .font(.system(size: 14))
             .foregroundStyle(Color.softText)
             .lineSpacing(5)

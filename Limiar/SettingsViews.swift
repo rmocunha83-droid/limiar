@@ -84,10 +84,24 @@ struct SettingsView: View {
                 Section("Ativação") {
                     Toggle("Limiar ativo", isOn: $model.blockingEnabled)
                         .disabled(!model.hasPauseAccess)
-                    LabeledContent("Pausa diária") {
-                        Text(model.unlockDurationDescription)
-                            .foregroundStyle(.secondary)
+
+                    Picker(
+                        "Turno da pausa",
+                        selection: Binding(
+                            get: { model.pauseCycleTurn },
+                            set: { model.selectPauseCycleTurn($0) }
+                        )
+                    ) {
+                        ForEach(PauseCycleTurn.allCases) { turn in
+                            Text("\(turn.title) · \(turn.hourLabel)").tag(turn)
+                        }
                     }
+                    .disabled(!model.hasPauseAccess)
+
+                    Text("A mudança vale a partir do próximo ciclo.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Button("Ajustar apps que ativam o Limiar") {
                         showingPicker = true
                     }

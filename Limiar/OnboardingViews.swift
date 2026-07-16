@@ -22,7 +22,7 @@ struct OnboardingView: View {
         if let stepFlagIndex = arguments.firstIndex(of: "-LimiarOnboardingStep"),
            arguments.indices.contains(stepFlagIndex + 1),
            let debugStep = Int(arguments[stepFlagIndex + 1]) {
-            _step = State(initialValue: min(max(debugStep, 0), 5))
+            _step = State(initialValue: min(max(debugStep, 0), 6))
             return
         }
         #endif
@@ -55,6 +55,8 @@ struct OnboardingView: View {
                         case 4:
                             reflectionDepth
                         case 5:
+                            pauseTurn
+                        case 6:
                             screenTime
                         default:
                             screenTime
@@ -130,10 +132,10 @@ struct OnboardingView: View {
         }
     }
 
-    private var finalOnboardingStep: Int { 5 }
+    private var finalOnboardingStep: Int { 6 }
 
     private var visibleSteps: [Int] {
-        [0, 1, 2, 3, 4, 5]
+        [0, 1, 2, 3, 4, 5, 6]
     }
 
     private var displayedStep: Int { step }
@@ -263,6 +265,42 @@ struct OnboardingView: View {
         }
     }
 
+    private var pauseTurn: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingTitle(
+                    eyebrow: "SUA PAUSA",
+                    title: "Quando é a sua pausa com Deus?"
+                )
+
+                Text("Escolha o turno em que o Limiar deve preparar sua pausa diária.")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ForEach(PauseCycleTurn.allCases) { turn in
+                    SelectableRow(
+                        title: turn.title,
+                        subtitle: turn.onboardingSubtitle,
+                        isSelected: model.pauseCycleTurn == turn
+                    ) {
+                        model.selectPauseCycleTurn(turn)
+                    }
+                }
+
+                Text("Você poderá mudar depois em Configurações. A mudança valerá no ciclo seguinte.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.softText.opacity(0.86))
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Layout.horizontalInset)
+            .padding(.vertical, Layout.verticalInset)
+        }
+    }
+
     private var screenTime: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 22) {
@@ -361,7 +399,7 @@ struct OnboardingView: View {
             return
         }
 
-        if step == 5 {
+        if step == 6 {
             model.saveProfile()
             advanceFromScreenTime()
             return

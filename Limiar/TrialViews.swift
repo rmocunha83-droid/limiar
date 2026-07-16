@@ -24,7 +24,7 @@ struct EssentialModeIntroView: View {
                         Divider().overlay(Color.conversionDivider)
                         ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "3 trechos por leitura, com explicações essenciais")
                         Divider().overlay(Color.conversionDivider)
-                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Sua travessia de cada manhã, sempre gratuita")
+                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Sua travessia diária, sempre gratuita")
                     }
                     .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
