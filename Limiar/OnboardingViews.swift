@@ -5,10 +5,12 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(LimiarNotificationCoordinator.self) private var notifications
     @State private var step: Int
     @State private var status = ""
     @State private var readingPreferenceMessage = ""
     @State private var showingPicker = false
+    @State private var showingNotificationPrePrompt = false
     @State private var didApplyDebugTradition = false
 
     private enum Layout {
@@ -129,6 +131,22 @@ struct OnboardingView: View {
         }
         .onChange(of: model.faithProfile.tradition) { _, _ in
             normalizeCurrentStepForTradition()
+        }
+        .alert(
+            LimiarNotificationCoordinator.prePromptTitle,
+            isPresented: $showingNotificationPrePrompt
+        ) {
+            Button("Ativar") {
+                Task {
+                    await notifications.requestAuthorization()
+                    model.completeOnboarding()
+                }
+            }
+            Button("Agora não", role: .cancel) {
+                model.completeOnboarding()
+            }
+        } message: {
+            Text(LimiarNotificationCoordinator.prePromptMessage)
         }
     }
 
@@ -425,7 +443,16 @@ struct OnboardingView: View {
             return
         }
 
-        model.completeOnboarding()
+        Task {
+            await notifications.refreshAuthorizationStatus()
+            if notifications.authorizationStatus == .notDetermined {
+                showingNotificationPrePrompt = true
+            } else {
+                // Não insistir depois que a pessoa já tomou uma decisão no
+                // prompt do sistema, positiva ou negativa.
+                model.completeOnboarding()
+            }
+        }
     }
 
     private func moveToPreviousStep() {

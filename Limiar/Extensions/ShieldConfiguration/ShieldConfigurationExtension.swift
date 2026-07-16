@@ -20,7 +20,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     }
 
     private func configuration() -> ShieldConfiguration {
-        ShieldConfiguration(
+        return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: UIColor(red: 0.02, green: 0.05, blue: 0.06, alpha: 1),
             icon: Self.shieldIcon(),
@@ -29,11 +29,11 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor(red: 0.94, green: 0.91, blue: 0.84, alpha: 1)
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "\nAntes de continuar, reserve alguns minutos para uma leitura que fortaleça sua fé.\nToque no botão abaixo para abrir o app Limiar e fazer sua travessia.",
+                text: "\nAntes de continuar, reserve alguns minutos para uma leitura que fortaleça sua fé.\nAbra o app Limiar para fazer sua travessia e liberar seus apps.",
                 color: UIColor(red: 0.74, green: 0.75, blue: 0.75, alpha: 1)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Fazer a travessia",
+                text: "Entendi",
                 color: UIColor(red: 0.03, green: 0.06, blue: 0.07, alpha: 1)
             ),
             primaryButtonBackgroundColor: UIColor(red: 0.70, green: 0.81, blue: 0.72, alpha: 1),
