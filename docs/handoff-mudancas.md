@@ -92,6 +92,14 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - O MREC preserva o comportamento anterior: uma única nova tentativa suave após 4s.
 - `admob_banner_failed` e `admob_banner_loaded` registram `position` e número da tentativa; falhas também registram o próximo intervalo previsto.
 
+## 5e. Estado dos blocos no AdMob — 16/07/2026
+
+- O app **Limiar Gratuito | iOS** já estava vinculado à App Store pelo ID **6783115468**, com status pronto e veiculação habilitada. Nenhum vínculo foi forçado ou recriado.
+- **Banner ancorado (Essencial)** — `ca-app-pub-7717198050770102/7996436288`: atualização automática já estava em **Otimizado pelo Google**. A configuração foi conferida e mantida, sem salvar alteração.
+- **Retângulo final (Essencial)** — `ca-app-pub-7717198050770102/2565100496`: atualização automática observada em **Otimizado pelo Google**. O estado foi apenas registrado; nenhuma configuração do MREC foi modificada.
+- O bloco antigo `ca-app-pub-7717198050770102/8580637095` continua existente no painel e não foi apagado. Ele não é mais usado no código e só deve ser arquivado depois da validação em produção.
+- Não houve mudança em pagamentos, verificação, consentimento/GDPR, mediação, configurações do app ou exclusões.
+
 ---
 
 ## 6. Marketing / rastreamento Meta (site — JÁ EM PRODUÇÃO)
