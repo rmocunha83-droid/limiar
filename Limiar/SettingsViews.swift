@@ -7,6 +7,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
+    @Environment(LimiarNotificationCoordinator.self) private var notifications
     @Environment(\.openURL) private var openURL
     @State private var showingPicker = false
     @State private var showingPaywall = false
@@ -14,6 +15,7 @@ struct SettingsView: View {
     @State private var showingFavorites = false
     @State private var selectedProfilePhoto: PhotosPickerItem?
     @State private var showingRemoveProfilePhotoConfirmation = false
+    @State private var showingNotificationPrePrompt = false
 
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
@@ -112,6 +114,30 @@ struct SettingsView: View {
                             .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
                             .listRowBackground(Color.clear)
                     }
+                }
+
+                Section("Notificações") {
+                    HStack {
+                        Text("Permissão")
+                        Spacer()
+                        Text(notifications.authorizationStatusLabel)
+                            .foregroundStyle(notificationStatusColor)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    if notifications.authorizationStatus == .denied {
+                        Button("Abrir Ajustes do iOS") {
+                            notifications.openNotificationSettings()
+                        }
+                    } else if notifications.authorizationStatus == .notDetermined {
+                        Button("Ativar notificações") {
+                            showingNotificationPrePrompt = true
+                        }
+                    }
+
+                    Text("A mesma permissão serve para o atalho da travessia e para o futuro lembrete da pausa diária.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Preferências bíblicas") {
@@ -229,6 +255,9 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Configurações")
+        .task {
+            await notifications.refreshAuthorizationStatus()
+        }
         .onChange(of: selectedProfilePhoto) { _, selectedPhoto in
             guard let selectedPhoto else { return }
             Task {
@@ -263,6 +292,30 @@ struct SettingsView: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text("O Limiar voltará a mostrar o ícone padrão de perfil.")
+        }
+        .alert(
+            LimiarNotificationCoordinator.prePromptTitle,
+            isPresented: $showingNotificationPrePrompt
+        ) {
+            Button("Ativar") {
+                Task { await notifications.requestAuthorization() }
+            }
+            Button("Agora não", role: .cancel) {}
+        } message: {
+            Text(LimiarNotificationCoordinator.prePromptMessage)
+        }
+    }
+
+    private var notificationStatusColor: Color {
+        switch notifications.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            Color.sageButton
+        case .denied:
+            Color.conversionCoral
+        case .notDetermined:
+            .secondary
+        @unknown default:
+            .secondary
         }
     }
 

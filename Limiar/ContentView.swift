@@ -6,6 +6,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
+    @Environment(LimiarNotificationCoordinator.self) private var notifications
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(
         ConversionFunnelPersistence.d6DismissedKey,
@@ -82,6 +83,12 @@ struct ContentView: View {
                     PaywallView()
                 } else if Self.forceEssentialModeForDebugging {
                     DashboardView()
+                } else if notifications.shieldBridgeRouteID != nil,
+                          model.hasCompletedOnboarding {
+                    // O toque na ponte do shield é uma intenção explícita de
+                    // atravessar. Ele entra direto no dashboard e não pode ser
+                    // interceptado por uma tela automática do funil.
+                    DashboardView()
                 } else if !model.hasCompletedOnboarding {
                     OnboardingView()
                 } else if subscription.accessState == .trialNotStarted {
@@ -117,6 +124,7 @@ struct ContentView: View {
         .statusBarHidden(true)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                notifications.handleAppDidBecomeActive()
                 subscription.refreshAccessState()
                 model.updateAccess(
                     hasPremiumAccess: effectiveHasPremiumAccess,

@@ -100,6 +100,17 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - O bloco antigo `ca-app-pub-7717198050770102/8580637095` continua existente no painel e não foi apagado. Ele não é mais usado no código e só deve ser arquivado depois da validação em produção.
 - Não houve mudança em pagamentos, verificação, consentimento/GDPR, mediação, configurações do app ou exclusões.
 
+## 5f. Ponte do Shield para o Limiar — build 120
+
+- **Resultado real que ativou a contingência:** no iPhone 16 conectado, com **iOS 27.0** e Limiar comercial **1.4 (117)**, tocar em “Fazer a travessia” fechou o Instagram e voltou à tela inicial. Portanto, `.openParentalControlsApp` não abriu o app mesmo acima do iOS 26.5 no cenário de autorização individual.
+- **Comportamento final em todas as versões (iOS 17+):** o Shield mostra o título “Seu acesso está em pausa”, orienta “Abra o app Limiar para fazer sua travessia e liberar seus apps.” e usa o botão **“Entendi”**. A copy continua válida mesmo sem permissão de notificações.
+- Ao tocar no botão, a `ShieldActionExtension` verifica a permissão. Quando autorizada ou provisória, agenda em 1 segundo uma única notificação `shield.bridge` — “Sua travessia está pronta” — e fecha o app bloqueado apenas no completion do agendamento. O identificador fixo remove pedidos/entregas anteriores e impede empilhamento. Sem permissão, apenas fecha; a orientação manual do Shield permanece correta.
+- O onboarding ganhou um pré-prompt explícito antes do prompt do sistema: **“Um atalho para sua travessia”**, com “Ativar” e “Agora não”. O sistema só recebe `requestAuthorization(.alert, .sound, .badge)` após “Ativar” e uma negativa não é repetida.
+- Configurações mostra o estado real da permissão. Quando negada, oferece **“Abrir Ajustes do iOS”**; quando ainda não determinada, reutiliza o mesmo pré-prompt. Esta é a única permissão de notificações e será compartilhada com o futuro lembrete diário.
+- O delegate é instalado no `UIApplicationDelegate` antes do fim do lançamento. O toque em uma notificação com `source=shield_bridge` entra diretamente no dashboard, acima dos gates automáticos do funil, limpa badge/pedido entregue e não mostra banner redundante se o app já estiver em primeiro plano.
+- **QA real disponível:** o caminho nativo iOS 26.5+ foi reprovado no iPhone 16/iOS 27.0/build 117 e substituído pela contingência. A build 120 foi instalada nesse mesmo aparelho e o Shield real exibiu corretamente a nova copy autossuficiente e o botão “Entendi”, confirmando o empacotamento das extensões. A entrega e o toque da notificação ainda precisam ser exercitados no aparelho com a permissão autorizada. Não havia aparelho físico abaixo do iOS 26.5 disponível; essa faixa permanece sem validação real. Family Controls não pode ser validado no simulador.
+- **QA em simulador (iOS 26.5):** Configurações exibiu o estado “Ainda não configuradas” e o botão “Ativar notificações”; o toque abriu o pré-prompt com a copy e as ações previstas. Esse teste valida UI/estado, não o Shield, que exige aparelho real.
+
 ---
 
 ## 6. Marketing / rastreamento Meta (site — JÁ EM PRODUÇÃO)
