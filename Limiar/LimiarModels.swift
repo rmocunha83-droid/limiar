@@ -657,6 +657,21 @@ enum AIContentState: Equatable {
     }
 }
 
+enum LimiarPrewarmResult: String {
+    case generated
+    case alreadyAvailable = "already_available"
+    case alreadyRunning = "already_running"
+    case activeTraversal = "active_traversal"
+    case notEligible = "not_eligible"
+    case profileChanged = "profile_changed"
+    case failed
+    case cancelled
+
+    var completedSuccessfully: Bool {
+        self == .generated || self == .alreadyAvailable || self == .alreadyRunning
+    }
+}
+
 @MainActor
 @Observable
 final class LimiarAppModel {
@@ -707,7 +722,9 @@ final class LimiarAppModel {
     private let screenTimeController = ScreenTimeController()
     private var lastForegroundRefreshAt = Date.distantPast
     private var aiGenerationTask: Task<Void, Never>?
-    private var prewarmTask: Task<Void, Never>?
+    private var prewarmTask: Task<LimiarPrewarmResult, Never>?
+    private var prewarmRequestID: UUID?
+    private var prewarmDayKeyInFlight: String?
     // Dia a que pertence a sessão exibida: detecta a virada de dia no
     // foreground para trocar pela sessão pré-gerada do novo ciclo.
     private var currentSessionDayKey = DailyReadingSessionStore.todayKey()
@@ -1008,10 +1025,17 @@ final class LimiarAppModel {
     /// tela. Usada (1) no passo de ativação do onboarding, enquanto o usuário
     /// autoriza o Tempo de Uso, e (2) após concluir a travessia, para que a
     /// o próximo ciclo abra instantaneamente mesmo em cold start.
-    func prewarmSessionIfNeeded(dayKey: String = DailyReadingSessionStore.todayKey()) {
+    @discardableResult
+    func prewarmSessionIfNeeded(
+        dayKey: String = DailyReadingSessionStore.todayKey()
+    ) -> Task<LimiarPrewarmResult, Never>? {
         let profile = faithProfile
         let profileKey = sessionProfileKey(for: profile)
-        guard dailySessionStore.load(profileKey: profileKey, dayKey: dayKey) == nil else { return }
+        guard dailySessionStore.load(profileKey: profileKey, dayKey: dayKey) == nil else { return nil }
+        // Há uma única geração especulativa por modelo. Além de economizar rede,
+        // isso impede que foreground, conclusão e BGAppRefresh consumam trechos
+        // diferentes para o mesmo ciclo quando chegam quase juntos.
+        guard prewarmTask == nil else { return nil }
 
         let candidates = recommender.readingPlan(
             for: profile,
@@ -1021,6 +1045,9 @@ final class LimiarAppModel {
         )
         let recents = recentPassageIDs
         let reflections = recentAIReflections
+        let requestID = UUID()
+        prewarmRequestID = requestID
+        prewarmDayKeyInFlight = dayKey
 
         LimiarAIDiagnostics.log(
             "prewarm_started",
@@ -1028,8 +1055,7 @@ final class LimiarAppModel {
                 .merging(LimiarAIDiagnostics.profileSnapshot(profile)) { current, _ in current }
         )
 
-        prewarmTask?.cancel()
-        prewarmTask = Task { [candidates, profile, profileKey, dayKey, recents, reflections] in
+        let task = Task<LimiarPrewarmResult, Never> { [weak self, candidates, profile, profileKey, dayKey, recents, reflections] in
             let service = RemoteAIReadingSessionService()
             let session = await service.readingSession(
                 for: Array(candidates.prefix(36)),
@@ -1038,30 +1064,124 @@ final class LimiarAppModel {
                 recentReflections: reflections
             )
 
-            guard !Task.isCancelled else { return }
+            guard let self else { return .cancelled }
+            guard !Task.isCancelled else {
+                clearPrewarmRequest(requestID)
+                return .cancelled
+            }
 
-            await MainActor.run {
-                guard let session else {
-                    LimiarAIDiagnostics.log("prewarm_failed", values: ["dayKey": dayKey])
-                    return
-                }
-                // Se as preferências mudaram durante a geração, descarta:
-                // o fluxo normal gera de novo com o perfil atual.
-                guard sessionProfileKey(for: faithProfile) == profileKey else {
-                    LimiarAIDiagnostics.log("prewarm_discarded", values: ["reason": "profile_changed"])
-                    return
-                }
-                dailySessionStore.save(
-                    DailyReadingSessionSnapshot(
-                        dayKey: dayKey,
-                        profileKey: profileKey,
-                        items: session.items,
-                        reflection: session.reflection
-                    )
+            guard let session else {
+                LimiarAIDiagnostics.log("prewarm_failed", values: ["dayKey": dayKey])
+                clearPrewarmRequest(requestID)
+                return .failed
+            }
+            // Se as preferências mudaram durante a geração, descarta:
+            // o fluxo normal gera de novo com o perfil atual.
+            guard sessionProfileKey(for: faithProfile) == profileKey else {
+                LimiarAIDiagnostics.log("prewarm_discarded", values: ["reason": "profile_changed"])
+                clearPrewarmRequest(requestID)
+                return .profileChanged
+            }
+            dailySessionStore.save(
+                DailyReadingSessionSnapshot(
+                    dayKey: dayKey,
+                    profileKey: profileKey,
+                    items: session.items,
+                    reflection: session.reflection
                 )
-                LimiarAIDiagnostics.log("prewarm_saved", values: ["dayKey": dayKey, "items": "\(session.items.count)"])
+            )
+            LimiarAIDiagnostics.log("prewarm_saved", values: ["dayKey": dayKey, "items": "\(session.items.count)"])
+            clearPrewarmRequest(requestID)
+            return .generated
+        }
+        prewarmTask = task
+        return task
+    }
+
+    /// Executa a tentativa de foreground uma única vez por ativação (o debounce
+    /// da ativação vive no ContentView) e nunca interfere numa travessia aberta.
+    func prewarmNextCycleFromForeground(now: Date = Date()) {
+        guard hasCompletedOnboarding else {
+            LimiarAIDiagnostics.log("prewarm_foreground_skipped", values: ["reason": "onboarding"], persistForDiagnostics: true)
+            return
+        }
+        guard !isReadingSessionActive else {
+            LimiarAIDiagnostics.log("prewarm_foreground_skipped", values: ["reason": "active_traversal"], persistForDiagnostics: true)
+            return
+        }
+
+        let nextCycleKey = DailyReadingSessionStore.todayKey(
+            ScreenTimePolicyStore.nextCycleStart(after: now)
+        )
+        guard !hasCachedSession(dayKey: nextCycleKey) else {
+            LimiarAIDiagnostics.log("prewarm_foreground_skipped", values: ["reason": "already_available"], persistForDiagnostics: true)
+            return
+        }
+        guard prewarmTask == nil else {
+            LimiarAIDiagnostics.log("prewarm_foreground_skipped", values: ["reason": "in_flight"], persistForDiagnostics: true)
+            return
+        }
+
+        LimiarAIDiagnostics.log("prewarm_foreground_started", values: ["target": "next_cycle"], persistForDiagnostics: true)
+        if prewarmSessionIfNeeded(dayKey: nextCycleKey) == nil {
+            LimiarAIDiagnostics.log("prewarm_foreground_skipped", values: ["reason": "guarded"], persistForDiagnostics: true)
+        }
+    }
+
+    /// BGAppRefresh prioriza a sessão do ciclo corrente quando o sistema só
+    /// entrega a tarefa depois da virada; caso ela exista, prepara a próxima.
+    func runBackgroundPrewarm(now: Date = Date()) async -> LimiarPrewarmResult {
+        guard hasCompletedOnboarding else { return .notEligible }
+        guard !isReadingSessionActive else { return .activeTraversal }
+
+        let currentKey = DailyReadingSessionStore.todayKey(now)
+        if !hasCachedSession(dayKey: currentKey) {
+            return await prewarmSessionAndWaitIfNeeded(dayKey: currentKey)
+        }
+
+        let nextKey = DailyReadingSessionStore.todayKey(
+            ScreenTimePolicyStore.nextCycleStart(after: now)
+        )
+        if !hasCachedSession(dayKey: nextKey) {
+            return await prewarmSessionAndWaitIfNeeded(dayKey: nextKey)
+        }
+        return .alreadyAvailable
+    }
+
+    func cancelPrewarmSession() {
+        prewarmTask?.cancel()
+    }
+
+    private func prewarmSessionAndWaitIfNeeded(dayKey: String) async -> LimiarPrewarmResult {
+        if hasCachedSession(dayKey: dayKey) { return .alreadyAvailable }
+
+        if let runningTask = prewarmTask {
+            let runningDayKey = prewarmDayKeyInFlight
+            let result = await runningTask.value
+            guard !Task.isCancelled else { return .cancelled }
+            if runningDayKey == dayKey || hasCachedSession(dayKey: dayKey) {
+                return result
             }
         }
+
+        guard let task = prewarmSessionIfNeeded(dayKey: dayKey) else {
+            return hasCachedSession(dayKey: dayKey) ? .alreadyAvailable : .alreadyRunning
+        }
+        return await task.value
+    }
+
+    private func hasCachedSession(dayKey: String) -> Bool {
+        dailySessionStore.load(
+            profileKey: sessionProfileKey(for: faithProfile),
+            dayKey: dayKey
+        ) != nil
+    }
+
+    private func clearPrewarmRequest(_ requestID: UUID) {
+        guard prewarmRequestID == requestID else { return }
+        prewarmRequestID = nil
+        prewarmDayKeyInFlight = nil
+        prewarmTask = nil
     }
 
     func prepareFreshPassageForForeground() {
@@ -1181,6 +1301,7 @@ final class LimiarAppModel {
             ScreenTimePolicyStore.nextCycleStart(after: completedAt)
         )
         prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
+        LimiarPrewarmCoordinator.shared.schedule(now: completedAt)
     }
 
     func applyBlocking() {

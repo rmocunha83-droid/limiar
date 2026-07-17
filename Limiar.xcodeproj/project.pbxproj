@@ -25,6 +25,7 @@
 		LIMI00000000000000000111 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000113 /* PaywallView.swift */; };
 		LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000121 /* AdMobBannerView.swift */; };
 		LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000320 /* ProfileImageStore.swift */; };
+		LIMI00000000000000000323 /* LimiarPrewarmCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */; };
 		LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000202 /* GoogleMobileAds */; };
 		LIMI00000000000000000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000017 /* Assets.xcassets */; };
 		LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */; };
@@ -99,6 +100,7 @@
 		LIMI00000000000000000113 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000121 /* AdMobBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobBannerView.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000320 /* ProfileImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageStore.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimiarPrewarmCoordinator.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		LIMI00000000000000000018 /* Limiar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Limiar.entitlements; sourceTree = "<group>"; };
 		LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -158,6 +160,7 @@
 				LIMI00000000000000000113 /* PaywallView.swift */,
 				LIMI00000000000000000121 /* AdMobBannerView.swift */,
 				LIMI00000000000000000320 /* ProfileImageStore.swift */,
+				LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */,
 				LIMI00000000000000000018 /* Limiar.entitlements */,
 				LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */,
 				LIMI00000000000000000017 /* Assets.xcassets */,
@@ -276,7 +279,12 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					LIMI00000000000000000040 = {CreatedOnToolsVersion = 26.0;};
+					LIMI00000000000000000040 = {
+						CreatedOnToolsVersion = 26.0;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {enabled = 1;};
+						};
+					};
 					LIMI00000000000000000081 = {CreatedOnToolsVersion = 26.0;};
 					LIMI00000000000000000082 = {CreatedOnToolsVersion = 26.0;};
 					LIMI00000000000000000083 = {CreatedOnToolsVersion = 26.0;};
@@ -349,6 +357,7 @@
 				LIMI00000000000000000111 /* PaywallView.swift in Sources */,
 				LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */,
 				LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */,
+				LIMI00000000000000000323 /* LimiarPrewarmCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -456,7 +465,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Limiar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -485,7 +494,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Limiar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -514,7 +523,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
@@ -535,7 +544,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
@@ -556,7 +565,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldAction/ShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
@@ -577,7 +586,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldAction/ShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
@@ -598,7 +607,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
@@ -619,7 +628,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
