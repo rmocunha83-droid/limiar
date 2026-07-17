@@ -21,6 +21,7 @@ struct ContentView: View {
         store: UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
     ) private var dismissedPostTrialPaywall = false
     @State private var presentedFunnelInterstitialThisSession = false
+    @State private var attemptedNextCyclePrewarmThisForeground = false
 
     private static var forcePaywallForReviewScreenshot: Bool {
         #if DEBUG
@@ -131,6 +132,14 @@ struct ContentView: View {
                     isEssentialMode: effectiveIsEssentialMode
                 )
                 model.prepareFreshPassageForForeground()
+                attemptNextCyclePrewarmForForeground()
+            } else if phase == .background {
+                attemptedNextCyclePrewarmThisForeground = false
+                LimiarPrewarmCoordinator.shared.schedule()
+            } else if phase == .inactive {
+                // A próxima ativação (inclusive após interrupções do sistema)
+                // recebe no máximo uma nova tentativa silenciosa.
+                attemptedNextCyclePrewarmThisForeground = false
             }
         }
         .task {
@@ -139,6 +148,9 @@ struct ContentView: View {
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode
             )
+            if scenePhase == .active {
+                attemptNextCyclePrewarmForForeground()
+            }
         }
         .onChange(of: subscription.accessState) { _, _ in
             // A trava efêmera acima impede que outro interstício do funil seja
@@ -148,6 +160,12 @@ struct ContentView: View {
                 isEssentialMode: effectiveIsEssentialMode
             )
         }
+    }
+
+    private func attemptNextCyclePrewarmForForeground() {
+        guard !attemptedNextCyclePrewarmThisForeground else { return }
+        attemptedNextCyclePrewarmThisForeground = true
+        model.prewarmNextCycleFromForeground()
     }
 }
 

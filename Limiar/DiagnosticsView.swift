@@ -18,7 +18,7 @@ struct DiagnosticsView: View {
 
             Form {
                 Section {
-                    Text("Eventos do shield e do agendamento matinal. Os eventos \"monitor.*\" provam que a extensão rodou com o app fechado.")
+                    Text("Eventos do shield, dos anúncios e da pré-geração da próxima travessia. Os eventos \"monitor.*\" provam que a extensão rodou com o app fechado.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

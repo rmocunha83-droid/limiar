@@ -7,11 +7,14 @@ import UIKit
 @main
 struct LimiarApp: App {
     @UIApplicationDelegateAdaptor(LimiarAppDelegate.self) private var appDelegate
-    @State private var model = LimiarAppModel()
+    @State private var model: LimiarAppModel
     @State private var subscription = SubscriptionManager()
     @State private var notifications = LimiarNotificationCoordinator.shared
 
     init() {
+        let appModel = LimiarAppModel()
+        _model = State(initialValue: appModel)
+        LimiarPrewarmCoordinator.shared.attach(model: appModel)
         MobileAds.shared.requestConfiguration.publisherPrivacyPersonalizationState = .disabled
         MobileAds.shared.requestConfiguration.setPublisherFirstPartyIDEnabled(false)
         MobileAds.shared.start()
@@ -36,6 +39,7 @@ final class LimiarAppDelegate: NSObject, UIApplicationDelegate {
         // A Apple exige o delegate antes do fim do lançamento para não perder
         // o toque que iniciou um cold launch pela notificação.
         UNUserNotificationCenter.current().delegate = LimiarNotificationCoordinator.shared
+        LimiarPrewarmCoordinator.shared.register()
         return true
     }
 }

@@ -33,7 +33,10 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor(red: 0.74, green: 0.75, blue: 0.75, alpha: 1)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Entendi",
+                // Só promover esta copy para “Fazer a travessia” depois que
+                // uma versão estável do iOS comprovar em aparelho real que a
+                // abertura direta funciona com autorização individual.
+                text: "Fechar",
                 color: UIColor(red: 0.03, green: 0.06, blue: 0.07, alpha: 1)
             ),
             primaryButtonBackgroundColor: UIColor(red: 0.70, green: 0.81, blue: 0.72, alpha: 1),

@@ -8,12 +8,19 @@ enum LimiarReadingConstants {
 enum LimiarAIDiagnostics {
     private static let logger = Logger(subsystem: "com.romeucunha.Limiar", category: "ai")
 
-    static func log(_ event: String, values: [String: String]) {
+    static func log(
+        _ event: String,
+        values: [String: String],
+        persistForDiagnostics: Bool = false
+    ) {
         let detailText = values
             .sorted { $0.key < $1.key }
             .map { "\($0.key)=\($0.value)" }
             .joined(separator: " ")
         logger.info("\(event, privacy: .public) \(detailText, privacy: .public)")
+        if persistForDiagnostics {
+            LimiarEventLog(source: "ai").log(event, values)
+        }
     }
 
     static func profileSnapshot(_ profile: UserFaithProfile) -> [String: String] {

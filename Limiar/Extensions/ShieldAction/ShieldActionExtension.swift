@@ -23,9 +23,10 @@ final class ShieldActionExtension: ShieldActionDelegate {
             return
         }
 
-        // `.openParentalControlsApp` também falhou no teste comercial em
-        // iOS 27 com autorização individual. A ponte por notificação é usada
-        // em todas as versões para manter um único comportamento confiável.
+        // A notificação continua sendo a ponte garantida. A resposta híbrida
+        // também tenta a API nativa: se a Apple corrigir a autorização
+        // individual numa atualização do iOS, a abertura direta passa a
+        // funcionar automaticamente sem depender de um novo release nosso.
         scheduleBridgeNotificationBeforeClosing(completionHandler: completionHandler)
     }
 
@@ -38,7 +39,9 @@ final class ShieldActionExtension: ShieldActionDelegate {
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized ||
                     settings.authorizationStatus == .provisional else {
-                completion.close()
+                // Sem notificação, a API nativa ainda é a única chance de
+                // abrir diretamente nas versões que a oferecem.
+                completion.openParentalControlsAppIfAvailable()
                 return
             }
 
@@ -59,9 +62,10 @@ final class ShieldActionExtension: ShieldActionDelegate {
             center.removePendingNotificationRequests(withIdentifiers: [Self.bridgeIdentifier])
             center.removeDeliveredNotifications(withIdentifiers: [Self.bridgeIdentifier])
             center.add(request) { _ in
-                // A extensão é efêmera. Fechar somente depois do completion do
-                // agendamento garante que o pedido seja persistido pelo sistema.
-                completion.close()
+                // A extensão é efêmera. Só responder depois do completion do
+                // agendamento garante que a ponte tenha sido persistida antes
+                // da tentativa de abertura direta ou do fechamento.
+                completion.openParentalControlsAppIfAvailable()
             }
         }
     }
@@ -82,5 +86,13 @@ private final class ShieldResponseCompletion: @unchecked Sendable {
 
     func close() {
         completionHandler(.close)
+    }
+
+    func openParentalControlsAppIfAvailable() {
+        if #available(iOS 26.5, *) {
+            completionHandler(.openParentalControlsApp)
+        } else {
+            completionHandler(.close)
+        }
     }
 }
