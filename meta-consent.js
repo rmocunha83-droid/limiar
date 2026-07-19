@@ -84,7 +84,7 @@
     banner.setAttribute('aria-label', 'Preferências de privacidade');
     banner.innerHTML = '<div><strong>Sua privacidade importa</strong><p>Com sua permissão, analisamos de forma segura como o site é utilizado. Isso nos ajuda a entender o que podemos melhorar.</p></div>'
       + '<div class="privacy-consent-actions"><button type="button" data-consent="declined">Agora não</button>'
-      + '<button type="button" class="primary" data-consent="accepted">Permitir cookies</button></div>';
+      + '<button type="button" class="primary" data-consent="accepted">Continuar</button></div>';
     banner.querySelectorAll('[data-consent]').forEach(function (button) {
       button.addEventListener('click', function () {
         saveConsent(button.getAttribute('data-consent'));
