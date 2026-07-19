@@ -12,7 +12,7 @@ Crie uma pausa antes de abrir apps que puxam sua atenção. Leia uma jornada com
 ## Descrição
 Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece um acesso inicial completo e, depois desse período, mantém um Modo Essencial com trechos principais.
 
-Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma jornada com três trechos religiosos, explicações espirituais e opção individual de salvar cada trecho.
+Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma travessia diária adaptada ao ritmo escolhido, com explicações espirituais e opção individual de salvar cada leitura.
 
 O app foi pensado para quem quer menos automático e mais presença no celular.
 
@@ -21,7 +21,7 @@ Recursos:
 - Modo Essencial depois do acesso inicial, com trechos principais, explicações essenciais e anúncios.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
-- Três trechos por sessão para uma leitura com mais calma.
+- Uma, duas ou três leituras por travessia, conforme a profundidade escolhida.
 - Explicação espiritual para cada trecho, com resumo, aplicação prática e pergunta de meditação.
 - Opção individual de salvar os trechos que tocaram você.
 - Preferências por tradição espiritual: católica, evangélica, judaica ou espírita.
@@ -55,4 +55,4 @@ Disponibilidade comercial inicial: Brasil. App gratuito para baixar, com vendas 
 ## Observações de revisão
 O app usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração. Para testar a assinatura, toque em “Ver planos” ou “Assinar Premium” e escolha o plano mensal ou anual. Recursos Premium: reflexões completas, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e uso completo da versão completa do Limiar. A tela do paywall mostra preço, renovação automática, restauração de compra, Termos de Uso e Política de Privacidade.
+Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração. Para testar a assinatura, toque em “Ver planos” ou “Assinar Premium” e escolha o plano mensal ou anual. Recursos Premium: reflexões completas, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e uso completo da versão completa do Limiar. A tela do paywall mostra preço, renovação automática, restauração de compra, Termos de Uso e Política de Privacidade.

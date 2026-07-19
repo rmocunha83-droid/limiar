@@ -8,14 +8,14 @@ Limiar é um app iOS em SwiftUI para criar uma pausa espiritual antes de voltar 
 - Tradições: católica, evangélica, judaica e espírita.
 - Seleção de apps que ativam o Limiar usando recursos nativos do iOS.
 - Exibição dos apps selecionados apenas por ícones originais, sem nome, horário ou descrição.
-- Tela inicial com jornada de leitura e três trechos religiosos por sessão.
+- Tela inicial com uma travessia diária adaptada ao ritmo escolhido: 1 leitura em Curta, 2 em Média e 3 em Mais profunda.
 - Rotação local de trechos para evitar que o mesmo texto fique preso quando o app permanece aberto.
 - Reflexões personalizadas via backend próprio, com GPT-5.4 mini no servidor, histórico antirrepetição e fallback local.
 - Explicação espiritual por trecho, com resumo, aplicação prática e pergunta de meditação.
 - Histórico local de leituras e opção individual de salvar cada trecho.
 - Narração premium via Azure Cognitive Services Speech no backend seguro, acionada apenas quando a pessoa toca em ouvir; ElevenLabs permanece disponível como alternativa por configuração.
 - Botão “Li com calma, continuar” com ícone positivo e retorno temporário aos apps selecionados.
-- Modo Essencial após o teste gratuito: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+- Modo Essencial após o teste gratuito: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
 - Preview web e materiais de marketing/App Store.
 
 ## Requisitos

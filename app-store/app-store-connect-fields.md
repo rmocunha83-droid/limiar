@@ -47,7 +47,7 @@ foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,
 
 Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece um acesso inicial completo e, depois desse período, mantém um Modo Essencial com trechos principais.
 
-Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma jornada na própria tela inicial, com três trechos religiosos, explicações espirituais e opção individual de salvar cada trecho.
+Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma travessia diária adaptada ao ritmo escolhido, com explicações espirituais e opção individual de salvar cada leitura.
 
 O app foi pensado para quem quer menos automático e mais presença no celular.
 
@@ -56,7 +56,7 @@ Recursos:
 - Modo Essencial depois do acesso inicial, com trechos principais, explicações essenciais e anúncios.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
-- Três trechos na tela inicial para uma leitura com mais calma.
+- Uma, duas ou três leituras por travessia, conforme a profundidade escolhida.
 - Explicação espiritual para cada trecho, com resumo, aplicação prática e pergunta de meditação.
 - Opção individual de salvar os trechos que tocaram você.
 - Preferências por tradição espiritual: católica, evangélica, judaica ou espírita.
@@ -118,7 +118,7 @@ Observação comercial: envie `limiar_premium_monthly` e `limiar_premium_annual_
 
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
 
 Termos de Uso (EULA padrão da Apple): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 Política de Privacidade: https://limiar-five.vercel.app/privacy.html

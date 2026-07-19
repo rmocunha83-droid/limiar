@@ -247,6 +247,14 @@ struct OnboardingView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.warmGold)
 
+                if selectedCount == 2 {
+                    Text("Dica: escolher mais estilos traz mais variedade às suas manhãs.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.softText.opacity(0.86))
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 OptionalBooksRefinement(config: config)
 
                 if !readingPreferenceMessage.isEmpty {
@@ -259,6 +267,7 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Layout.horizontalInset)
             .padding(.vertical, Layout.verticalInset)
+            .padding(.bottom, 96)
         }
         .id(model.faithProfile.tradition)
     }
@@ -276,6 +285,12 @@ struct OnboardingView: View {
                         model.selectExplanationDepth(depth)
                     }
                 }
+
+                Text("Você pode mudar isso depois em Configurações.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.softText.opacity(0.86))
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Layout.horizontalInset)
@@ -413,7 +428,7 @@ struct OnboardingView: View {
 
     private func advance() {
         if step == 2, !model.faithProfile.hasSelectedReadingPreferences {
-            readingPreferenceMessage = "Escolha ao menos 1 estilo de leitura para continuar."
+            readingPreferenceMessage = "Escolha ao menos \(model.faithProfile.tradition.readingConfig.minSelected) estilos de leitura para continuar."
             return
         }
 

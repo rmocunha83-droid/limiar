@@ -539,7 +539,7 @@ def make_card(
         chip_y = panel_y1 + 716
         features = [
             ("Tempo de Uso", "Permissões nativas do iPhone.", draw_screen_time_icon),
-            ("Leitura com propósito", "Três trechos para uma pausa com sentido.", draw_book_icon),
+            ("Leitura com propósito", "Sua travessia diária com explicações.", draw_book_icon),
             ("Retomar com presença", "Depois da leitura, continue com calma.", draw_return_icon),
         ]
         for label, detail, icon_drawer in features:
@@ -570,7 +570,7 @@ def make_app_store_cards() -> None:
         (
             "02-leitura-com-proposito.png",
             "Leitura com propósito",
-            "Três trechos para voltar com presença.",
+            "Uma travessia no ritmo da sua rotina.",
             "Cada jornada vem com texto, explicação espiritual e aplicação prática.",
             dashboard,
             COLORS["gold"],

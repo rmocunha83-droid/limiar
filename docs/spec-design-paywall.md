@@ -85,7 +85,7 @@ crescimento a `xxLarge` para preservar a composição. Textos corridos de 14-16p
 3. **Subtítulo:** `Sua pausa diária continua funcionando, gratuita. Veja o que fica com você:`
 4. **Lista do que FICA** (✓ sage):
    - `Pausa diária e bloqueio dos seus apps`
-   - `3 trechos por leitura, com explicações essenciais`
+   - `Sua travessia diária com explicações essenciais`
    - `Salvar trechos enquanto lê`
 5. **Nota discreta (14pt, softText):** `O Essencial exibe anúncios e não inclui narração, a
    reflexão completa nem personalização. Você pode voltar ao completo quando quiser.`
@@ -103,7 +103,7 @@ Sem carrossel, sem planos, sem contador. O botão primário é seguir grátis �
 1. **Eyebrow:** `LIMIAR PREMIUM`
 2. **Título:** `Ontem, sua travessia ficou menor.`
 3. **Subtítulo:** `Sua pausa continua — mas desde ontem ela vem sem a parte que fazia a diferença.`
-4. **Linha de contraste honesto** (✓ sage, 14pt): `Você continua com a pausa, o bloqueio e os 3 trechos.`
+4. **Linha de contraste honesto** (✓ sage, 14pt): `Você continua com a pausa, o bloqueio e sua travessia diária.`
 5. **Bloco de perdas — rótulo:** `Desde ontem, você está sem:`
    Mesma lista da D6 (✕ coral), com a última linha no passado:
    `Pausa limpa — anúncios nos trechos e no dashboard`

@@ -17,7 +17,7 @@ Documento de planejamento. Nada implementado. Base: `PaywallView.swift` atual, p
 **A pessoa AINDA TEM:**
 - a pausa diária e o bloqueio de apps;
 - escolha/edição dos apps bloqueados;
-- 3 trechos por leitura;
+- uma travessia diária no ritmo escolhido;
 - explicações essenciais nos trechos;
 - salvar trechos enquanto lê.
 
@@ -82,7 +82,7 @@ ser completa" — mesma tela, header trocado.)*
 
 ### Contraste honesto (1 linha antes das perdas)
 
-> "Você continua com a pausa, o bloqueio e os 3 trechos de sempre. O que mudou:"
+> "Você continua com a pausa, o bloqueio e sua travessia diária. O que mudou:"
 
 Nomear o que fica é deliberado: honestidade gera confiança e torna a lista de perdas mais crível.
 

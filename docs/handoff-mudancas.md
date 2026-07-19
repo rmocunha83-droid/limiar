@@ -1,16 +1,27 @@
 # Limiar — Resumo de mudanças (handoff para o desenvolvedor)
 
-Repositório: `rmocunha83-droid/limiar` · Branch: `main` (push em main = deploy automático do Vercel).
+Repositório: `rmocunha83-droid/limiar` · Branch principal: `main` (push em main = deploy automático do Vercel).
 App iOS em `Limiar/` · Backend serverless em `api/` (Vercel, produção `https://limiar-five.vercel.app`).
 
-Todas as mudanças abaixo já estão **commitadas e no `main`**. As de **backend já estão em produção**. As de **app entram na próxima build** que for arquivada para o TestFlight/App Store.
+Este documento combina o histórico já entregue com mudanças ainda em validação. A seção 0 descreve o trabalho da branch adaptativa e ainda não está no `main` nem em produção. As demais seções registram entregas anteriores e devem ser conferidas contra o histórico do Git antes de qualquer publicação.
 
 ---
 
-## 1. Backend / geração de leituras (Vercel — JÁ EM PRODUÇÃO)
+## 0. Travessia adaptada ao ritmo escolhido — EM VALIDAÇÃO
+
+- A profundidade agora determina também a quantidade: **Curta = 1 leitura, Média = 2 e Mais profunda = 3**.
+- O app envia `itemCount` ao backend; requisições de builds antigos sem esse campo continuam recebendo 3 itens e o comportamento legado.
+- Cache diário, chave de perfil e chave da requisição remota incluem a quantidade, evitando reaproveitar uma sessão feita para outro ritmo.
+- O onboarding exige no mínimo 2 estilos. Católica e evangélica abrem com 3 categorias representativas; judaica e espírita abrem com pelo menos 2. Ao ficar exatamente em 2, uma dica suave incentiva variedade sem bloquear. Perfis legados com 1 categoria continuam funcionando normalmente e precisam chegar ao mínimo apenas ao editar a seleção.
+- Site, metadados e cards da App Store deixam de prometer uma quantidade fixa. O card antigo com referência a IA passa a usar `Leitura com propósito` e copy centrada na travessia.
+- **A App Store fica bloqueada até uma semana de validação humana no TestFlight.** Pergunta recomendada aos testadores: `A travessia está do tamanho certo para fazer todo dia?`
+
+---
+
+## 1. Backend / geração de leituras (histórico já entregue)
 
 **Arquitetura da geração** (`api/_limiar-ai.js`, `api/reading-session.js`, `spiritual-reading.js`, `reflection.js`):
-- O **servidor seleciona os 3 trechos de forma determinística** (`selectSessionPassages`). `favoriteBooks` aceita até 40 livros e permanece como a união das categorias. `priorityBooks` é opcional: até dois trechos frescos por sessão vêm desses livros, e a vaga restante privilegia descoberta fora deles. Se houver tema favorito, o servidor garante um trecho fresco desse tema quando houver candidato permitido. A IA **não escolhe mais** os versículos.
+- O **servidor seleciona os trechos de forma determinística** (`selectSessionPassages`). `favoriteBooks` aceita até 40 livros e permanece como a união das categorias. `priorityBooks` é opcional e equilibra afinamento e descoberta conforme a quantidade pedida. Se houver tema favorito, o servidor garante um trecho fresco desse tema quando houver candidato permitido. A IA **não escolhe mais** os versículos.
 - **Compatibilidade:** builds já publicados, que não enviam `priorityBooks`, continuam no caminho legado de seleção; o novo campo só é usado pelo app atualizado.
 - A **IA gera só as explicações** (homily, spiritualMeaning, practicalApplication, conclusion, meditationQuestion), com JSON Schema `strict`. Referência e texto bíblico vêm sempre do trecho selecionado — a IA nunca reescreve versículo.
 - **Removido o retry pesado de diversidade** (era a causa dos 422 e da latência de ~24s).

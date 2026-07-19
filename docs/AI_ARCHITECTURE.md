@@ -4,15 +4,15 @@
 
 1. O app iOS prepara candidatos de leitura conforme as preferências do usuário (catálogo local `Limiar/Resources/passages.json`, 977 trechos).
 2. Para usuários no teste gratuito ativo, assinantes e Modo Essencial, o app chama o backend:
-   - `POST /api/reading-session` — sessão diária completa (3 trechos + reflexão), caminho principal;
+   - `POST /api/reading-session` — sessão diária adaptativa (1 a 3 leituras + reflexão), caminho principal;
    - `POST /api/spiritual-reading` e `POST /api/reflection` — caminhos legados, mantidos por compatibilidade;
    - `POST /api/speech` — narração, somente Premium, quando a pessoa toca em ouvir.
-3. **A seleção dos 3 trechos é determinística e feita pelo servidor** (`selectSessionPassages`): tiers livros favoritos → seções → pool completo, rotação LRU dos menos recentes, cota de prioridade (até 2 trechos dos `priorityBooks` afinados + 1 de descoberta) e garantia de tema favorito (mínimo 1 trecho por sessão, apenas para perfis que enviam `priorityBooks`, sem sair dos livros escolhidos). Livros evitados nunca entram. A IA **não escolhe nem reescreve versículos** — só gera as explicações.
+3. **A seleção das leituras é determinística e feita pelo servidor** (`selectSessionPassages`). A quantidade acompanha a profundidade escolhida: Curta = 1, Média = 2 e Mais profunda = 3. O seletor usa tiers livros favoritos → seções → pool completo, rotação LRU dos menos recentes, cotas proporcionais de prioridade e descoberta e garantia de tema favorito quando houver candidato permitido. Livros evitados nunca entram. A IA **não escolhe nem reescreve versículos** — só gera as explicações. Builds antigos sem `itemCount` preservam o caminho legado de 3 itens.
 4. O backend gera texto com GPT-5.4 mini (`reasoning effort: none`) usando `OPENAI_API_KEY`, exige JSON estruturado (schema estrito) e valida o resultado; o app valida de novo.
 5. Se qualquer etapa falhar, o app usa o fallback local e mostra mensagem simples, sem expor erro técnico.
 6. O app pré-gera a sessão em tempo morto (passo de ativação do onboarding e após concluir a travessia, para o ciclo seguinte) — a hora do turno escolhido abre sem espera; o padrão de migração é 5h.
 
-Usuários com teste expirado e sem assinatura entram no **Modo Essencial**: continuam vendo 3 trechos com explicações essenciais **gerados pelo backend de texto (esse custo de IA existe e está no plano de negócio)**, mas sem narração, sem a reflexão breve completa (aparece só um teaser trancado) e com anúncios. Toques em recursos Premium abrem o paywall.
+Usuários com teste expirado e sem assinatura entram no **Modo Essencial**: continuam vendo a travessia no ritmo escolhido, com explicações essenciais **geradas pelo backend de texto (esse custo de IA existe e está no plano de negócio)**, mas sem narração, sem a reflexão breve completa (aparece só um teaser trancado) e com anúncios. Toques em recursos Premium abrem o paywall.
 
 ## Narração (TTS)
 
@@ -47,7 +47,7 @@ Usuários com teste expirado e sem assinatura entram no **Modo Essencial**: cont
 npm run test:ai-backend
 ```
 
-Valida contrato JSON, seleção determinística (cota de prioridade, garantia de tema, compatibilidade com perfis antigos sem `priorityBooks`), formato canônico da narração, chaves de cache do speech e limites de perfil. Para QA no app, testar:
+Valida contrato JSON, quantidade adaptativa 1/2/3, seleção determinística (cota de prioridade, garantia de tema, compatibilidade com perfis antigos sem `priorityBooks` e `itemCount`), formato canônico da narração, chaves de cache do speech e limites de perfil. Para QA no app, testar:
 
 - geração remota com `OPENAI_API_KEY` configurada;
 - mensagem simples sem internet; backend retornando erro; JSON inválido;

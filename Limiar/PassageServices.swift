@@ -1,10 +1,6 @@
 import Foundation
 import os
 
-enum LimiarReadingConstants {
-    static let targetItemCount = 3
-}
-
 enum LimiarAIDiagnostics {
     private static let logger = Logger(subsystem: "com.romeucunha.Limiar", category: "ai")
 
@@ -99,8 +95,9 @@ struct PassageRecommendationService {
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil,
         recentlyShownPassageIDs: [String] = [],
-        minimumCount: Int = LimiarReadingConstants.targetItemCount
+        minimumCount: Int? = nil
     ) -> [ScripturePassage] {
+        let minimumCount = minimumCount ?? profile.explanationDepth.readingItemCount
         let ranked = rankedPassages(
             for: profile,
             history: history,
@@ -216,11 +213,15 @@ struct DailyReadingSessionStore {
         ScreenTimePolicyStore.cycleDayKey(now: date)
     }
 
-    func load(profileKey: String, dayKey: String = DailyReadingSessionStore.todayKey()) -> DailyReadingSessionSnapshot? {
+    func load(
+        profileKey: String,
+        dayKey: String = DailyReadingSessionStore.todayKey(),
+        expectedItemCount: Int
+    ) -> DailyReadingSessionSnapshot? {
         allSnapshots().first { snapshot in
             snapshot.dayKey == dayKey
                 && snapshot.profileKey == profileKey
-                && snapshot.items.count >= LimiarReadingConstants.targetItemCount
+                && snapshot.items.count >= expectedItemCount
         }
     }
 
@@ -426,6 +427,7 @@ struct RemoteAIReflectionDigestPayload: Codable {
 struct RemoteReadingSessionRequestPayload: Codable {
     let profile: RemoteAIProfilePayload
     let passages: [RemotePassagePayload]
+    let itemCount: Int
     let recentPassageIDs: [String]
     let recentReflections: [RemoteAIReflectionDigestPayload]
 }
@@ -534,6 +536,7 @@ struct RemoteAIReadingSessionService {
         let payload = RemoteReadingSessionRequestPayload(
             profile: RemoteAIProfilePayload(profile: profile),
             passages: passages.map(RemotePassagePayload.init),
+            itemCount: profile.explanationDepth.readingItemCount,
             recentPassageIDs: Array(recentPassageIDs.prefix(40)),
             recentReflections: recentReflections.prefix(8).map(RemoteAIReflectionDigestPayload.init)
         )
@@ -547,7 +550,8 @@ struct RemoteAIReadingSessionService {
             let items = try response.items.enumerated().map { index, item in
                 try item.validatedItem(cacheKey: "session", index: index)
             }
-            guard items.count >= min(LimiarReadingConstants.targetItemCount, max(1, passages.count)) else {
+            let expectedItemCount = min(profile.explanationDepth.readingItemCount, max(1, passages.count))
+            guard items.count >= expectedItemCount else {
                 LimiarAIDiagnostics.log("ai_fallback", values: [
                     "endpoint": "reading-session",
                     "reason": "unexpected_item_count",
@@ -561,7 +565,7 @@ struct RemoteAIReadingSessionService {
             values["endpoint"] = "reading-session"
             values["items"] = "\(items.count)"
             LimiarAIDiagnostics.log("ai_reading_session_loaded", values: values)
-            return RemoteReadingSessionResult(items: items, reflection: reflection)
+            return RemoteReadingSessionResult(items: Array(items.prefix(expectedItemCount)), reflection: reflection)
         } catch {
             LimiarAIDiagnostics.log("ai_fallback", values: [
                 "endpoint": "reading-session",
