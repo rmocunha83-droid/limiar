@@ -29,6 +29,7 @@ const {
   normalizeRecentReflections,
   parseProviderJSON,
   readingSessionExplanationSchema,
+  resolveReadingSessionOptions,
   selectSessionPassages,
   spokenReference,
   validateExplanationFields,
@@ -241,6 +242,111 @@ test("uses two priority-book passages and keeps a discovery passage", () => {
   assert.equal(selection.priorityCount, 2);
   assert.equal(selection.selected.filter((passage) => passage.book === "Salmos").length, 2);
   assert.equal(selection.selected.some((passage) => passage.book !== "Salmos"), true);
+});
+
+test("adapts priority and discovery quotas for one, two and three items", () => {
+  const profile = normalizeProfile({
+    favoriteBooks: ["Salmos", "Provérbios", "Mateus"],
+    priorityBooks: ["Salmos"],
+    favoriteThemes: ["Propósito"],
+    explanationDepth: "média"
+  });
+
+  const one = selectSessionPassages({
+    profile,
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 1,
+    seed: "adaptive-one"
+  });
+  assert.equal(one.selected.length, 1);
+  assert.equal(one.priorityCount, 1);
+  assert.equal(one.selected[0].book, "Salmos");
+
+  const two = selectSessionPassages({
+    profile,
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 2,
+    seed: "adaptive-two"
+  });
+  assert.equal(two.selected.length, 2);
+  assert.equal(two.priorityCount, 1);
+  assert.equal(two.selected.some((passage) => passage.book !== "Salmos"), true);
+  assert.equal(two.selected.some((passage) => passage.theme === "Propósito"), true);
+
+  const three = selectSessionPassages({
+    profile,
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 3,
+    seed: "adaptive-three"
+  });
+  assert.equal(three.selected.length, 3);
+  assert.equal(three.priorityCount, 2);
+  assert.equal(three.selected.some((passage) => passage.book !== "Salmos"), true);
+});
+
+test("keeps a single refined-book passage instead of ejecting it for theme guarantee", () => {
+  const selection = selectSessionPassages({
+    profile: normalizeProfile({
+      favoriteBooks: ["Salmos", "Mateus"],
+      priorityBooks: ["Salmos"],
+      favoriteThemes: ["Propósito"],
+      explanationDepth: "média"
+    }),
+    passages: CATALOG,
+    recentPassageIDs: [],
+    count: 1,
+    seed: "single-refined-wins"
+  });
+
+  assert.equal(selection.selected.length, 1);
+  assert.equal(selection.selected[0].book, "Salmos");
+  assert.equal(selection.priorityCount, 1);
+  assert.equal(selection.favoriteThemeCount, 0);
+});
+
+test("resolves adaptive item counts while preserving the legacy payload", () => {
+  const legacy = resolveReadingSessionOptions({}, "curta", 8);
+  assert.deepEqual(legacy, {
+    hasItemCount: false,
+    requestedItemCount: 3,
+    itemCount: 3,
+    generationDepth: "curta",
+    outputBudgetDepth: "curta"
+  });
+
+  const one = resolveReadingSessionOptions({ itemCount: 0 }, "grande", 8);
+  assert.equal(one.itemCount, 1);
+  assert.equal(one.generationDepth, "média");
+  assert.equal(one.outputBudgetDepth, "grande");
+
+  const two = resolveReadingSessionOptions({ itemCount: 2 }, "curta", 8);
+  assert.equal(two.itemCount, 2);
+  assert.equal(two.generationDepth, "média");
+  assert.equal(two.outputBudgetDepth, "média");
+
+  const three = resolveReadingSessionOptions({ itemCount: 9 }, "grande", 8);
+  assert.equal(three.itemCount, 3);
+  assert.equal(three.generationDepth, "média");
+  assert.equal(three.outputBudgetDepth, "média");
+});
+
+test("adaptive selection remains deterministic for every supported item count", () => {
+  for (const count of [1, 2, 3]) {
+    const profile = normalizeProfile({
+      favoriteBooks: ["Salmos", "Provérbios", "Mateus"],
+      priorityBooks: ["Salmos"],
+      favoriteThemes: ["Propósito"]
+    });
+    const first = selectSessionPassages({ profile, passages: CATALOG, count, seed: `count-${count}` });
+    const second = selectSessionPassages({ profile, passages: CATALOG, count, seed: `count-${count}` });
+    assert.deepEqual(
+      first.selected.map((passage) => passage.id),
+      second.selected.map((passage) => passage.id)
+    );
+  }
 });
 
 test("degrades priority quota without repeating recent passages", () => {
