@@ -47,7 +47,7 @@ final class ShieldActionExtension: ShieldActionDelegate {
 
             let content = UNMutableNotificationContent()
             content.title = "Sua travessia está pronta"
-            content.body = "Toque para abrir o Limiar, ler seus 3 trechos e liberar seus apps."
+            content.body = "Toque para abrir o Limiar, fazer sua travessia e liberar seus apps."
             content.sound = .default
             content.userInfo = ["source": Self.bridgeSource]
 

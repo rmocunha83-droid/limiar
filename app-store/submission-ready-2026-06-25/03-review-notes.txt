@@ -1,6 +1,6 @@
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário antes de apps selecionados. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém os 3 trechos principais, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
 
 Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
 

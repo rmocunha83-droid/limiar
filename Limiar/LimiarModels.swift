@@ -313,7 +313,7 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Judite, Macabeus e Baruque", sections: [.deuterocanonical], books: [.tobias, .judith, .maccabees, .baruch])
                 ],
                 optionalBooks: [.genesis, .exodus, .joshua, .judges, .psalms, .proverbs, .job, .ecclesiastes, .wisdom, .sirach, .isaiah, .jeremiah, .ezekiel, .daniel, .matthew, .mark, .luke, .john, .romans, .corinthians, .galatians, .ephesians, .james, .peter, .tobias, .judith, .maccabees, .baruch],
-                minSelected: 1
+                minSelected: 2
             )
         case .protestant:
             TraditionReadingConfig(
@@ -329,7 +329,7 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo e livros históricos", sections: [.torah, .historicalBooks], books: [.genesis, .exodus, .joshua, .judges, .ruth, .esther])
                 ],
                 optionalBooks: [.genesis, .exodus, .joshua, .judges, .ruth, .esther, .psalms, .proverbs, .job, .ecclesiastes, .songOfSongs, .isaiah, .jeremiah, .ezekiel, .daniel, .matthew, .mark, .luke, .john, .romans, .corinthians, .galatians, .ephesians, .hebrews, .james, .peter, .revelation],
-                minSelected: 1
+                minSelected: 2
             )
         case .jewish:
             TraditionReadingConfig(
@@ -344,7 +344,7 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "etica", label: "Ética e vida prática", hint: "Trechos morais e de conduta", sections: [.ethicalWisdom], books: [.proverbs, .ecclesiastes, .leviticus, .deuteronomy])
                 ],
                 optionalBooks: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy, .joshua, .judges, .isaiah, .jeremiah, .ezekiel, .psalms, .proverbs, .job, .ecclesiastes, .ruth, .esther, .daniel],
-                minSelected: 1
+                minSelected: 2
             )
         case .spiritist:
             TraditionReadingConfig(
@@ -358,7 +358,7 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians, .james, .peter])
                 ],
                 optionalBooks: [.matthew, .mark, .luke, .john, .psalms, .proverbs, .ecclesiastes, .job, .romans, .corinthians, .james, .peter],
-                minSelected: 1
+                minSelected: 2
             )
         }
     }
@@ -411,6 +411,14 @@ enum ExplanationDepth: String, Codable, CaseIterable, Identifiable {
         case .short: "Curta"
         case .medium: "Média"
         case .deep: "Mais profunda"
+        }
+    }
+
+    var readingItemCount: Int {
+        switch self {
+        case .short: 1
+        case .medium: 2
+        case .deep: 3
         }
     }
 }
@@ -646,7 +654,7 @@ enum AIContentState: Equatable {
         case .localReady:
             "A leitura será atualizada assim que você começar."
         case .generating:
-            "Estamos preparando três novas reflexões bíblicas com explicações para este momento."
+            "Estamos preparando sua travessia bíblica com explicações para este momento."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
         case .fallback:
@@ -737,6 +745,22 @@ final class LimiarAppModel {
         var savedProfile = policyStore.loadFaithProfile() ?? .starter
         savedProfile.normalizeReadingPreferencesForTradition()
         savedProfile.normalizeStandaloneThemesForCurrentTradition()
+#if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let depthIndex = arguments.firstIndex(of: "-LimiarExplanationDepth"),
+           arguments.indices.contains(depthIndex + 1) {
+            switch arguments[depthIndex + 1].folding(options: .diacriticInsensitive, locale: .current).lowercased() {
+            case "curta", "short":
+                savedProfile.explanationDepth = .short
+            case "media", "medium":
+                savedProfile.explanationDepth = .medium
+            case "profunda", "deep":
+                savedProfile.explanationDepth = .deep
+            default:
+                break
+            }
+        }
+#endif
         policyStore.saveFaithProfile(savedProfile)
         faithProfile = savedProfile
         pauseCycleTurn = policyStore.loadSelectedCycleTurn()
@@ -1002,15 +1026,16 @@ final class LimiarAppModel {
     func beginNewReading(avoidingCurrent: Bool = false) {
         readingProgress = 0
         readingStartedAt = Date()
+        let targetItemCount = faithProfile.explanationDepth.readingItemCount
         let candidates = recommender.readingPlan(
             for: faithProfile,
             history: history,
             avoiding: avoidingCurrent ? currentPassage.id : nil,
             recentlyShownPassageIDs: recentPassageIDs,
-            minimumCount: hasPauseAccess ? 36 : LimiarReadingConstants.targetItemCount
+            minimumCount: hasPauseAccess ? 36 : targetItemCount
         )
         setReadingPlan(
-            Array(candidates.prefix(LimiarReadingConstants.targetItemCount)),
+            Array(candidates.prefix(targetItemCount)),
             profile: faithProfile,
             remoteCandidatePool: candidates
         )
@@ -1031,7 +1056,11 @@ final class LimiarAppModel {
     ) -> Task<LimiarPrewarmResult, Never>? {
         let profile = faithProfile
         let profileKey = sessionProfileKey(for: profile)
-        guard dailySessionStore.load(profileKey: profileKey, dayKey: dayKey) == nil else { return nil }
+        guard dailySessionStore.load(
+            profileKey: profileKey,
+            dayKey: dayKey,
+            expectedItemCount: profile.explanationDepth.readingItemCount
+        ) == nil else { return nil }
         // Há uma única geração especulativa por modelo. Além de economizar rede,
         // isso impede que foreground, conclusão e BGAppRefresh consumam trechos
         // diferentes para o mesmo ciclo quando chegam quase juntos.
@@ -1173,7 +1202,8 @@ final class LimiarAppModel {
     private func hasCachedSession(dayKey: String) -> Bool {
         dailySessionStore.load(
             profileKey: sessionProfileKey(for: faithProfile),
-            dayKey: dayKey
+            dayKey: dayKey,
+            expectedItemCount: faithProfile.explanationDepth.readingItemCount
         ) != nil
     }
 
@@ -1193,7 +1223,7 @@ final class LimiarAppModel {
         // Isso mantém a leitura do dia estável, evita custo repetido de IA e
         // impede que o pool de trechos seja consumido sem o usuário ler.
         // Exceção: virada de dia — troca pela sessão pré-gerada do novo ciclo.
-        if currentSpiritualReadingItems.count >= LimiarReadingConstants.targetItemCount,
+        if currentSpiritualReadingItems.count >= faithProfile.explanationDepth.readingItemCount,
            aiContentState != .fallback,
            currentSessionDayKey == DailyReadingSessionStore.todayKey() {
             return
@@ -1408,7 +1438,10 @@ final class LimiarAppModel {
 
         // Reaproveita a sessão do dia quando ela existe para este perfil:
         // nada de nova geração (nem novo consumo de trechos) a cada abertura.
-        if let saved = dailySessionStore.load(profileKey: sessionProfileKey(for: profile)) {
+        if let saved = dailySessionStore.load(
+            profileKey: sessionProfileKey(for: profile),
+            expectedItemCount: profile.explanationDepth.readingItemCount
+        ) {
             applyGeneratedSession(items: saved.items, reflection: saved.reflection, profile: profile)
             aiContentState = isEssentialMode ? .essentialMode : .remoteReady
             var cachedValues = LimiarAIDiagnostics.profileSnapshot(profile)
@@ -1439,6 +1472,7 @@ final class LimiarAppModel {
         [
             profile.tradition.rawValue,
             profile.explanationDepth.rawValue,
+            "item-count:\(profile.explanationDepth.readingItemCount)",
             profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
             // Afinamento entra na chave: mudar só os livros prioritários deve
@@ -1474,6 +1508,7 @@ final class LimiarAppModel {
             passages.map(\.id).joined(separator: "+"),
             profile.tradition.rawValue,
             profile.explanationDepth.rawValue,
+            "item-count:\(profile.explanationDepth.readingItemCount)",
             profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
             (profile.refinedBooks ?? []).map(\.rawValue).sorted().joined(separator: ","),

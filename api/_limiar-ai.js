@@ -225,6 +225,32 @@ function normalizeDepth(value) {
   return "média";
 }
 
+// Mantém compatibilidade binária com builds publicados: sem `itemCount`, a
+// sessão continua com três itens e respeita a profundidade antiga. Builds
+// novos enviam a contagem e passam a usar a explicação média como régua fixa.
+function resolveReadingSessionOptions(body = {}, profileDepth = "média", passageCount = SESSION_ITEM_COUNT) {
+  const hasItemCount = Object.prototype.hasOwnProperty.call(body, "itemCount")
+    && body.itemCount !== null
+    && body.itemCount !== undefined;
+  const numericCount = Number(body.itemCount);
+  const requestedItemCount = hasItemCount && Number.isFinite(numericCount)
+    ? Math.max(1, Math.min(SESSION_ITEM_COUNT, Math.trunc(numericCount)))
+    : SESSION_ITEM_COUNT;
+  const availableCount = Math.max(0, Math.trunc(Number(passageCount) || 0));
+  const itemCount = Math.min(requestedItemCount, availableCount);
+  const generationDepth = hasItemCount ? "média" : normalizeDepth(profileDepth);
+
+  return {
+    hasItemCount,
+    requestedItemCount,
+    itemCount,
+    generationDepth,
+    // O card único ganha mais espaço de resposta, sem trocar a instrução
+    // editorial média pela antiga instrução "grande".
+    outputBudgetDepth: hasItemCount && itemCount === 1 ? "grande" : generationDepth
+  };
+}
+
 function depthGuidance(depth) {
   if (depth === "curta") {
     return [
@@ -454,9 +480,11 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
     }
   };
 
-  // O afinamento é prioridade, não filtro: até dois trechos frescos vêm dos
-  // livros escolhidos e a vaga restante preserva uma janela de descoberta.
-  const priorityQuota = priorityBooks.size ? Math.min(2, count) : 0;
+  // O afinamento é prioridade, não filtro. A cota degrada com a travessia:
+  // 3 itens = 2 afinados + 1 descoberta; 2 = 1 + 1; 1 = melhor afinado.
+  const priorityQuota = priorityBooks.size
+    ? (count >= 3 ? 2 : Math.min(1, count))
+    : 0;
   for (const entry of candidates
     .filter((candidate) => candidate.inPriorityBooks && !candidate.isRecent)
     .sort(byPreference)
@@ -465,6 +493,7 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
   }
 
   for (const tier of tiers) {
+    if (selected.length >= count) break;
     const pool = candidates.filter(
       (entry) => tier.accepts(entry) && !selectedIndexes.has(entry.index)
     );
@@ -1289,6 +1318,7 @@ module.exports = {
   normalizeProfile,
   normalizeRecentReflections,
   normalizeContentIdentity,
+  resolveReadingSessionOptions,
   parseProviderJSON,
   parseBody,
   readingSessionExplanationSchema,

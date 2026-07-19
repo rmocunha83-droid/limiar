@@ -6,7 +6,7 @@
 - Site publicado na Vercel em `https://limiar-five.vercel.app/`.
 - Site público já reflete:
   - apps que ativam o Limiar;
-  - 3 trechos;
+  - travessia diária no ritmo escolhido;
   - experiência completa no teste gratuito e Premium;
   - Modo Essencial após o teste;
   - Política de Privacidade, Termos e Suporte.

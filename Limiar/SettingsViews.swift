@@ -361,7 +361,12 @@ struct BiblicalPreferencesView: View {
             } header: {
                 Text("Estilos de leitura")
             } footer: {
-                Text("Escolha ao menos \(config.minSelected). Você pode mudar quando quiser.")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Escolha ao menos \(config.minSelected). Você pode mudar quando quiser.")
+                    if model.faithProfile.selectedReadingCategoryCount == 2 {
+                        Text("Dica: escolher mais estilos traz mais variedade às suas manhãs.")
+                    }
+                }
             }
 
             let pool = model.faithProfile.refinementBookPool

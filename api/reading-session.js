@@ -1,5 +1,4 @@
 const {
-  SESSION_ITEM_COUNT,
   applyCommonHeaders,
   assembleReadingItems,
   assembleReflection,
@@ -15,6 +14,7 @@ const {
   parseBody,
   readingSessionExplanationSchema,
   requirePost,
+  resolveReadingSessionOptions,
   selectSessionPassages,
   selectionSeed,
   validateExplanationFields,
@@ -40,10 +40,16 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Seleção determinística: o servidor fixa os 3 trechos respeitando as
-    // preferências como filtro forte e rotacionando contra o histórico. A IA
-    // recebe os trechos já escolhidos e escreve apenas as explicações.
-    const itemCount = Math.min(SESSION_ITEM_COUNT, passages.length);
+    const sessionOptions = resolveReadingSessionOptions(
+      body,
+      profile.explanationDepth,
+      passages.length
+    );
+    const itemCount = sessionOptions.itemCount;
+
+    // Seleção determinística: o servidor fixa os trechos respeitando as
+    // preferências e rotacionando contra o histórico. Sem itemCount, mantém o
+    // contrato publicado de três itens e da profundidade antiga.
     const selection = selectSessionPassages({
       profile,
       passages,
@@ -58,6 +64,9 @@ module.exports = async function handler(req, res) {
       clientID: rateLimit.context.clientID,
       tradition: profile.tradition,
       depth: profile.explanationDepth,
+      generationDepth: sessionOptions.generationDepth,
+      requestedItemCount: sessionOptions.requestedItemCount,
+      adaptiveItemCount: sessionOptions.hasItemCount,
       favoriteBooks: profile.favoriteBooks.join(", "),
       selectedReferences: selection.selected.map((passage) => passage.reference).join(" + "),
       selectionTier: selection.selectionTier,
@@ -68,8 +77,12 @@ module.exports = async function handler(req, res) {
       candidateCount: selection.candidateCount
     });
 
+    const generationProfile = {
+      ...profile,
+      explanationDepth: sessionOptions.generationDepth
+    };
     const prompt = buildExplanationPrompt({
-      profile,
+      profile: generationProfile,
       selectedPassages: selection.selected,
       recentReflections,
       includeReflection: true
@@ -79,12 +92,14 @@ module.exports = async function handler(req, res) {
       schema: readingSessionExplanationSchema(itemCount),
       schemaName: "limiar_reading_session",
       prompt,
-      maxOutputTokens: depthOutputTokenLimit(profile.explanationDepth, "reading-session"),
+      maxOutputTokens: depthOutputTokenLimit(sessionOptions.outputBudgetDepth, "reading-session"),
       debugContext: {
         endpoint: "reading-session",
         requestID: rateLimit.context.requestID,
         clientID: rateLimit.context.clientID,
-        depth: profile.explanationDepth,
+        depth: sessionOptions.generationDepth,
+        requestedItemCount: sessionOptions.requestedItemCount,
+        adaptiveItemCount: sessionOptions.hasItemCount,
         tradition: profile.tradition,
         passagesCount: selection.selected.length
       }

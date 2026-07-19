@@ -25,7 +25,7 @@ com precisão.
 ## 2. O que precisa ser reescrito — trabalho padrão, sem surpresa
 
 - **Toda a UI** em Kotlin + Jetpack Compose: onboarding (tradição → estilos de leitura → temas →
-  profundidade → ativação), tela da travessia (3 trechos + explicação + "ouvir"), configurações,
+  profundidade → ativação), tela da travessia (1 a 3 leituras + explicação + "ouvir"), configurações,
   histórico, favoritos.
 - **Assinatura**: StoreKit → **Google Play Billing** (produto de assinatura equivalente).
 - **Reprodução de áudio** do ElevenLabs (vem do mesmo endpoint `/api/speech`).

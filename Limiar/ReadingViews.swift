@@ -4,8 +4,13 @@ import ManagedSettings
 import SwiftUI
 
 struct AIReadingPreparationView: View {
+    @Environment(LimiarAppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isBreathing = false
+
+    private var itemCount: Int {
+        model.faithProfile.explanationDepth.readingItemCount
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -31,7 +36,7 @@ struct AIReadingPreparationView: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(Color.ivory)
 
-                    Text("Estamos preparando três novas reflexões bíblicas com explicações para este momento.")
+                    Text("Estamos preparando sua travessia bíblica com explicações para este momento.")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
@@ -40,7 +45,7 @@ struct AIReadingPreparationView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    ForEach(0..<3, id: \.self) { index in
+                    ForEach(0..<itemCount, id: \.self) { index in
                         Capsule()
                             .fill(Color.sageButton.opacity(reduceMotion ? (index == 1 ? 0.72 : 0.36) : (isBreathing ? 0.78 : 0.26)))
                             .frame(height: 5)

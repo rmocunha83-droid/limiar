@@ -24,7 +24,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 ## Leitura e continuidade
 
 - Abrir o Limiar a partir do fluxo de pausa.
-- Confirmar que aparecem 3 trechos religiosos adequados ao perfil configurado.
+- Confirmar que aparecem 1, 2 ou 3 leituras adequadas ao perfil, conforme a profundidade Curta, Média ou Mais profunda.
 - Verificar se trechos muito curtos são combinados em uma leitura maior.
 - Finalizar a leitura.
 - Conferir se os apps selecionados ficam disponíveis depois da leitura.
@@ -38,7 +38,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar que um novo trecho aparece, evitando que o texto anterior fique preso.
 - Repetir o fluxo algumas vezes para verificar que a rotação continua funcionando.
 
-## Reflexão com IA
+## Reflexões personalizadas
 
 - Gerar reflexão curta.
 - Gerar reflexão média.

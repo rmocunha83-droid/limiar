@@ -22,7 +22,7 @@ struct EssentialModeIntroView: View {
                     VStack(spacing: 0) {
                         ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Pausa diária e bloqueio dos seus apps")
                         Divider().overlay(Color.conversionDivider)
-                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "3 trechos por leitura, com explicações essenciais")
+                        ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Sua travessia diária com explicações essenciais")
                         Divider().overlay(Color.conversionDivider)
                         ConversionListRow(symbol: "checkmark", color: Color.sageButton, text: "Sua travessia diária, sempre gratuita")
                     }
@@ -197,7 +197,7 @@ private struct TrialRhythmPanel: View {
                 .foregroundStyle(Color.warmGold)
                 .frame(width: 24)
 
-            Text("7 dias, **\(readings) travessias**, **\(readings * 3) trechos**. Seu ritmo está no melhor momento.")
+            Text("7 dias, **\(readings) travessias concluídas**. Seu ritmo está no melhor momento.")
                 .conversionFont(15)
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
