@@ -133,7 +133,7 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - Se a abertura direta funcionar, a ativação do app remove pedidos pendentes e notificações entregues da ponte; `willPresent` continua suprimindo seu banner no primeiro plano. A copy só deve voltar a **“Fazer a travessia”** depois de uma versão estável do iOS comprovar a abertura direta em teste manual com autorização individual.
 - **QA disponível nesta entrega:** o projeto e as três extensões compilam no simulador com o SDK iOS 26.5. Family Controls, execução real de BGAppRefresh e o resultado de `.openParentalControlsApp` não podem ser validados no simulador. Permanecem pendentes no iPhone 16/iOS 27: botão “Fechar”, permissão concedida/negada, toque repetido sem empilhamento e registro do comportamento da tentativa direta.
 
-## 5h. Sessão local de contingência — build 126
+## 5h. Sessão local de contingência — build 132
 
 - Falhas de rede, backend, payload inválido ou `unexpected_item_count` não deixam mais a travessia vazia. O app usa o recomendador existente e monta 1, 2 ou 3 leituras com o catálogo empacotado, sem explicações inventadas.
 - A sessão local é persistida com `source=local`, permanece concluível e reutiliza o fluxo existente de histórico, recentes e liberação do Screen Time. O Modo Essencial e o Premium recebem a mesma proteção; a narração mantém as regras atuais e a avaliação da App Store não é solicitada após uma sessão degradada.
