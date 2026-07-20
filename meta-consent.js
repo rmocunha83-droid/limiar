@@ -41,6 +41,50 @@
     sendServerEvent(eventName, id);
   }
 
+  function trackCustomEvent(eventName, prefix, customData) {
+    var id = eventID(prefix);
+    window.fbq('trackCustom', eventName, customData, { eventID: id });
+    sendServerEvent(eventName, id);
+  }
+
+  function isMostlyVisible(element) {
+    var rect = element.getBoundingClientRect();
+    var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    var visibleWidth = Math.max(0, Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0));
+    var visibleHeight = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
+    var totalArea = rect.width * rect.height;
+
+    return totalArea > 0 && (visibleWidth * visibleHeight) / totalArea >= 0.5;
+  }
+
+  function trackVideoEngagement() {
+    var trackedThresholds = {};
+    var thresholds = [25, 50, 70];
+
+    document.querySelectorAll('[data-meta-video-id]').forEach(function (video) {
+      if (video.dataset.metaVideoTrackingReady === 'true') return;
+      video.dataset.metaVideoTrackingReady = 'true';
+
+      video.addEventListener('timeupdate', function () {
+        if (!Number.isFinite(video.duration) || video.duration <= 0 || !isMostlyVisible(video)) return;
+
+        var watchedPercent = (video.currentTime / video.duration) * 100;
+        thresholds.forEach(function (threshold) {
+          if (trackedThresholds[threshold] || watchedPercent < threshold) return;
+
+          trackedThresholds[threshold] = true;
+          trackCustomEvent('VideoWatched' + threshold, 'video_watched_' + threshold, {
+            content_name: video.dataset.metaVideoName || 'Demonstracao do app Limiar',
+            content_type: 'video',
+            video_id: video.dataset.metaVideoId,
+            video_percent: threshold
+          });
+        });
+      });
+    });
+  }
+
   function startMetaTracking() {
     if (window.fbq) return;
     !function(f,b,e,v,n,t,s) {
@@ -63,6 +107,7 @@
           trackEvent('Lead', 'app_store_click');
         });
       });
+      trackVideoEngagement();
     }
   }
 
