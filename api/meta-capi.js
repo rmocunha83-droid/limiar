@@ -5,7 +5,18 @@ const VIDEO_WATCH_EVENTS = new Map([
   ["VideoWatched50", 50],
   ["VideoWatched70", 70]
 ]);
-const WEB_EVENTS = new Set(["PageView", "ViewContent", "Lead", ...VIDEO_WATCH_EVENTS.keys()]);
+const SCROLL_DEPTH_EVENTS = new Map([
+  ["ScrollDepth25", 25],
+  ["ScrollDepth50", 50],
+  ["ScrollDepth70", 70]
+]);
+const WEB_EVENTS = new Set([
+  "PageView",
+  "ViewContent",
+  "Lead",
+  ...VIDEO_WATCH_EVENTS.keys(),
+  ...SCROLL_DEPTH_EVENTS.keys()
+]);
 
 function applyHeaders(res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -148,7 +159,13 @@ module.exports = async function handler(req, res) {
                     video_id: "limiar_app_demo",
                     video_percent: VIDEO_WATCH_EVENTS.get(eventName)
                   }
-                : undefined
+                : SCROLL_DEPTH_EVENTS.has(eventName)
+                  ? {
+                      content_name: "Profundidade de rolagem do site Limiar",
+                      content_type: "website",
+                      scroll_percent: SCROLL_DEPTH_EVENTS.get(eventName)
+                    }
+                  : undefined
           }]
         })
       }

@@ -85,6 +85,42 @@
     });
   }
 
+  function pageScrollPercent() {
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    var scrollHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    var scrollableHeight = scrollHeight - viewportHeight;
+
+    return scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+  }
+
+  function trackScrollEngagement() {
+    var trackedThresholds = {};
+    var thresholds = [25, 50, 70];
+
+    function checkScrollDepth() {
+      var scrollPercent = pageScrollPercent();
+
+      thresholds.forEach(function (threshold) {
+        if (trackedThresholds[threshold] || scrollPercent < threshold) return;
+
+        trackedThresholds[threshold] = true;
+        trackCustomEvent('ScrollDepth' + threshold, 'scroll_depth_' + threshold, {
+          content_name: 'Profundidade de rolagem do site Limiar',
+          content_type: 'website',
+          scroll_percent: threshold
+        });
+      });
+
+      if (Object.keys(trackedThresholds).length === thresholds.length) {
+        window.removeEventListener('scroll', checkScrollDepth);
+      }
+    }
+
+    window.addEventListener('scroll', checkScrollDepth, { passive: true });
+    checkScrollDepth();
+  }
+
   function startMetaTracking() {
     if (window.fbq) return;
     !function(f,b,e,v,n,t,s) {
@@ -108,6 +144,7 @@
         });
       });
       trackVideoEngagement();
+      trackScrollEngagement();
     }
   }
 
