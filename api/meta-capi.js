@@ -10,10 +10,12 @@ const SCROLL_DEPTH_EVENTS = new Map([
   ["ScrollDepth50", 50],
   ["ScrollDepth70", 70]
 ]);
+const APP_STORE_CLICK_EVENT = "AppStoreDownloadClick";
 const WEB_EVENTS = new Set([
   "PageView",
   "ViewContent",
   "Lead",
+  APP_STORE_CLICK_EVENT,
   ...VIDEO_WATCH_EVENTS.keys(),
   ...SCROLL_DEPTH_EVENTS.keys()
 ]);
@@ -152,6 +154,11 @@ module.exports = async function handler(req, res) {
             user_data: userData,
             custom_data: eventName === "Lead"
               ? { content_name: "app_store_download_click" }
+              : eventName === APP_STORE_CLICK_EVENT
+                ? {
+                    content_name: "Baixar Limiar na App Store",
+                    content_type: "app_store"
+                  }
               : VIDEO_WATCH_EVENTS.has(eventName)
                 ? {
                     content_name: "Demonstracao do app Limiar",

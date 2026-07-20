@@ -141,6 +141,10 @@
       document.querySelectorAll('a[href^="https://apps.apple.com/br/app/limiar/"]').forEach(function (link) {
         link.addEventListener('click', function () {
           trackEvent('Lead', 'app_store_click');
+          trackCustomEvent('AppStoreDownloadClick', 'app_store_download_click', {
+            content_name: 'Baixar Limiar na App Store',
+            content_type: 'app_store'
+          });
         });
       });
       trackVideoEngagement();
