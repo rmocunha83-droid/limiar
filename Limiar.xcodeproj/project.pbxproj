@@ -37,6 +37,7 @@
 		LIMI0000000000000000000C /* LimiarShieldConfigurationExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000061 /* LimiarShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI0000000000000000000D /* LimiarShieldActionExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI0000000000000000000E /* LimiarDeviceActivityMonitorExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000401 /* LocalReadingSessionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = LIMI00000000000000000083;
 			remoteInfo = LimiarDeviceActivityMonitorExtension;
+		};
+		LIMI00000000000000000408 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = LIMI00000000000000000080 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = LIMI00000000000000000040;
+			remoteInfo = Limiar;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -117,6 +125,8 @@
 		LIMI00000000000000000061 /* LimiarShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		LIMI00000000000000000401 /* LocalReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalReadingSessionTests.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000402 /* LimiarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LimiarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +134,7 @@
 		LIMI00000000000000000021 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000022 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000023 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000404 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -131,11 +142,20 @@
 			isa = PBXGroup;
 			children = (
 				LIMI00000000000000000034 /* Limiar */,
+				LIMI00000000000000000403 /* LimiarTests */,
 				LIMI00000000000000000035 /* LimiarShieldConfigurationExtension */,
 				LIMI00000000000000000036 /* LimiarShieldActionExtension */,
 				LIMI00000000000000000037 /* LimiarDeviceActivityMonitorExtension */,
 				LIMI00000000000000000038 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		LIMI00000000000000000403 /* LimiarTests */ = {
+			isa = PBXGroup;
+			children = (
+				LIMI00000000000000000401 /* LocalReadingSessionTests.swift */,
+			);
+			path = LimiarTests;
 			sourceTree = "<group>";
 		};
 		LIMI00000000000000000034 /* Limiar */ = {
@@ -203,6 +223,7 @@
 			isa = PBXGroup;
 			children = (
 				LIMI00000000000000000010 /* Limiar.app */,
+				LIMI00000000000000000402 /* LimiarTests.xctest */,
 				LIMI00000000000000000061 /* LimiarShieldConfigurationExtension.appex */,
 				LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */,
 				LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */,
@@ -269,6 +290,23 @@
 			productReference = LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		LIMI00000000000000000407 /* LimiarTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = LIMI0000000000000000040A /* Build configuration list for PBXNativeTarget "LimiarTests" */;
+			buildPhases = (
+				LIMI00000000000000000405 /* Sources */,
+				LIMI00000000000000000404 /* Frameworks */,
+				LIMI00000000000000000406 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = (
+				LIMI00000000000000000409 /* PBXTargetDependency */,
+			);
+			name = LimiarTests;
+			productName = LimiarTests;
+			productReference = LIMI00000000000000000402 /* LimiarTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -288,6 +326,7 @@
 					LIMI00000000000000000081 = {CreatedOnToolsVersion = 26.0;};
 					LIMI00000000000000000082 = {CreatedOnToolsVersion = 26.0;};
 					LIMI00000000000000000083 = {CreatedOnToolsVersion = 26.0;};
+					LIMI00000000000000000407 = {CreatedOnToolsVersion = 26.0; TestTargetID = LIMI00000000000000000040;};
 				};
 			};
 			buildConfigurationList = LIMI00000000000000000089 /* Build configuration list for PBXProject "Limiar" */;
@@ -310,6 +349,7 @@
 				LIMI00000000000000000081 /* LimiarShieldConfigurationExtension */,
 				LIMI00000000000000000082 /* LimiarShieldActionExtension */,
 				LIMI00000000000000000083 /* LimiarDeviceActivityMonitorExtension */,
+				LIMI00000000000000000407 /* LimiarTests */,
 			);
 		};
 /* End PBXProject section */
@@ -333,6 +373,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		LIMI00000000000000000406 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -364,12 +405,14 @@
 		LIMI00000000000000000054 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000055 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000056 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */, LIMI00000000000000000302 /* LimiarEventLog.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000405 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
 		LIMI00000000000000000074 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = LIMI00000000000000000081 /* LimiarShieldConfigurationExtension */; targetProxy = LIMI00000000000000000071 /* PBXContainerItemProxy */; };
 		LIMI00000000000000000075 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = LIMI00000000000000000082 /* LimiarShieldActionExtension */; targetProxy = LIMI00000000000000000072 /* PBXContainerItemProxy */; };
 		LIMI00000000000000000076 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = LIMI00000000000000000083 /* LimiarDeviceActivityMonitorExtension */; targetProxy = LIMI00000000000000000073 /* PBXContainerItemProxy */; };
+		LIMI00000000000000000409 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = LIMI00000000000000000040 /* Limiar */; targetProxy = LIMI00000000000000000408 /* PBXContainerItemProxy */; };
 /* End PBXTargetDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -467,7 +510,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Limiar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -496,7 +539,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Limiar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -525,7 +568,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
@@ -546,7 +589,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
@@ -567,7 +610,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldAction/ShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
@@ -588,7 +631,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/ShieldAction/ShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
@@ -609,7 +652,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
@@ -630,7 +673,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Limiar/Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 132;
 				DEVELOPMENT_TEAM = L38WCHAWJ9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
@@ -645,6 +688,38 @@
 			};
 			name = Release;
 		};
+		LIMI0000000000000000040B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = L38WCHAWJ9;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.LimiarTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Limiar.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Limiar";
+			};
+			name = Debug;
+		};
+		LIMI0000000000000000040C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = L38WCHAWJ9;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.LimiarTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Limiar.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Limiar";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -653,6 +728,7 @@
 		LIMI00000000000000000091 /* Build configuration list for PBXNativeTarget "LimiarShieldConfigurationExtension" */ = {isa = XCConfigurationList; buildConfigurations = (LIMI000000000000000000C1 /* Debug */, LIMI000000000000000000C2 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		LIMI00000000000000000092 /* Build configuration list for PBXNativeTarget "LimiarShieldActionExtension" */ = {isa = XCConfigurationList; buildConfigurations = (LIMI000000000000000000D1 /* Debug */, LIMI000000000000000000D2 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		LIMI00000000000000000093 /* Build configuration list for PBXNativeTarget "LimiarDeviceActivityMonitorExtension" */ = {isa = XCConfigurationList; buildConfigurations = (LIMI000000000000000000E1 /* Debug */, LIMI000000000000000000E2 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		LIMI0000000000000000040A /* Build configuration list for PBXNativeTarget "LimiarTests" */ = {isa = XCConfigurationList; buildConfigurations = (LIMI0000000000000000040B /* Debug */, LIMI0000000000000000040C /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = LIMI00000000000000000080 /* Project object */;

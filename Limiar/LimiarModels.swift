@@ -631,6 +631,7 @@ enum AIContentState: Equatable {
     case localReady
     case generating
     case remoteReady
+    case localSession
     case fallback
     case essentialMode
 
@@ -642,6 +643,8 @@ enum AIContentState: Equatable {
             "Criando suas reflexões"
         case .remoteReady:
             "Reflexão personalizada"
+        case .localSession:
+            "Leitura disponível offline"
         case .fallback:
             "Não foi possível preparar sua reflexão agora"
         case .essentialMode:
@@ -657,6 +660,8 @@ enum AIContentState: Equatable {
             "Estamos preparando sua travessia bíblica com explicações para este momento."
         case .remoteReady:
             "Texto atualizado com novos trechos e uma reflexão nova."
+        case .localSession:
+            "Sua leitura está disponível. As explicações voltam quando a conexão for restabelecida."
         case .fallback:
             "Tente novamente em instantes. Confira sua conexão com a internet antes de tentar outra vez."
         case .essentialMode:
@@ -667,6 +672,7 @@ enum AIContentState: Equatable {
 
 enum LimiarPrewarmResult: String {
     case generated
+    case localFallback = "local_fallback"
     case alreadyAvailable = "already_available"
     case alreadyRunning = "already_running"
     case activeTraversal = "active_traversal"
@@ -676,7 +682,7 @@ enum LimiarPrewarmResult: String {
     case cancelled
 
     var completedSuccessfully: Bool {
-        self == .generated || self == .alreadyAvailable || self == .alreadyRunning
+        self == .generated || self == .localFallback || self == .alreadyAvailable || self == .alreadyRunning
     }
 }
 
@@ -722,6 +728,7 @@ final class LimiarAppModel {
     var recentPassageIDs: [String] = []
     var recentAIReflections: [RecentAIReflectionDigest] = []
     var aiContentState = AIContentState.localReady
+    var isRetryingLocalSession = false
     var readingTopResetID = UUID()
 
     private let recommender = PassageRecommendationService()
@@ -737,6 +744,7 @@ final class LimiarAppModel {
     // foreground para trocar pela sessão pré-gerada do novo ciclo.
     private var currentSessionDayKey = DailyReadingSessionStore.todayKey()
     private var aiGenerationID = UUID()
+    private var localSessionFailureReason: String?
 
     init() {
 #if DEBUG
@@ -1042,6 +1050,10 @@ final class LimiarAppModel {
     }
 
     func retryReadingGeneration() {
+        if aiContentState == .localSession {
+            attemptLocalSessionUpgrade(trigger: "manual")
+            return
+        }
         dailySessionStore.clear()
         beginNewReading(avoidingCurrent: true)
     }
@@ -1086,7 +1098,7 @@ final class LimiarAppModel {
 
         let task = Task<LimiarPrewarmResult, Never> { [weak self, candidates, profile, profileKey, dayKey, recents, reflections] in
             let service = RemoteAIReadingSessionService()
-            let session = await service.readingSession(
+            let outcome = await service.readingSession(
                 for: Array(candidates.prefix(36)),
                 profile: profile,
                 recentPassageIDs: recents,
@@ -1099,10 +1111,27 @@ final class LimiarAppModel {
                 return .cancelled
             }
 
-            guard let session else {
-                LimiarAIDiagnostics.log("prewarm_failed", values: ["dayKey": dayKey])
-                clearPrewarmRequest(requestID)
-                return .failed
+            let session: RemoteReadingSessionResult
+            let source: DailyReadingSessionSource
+            let failureReason: String?
+            switch outcome {
+            case .success(let remoteSession):
+                session = remoteSession
+                source = .remote
+                failureReason = nil
+            case .failure(let reason):
+                let localItems = LocalReadingSessionFactory.items(
+                    from: candidates,
+                    itemCount: profile.explanationDepth.readingItemCount
+                )
+                guard !localItems.isEmpty else {
+                    LimiarAIDiagnostics.log("prewarm_failed", values: ["dayKey": dayKey, "reason": reason])
+                    clearPrewarmRequest(requestID)
+                    return .failed
+                }
+                session = RemoteReadingSessionResult(items: localItems, reflection: emptyReflection())
+                source = .local
+                failureReason = reason
             }
             // Se as preferências mudaram durante a geração, descarta:
             // o fluxo normal gera de novo com o perfil atual.
@@ -1116,12 +1145,18 @@ final class LimiarAppModel {
                     dayKey: dayKey,
                     profileKey: profileKey,
                     items: session.items,
-                    reflection: session.reflection
+                    reflection: session.reflection,
+                    source: source,
+                    failureReason: failureReason
                 )
             )
-            LimiarAIDiagnostics.log("prewarm_saved", values: ["dayKey": dayKey, "items": "\(session.items.count)"])
+            LimiarAIDiagnostics.log("prewarm_saved", values: [
+                "dayKey": dayKey,
+                "items": "\(session.items.count)",
+                "source": source.rawValue
+            ])
             clearPrewarmRequest(requestID)
-            return .generated
+            return source == .remote ? .generated : .localFallback
         }
         prewarmTask = task
         return task
@@ -1226,6 +1261,9 @@ final class LimiarAppModel {
         if currentSpiritualReadingItems.count >= faithProfile.explanationDepth.readingItemCount,
            aiContentState != .fallback,
            currentSessionDayKey == DailyReadingSessionStore.todayKey() {
+            if aiContentState == .localSession {
+                attemptLocalSessionUpgrade(trigger: "foreground")
+            }
             return
         }
         guard Date().timeIntervalSince(lastForegroundRefreshAt) > 8 else { return }
@@ -1414,6 +1452,7 @@ final class LimiarAppModel {
         let resolvedPlan = plan.isEmpty ? [currentPassage] : plan
         let candidatePool = remoteCandidatePool?.isEmpty == false ? remoteCandidatePool! : resolvedPlan
         aiGenerationTask?.cancel()
+        isRetryingLocalSession = false
         let generationID = UUID()
         aiGenerationID = generationID
         currentReadingPlan = resolvedPlan
@@ -1436,6 +1475,17 @@ final class LimiarAppModel {
             return
         }
 
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceLocalSession") {
+            installLocalSession(
+                from: candidatePool,
+                profile: profile,
+                reason: "debug_forced_local_session"
+            )
+            return
+        }
+#endif
+
         // Reaproveita a sessão do dia quando ela existe para este perfil:
         // nada de nova geração (nem novo consumo de trechos) a cada abertura.
         if let saved = dailySessionStore.load(
@@ -1443,11 +1493,18 @@ final class LimiarAppModel {
             expectedItemCount: profile.explanationDepth.readingItemCount
         ) {
             applyGeneratedSession(items: saved.items, reflection: saved.reflection, profile: profile)
-            aiContentState = isEssentialMode ? .essentialMode : .remoteReady
+            localSessionFailureReason = saved.failureReason
+            aiContentState = saved.source == .local
+                ? .localSession
+                : (isEssentialMode ? .essentialMode : .remoteReady)
             var cachedValues = LimiarAIDiagnostics.profileSnapshot(profile)
             cachedValues["source"] = "daily-session"
+            cachedValues["sessionSource"] = saved.source.rawValue
             cachedValues["items"] = "\(saved.items.count)"
             LimiarAIDiagnostics.log("ai_reading_session_loaded", values: cachedValues)
+            if saved.source == .local {
+                logLocalSessionShown(reason: saved.failureReason ?? "unknown", items: saved.items.count)
+            }
             return
         }
 
@@ -1537,7 +1594,7 @@ final class LimiarAppModel {
         aiGenerationTask = Task { [passages, fallbackPlan, profile, recentPassageIDs, recentReflections] in
             let readingSessionService = RemoteAIReadingSessionService()
 
-            let remoteSession = await readingSessionService.readingSession(
+            let outcome = await readingSessionService.readingSession(
                 for: passages,
                 profile: profile,
                 recentPassageIDs: recentPassageIDs,
@@ -1548,7 +1605,8 @@ final class LimiarAppModel {
 
             await MainActor.run {
                 guard aiGenerationID == generationID else { return }
-                if let session = remoteSession {
+                switch outcome {
+                case .success(let session):
                     applyGeneratedSession(items: session.items, reflection: session.reflection, profile: profile)
                     // Persiste a sessão do dia. Os trechos só entram no
                     // histórico de recentes quando a leitura for concluída
@@ -1558,22 +1616,160 @@ final class LimiarAppModel {
                             dayKey: DailyReadingSessionStore.todayKey(),
                             profileKey: sessionProfileKey(for: profile),
                             items: session.items,
-                            reflection: session.reflection
+                            reflection: session.reflection,
+                            source: .remote
                         )
                     )
                     rememberReflection(reference: currentReadingReference, reflection: session.reflection)
+                    localSessionFailureReason = nil
                     aiContentState = isEssentialMode ? .essentialMode : .remoteReady
-                } else {
-                    currentReadingPlan = fallbackPlan
-                    if let first = fallbackPlan.first {
-                        currentPassage = first
-                    }
-                    currentSpiritualReadingItems = []
-                    currentReflection = emptyReflection()
-                    aiContentState = .fallback
+                case .failure(let reason):
+                    installLocalSession(
+                        from: fallbackPlan,
+                        profile: profile,
+                        reason: reason
+                    )
                 }
             }
         }
+    }
+
+    private func attemptLocalSessionUpgrade(trigger: String) {
+        let hasCompletedCurrentCycle = policyStore.hasCompletedPauseInCurrentCycle()
+        guard LocalSessionUpgradePolicy.shouldAttempt(
+            source: .local,
+            isReadingSessionActive: isReadingSessionActive,
+            hasCompletedCurrentCycle: hasCompletedCurrentCycle
+        ),
+        aiContentState == .localSession,
+        currentSessionDayKey == DailyReadingSessionStore.todayKey(),
+        !isRetryingLocalSession else {
+            return
+        }
+
+        let profile = faithProfile
+        let profileKey = sessionProfileKey(for: profile)
+        let candidates = recommender.readingPlan(
+            for: profile,
+            history: history,
+            recentlyShownPassageIDs: recentPassageIDs,
+            minimumCount: 36
+        )
+        let recents = recentPassageIDs
+        let reflections = recentAIReflections
+        let generationID = UUID()
+        aiGenerationID = generationID
+        isRetryingLocalSession = true
+
+        aiGenerationTask = Task { [candidates, profile, profileKey, recents, reflections] in
+            let outcome = await RemoteAIReadingSessionService().readingSession(
+                for: Array(candidates.prefix(36)),
+                profile: profile,
+                recentPassageIDs: recents,
+                recentReflections: reflections
+            )
+
+            guard !Task.isCancelled else {
+                await MainActor.run {
+                    if aiGenerationID == generationID {
+                        isRetryingLocalSession = false
+                    }
+                }
+                return
+            }
+
+            await MainActor.run {
+                guard aiGenerationID == generationID else { return }
+                isRetryingLocalSession = false
+                guard aiContentState == .localSession,
+                      sessionProfileKey(for: faithProfile) == profileKey,
+                      currentSessionDayKey == DailyReadingSessionStore.todayKey() else {
+                    return
+                }
+
+                switch outcome {
+                case .success(let session):
+                    guard LocalSessionUpgradePolicy.shouldAttempt(
+                        source: .local,
+                        isReadingSessionActive: isReadingSessionActive,
+                        hasCompletedCurrentCycle: policyStore.hasCompletedPauseInCurrentCycle()
+                    ) else {
+                        return
+                    }
+                    applyGeneratedSession(items: session.items, reflection: session.reflection, profile: profile)
+                    dailySessionStore.save(
+                        DailyReadingSessionSnapshot(
+                            dayKey: DailyReadingSessionStore.todayKey(),
+                            profileKey: profileKey,
+                            items: session.items,
+                            reflection: session.reflection,
+                            source: .remote
+                        )
+                    )
+                    rememberReflection(reference: currentReadingReference, reflection: session.reflection)
+                    localSessionFailureReason = nil
+                    aiContentState = isEssentialMode ? .essentialMode : .remoteReady
+                    LimiarAIDiagnostics.log(
+                        "ai_local_session_upgraded",
+                        values: ["trigger": trigger, "items": "\(session.items.count)"],
+                        persistForDiagnostics: true
+                    )
+                case .failure(let reason):
+                    localSessionFailureReason = reason
+                    dailySessionStore.save(
+                        DailyReadingSessionSnapshot(
+                            dayKey: DailyReadingSessionStore.todayKey(),
+                            profileKey: profileKey,
+                            items: currentSpiritualReadingItems,
+                            reflection: currentReflection,
+                            source: .local,
+                            failureReason: reason
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private func installLocalSession(
+        from passages: [ScripturePassage],
+        profile: UserFaithProfile,
+        reason: String
+    ) {
+        let items = LocalReadingSessionFactory.items(
+            from: passages,
+            itemCount: profile.explanationDepth.readingItemCount
+        )
+        guard !items.isEmpty else {
+            currentSpiritualReadingItems = []
+            currentReflection = emptyReflection()
+            aiContentState = .fallback
+            return
+        }
+
+        let reflection = emptyReflection()
+        applyGeneratedSession(items: items, reflection: reflection, profile: profile)
+        localSessionFailureReason = reason
+        dailySessionStore.save(
+            DailyReadingSessionSnapshot(
+                dayKey: DailyReadingSessionStore.todayKey(),
+                profileKey: sessionProfileKey(for: profile),
+                items: items,
+                reflection: reflection,
+                source: .local,
+                failureReason: reason
+            )
+        )
+        aiContentState = .localSession
+        logLocalSessionShown(reason: reason, items: items.count)
+    }
+
+    private func logLocalSessionShown(reason: String, items: Int) {
+        LimiarAIDiagnostics.log(
+            "ai_local_session_shown",
+            values: ["reason": reason, "items": "\(items)"],
+            persistForDiagnostics: true
+        )
     }
 
     nonisolated private func scripturePassages(from items: [SpiritualReadingItem], profile: UserFaithProfile) -> [ScripturePassage] {

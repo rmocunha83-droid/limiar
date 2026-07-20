@@ -133,6 +133,15 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - Se a abertura direta funcionar, a ativação do app remove pedidos pendentes e notificações entregues da ponte; `willPresent` continua suprimindo seu banner no primeiro plano. A copy só deve voltar a **“Fazer a travessia”** depois de uma versão estável do iOS comprovar a abertura direta em teste manual com autorização individual.
 - **QA disponível nesta entrega:** o projeto e as três extensões compilam no simulador com o SDK iOS 26.5. Family Controls, execução real de BGAppRefresh e o resultado de `.openParentalControlsApp` não podem ser validados no simulador. Permanecem pendentes no iPhone 16/iOS 27: botão “Fechar”, permissão concedida/negada, toque repetido sem empilhamento e registro do comportamento da tentativa direta.
 
+## 5h. Sessão local de contingência — build 132
+
+- Falhas de rede, backend, payload inválido ou `unexpected_item_count` não deixam mais a travessia vazia. O app usa o recomendador existente e monta 1, 2 ou 3 leituras com o catálogo empacotado, sem explicações inventadas.
+- A sessão local é persistida com `source=local`, permanece concluível e reutiliza o fluxo existente de histórico, recentes e liberação do Screen Time. O Modo Essencial e o Premium recebem a mesma proteção; a narração mantém as regras atuais e a avaliação da App Store não é solicitada após uma sessão degradada.
+- Antes do início ou da conclusão da travessia, o retorno ao primeiro plano e o botão `Tentar novamente` podem trocar a sessão local por uma resposta remota válida. A leitura local nunca é apagada durante a tentativa e não é substituída depois da conclusão.
+- Diagnóstico sem PII: `ai_local_session_shown` registra apenas motivo técnico/quantidade; `ai_local_session_upgraded`, gatilho/quantidade. O prewarm do próximo ciclo continua independente.
+- Cobertura automática no target `LimiarTests`: quantidade e campos vazios da fábrica local, migração de snapshots antigos e política de atualização. Para QA visual em Debug, usar `-LimiarForceLocalSession`; combinar com `-LimiarForceEssential` para o Modo Essencial.
+- **QA ainda obrigatório em iPhone físico:** concluir em modo avião, confirmar histórico/recentes e liberação dos apps; reconectar antes do início e depois da conclusão; repetir no Modo Essencial. Family Controls não é validável no simulador.
+
 ---
 
 ## 6. Marketing / rastreamento Meta (site — JÁ EM PRODUÇÃO)
