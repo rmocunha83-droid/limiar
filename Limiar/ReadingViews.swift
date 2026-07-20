@@ -122,6 +122,54 @@ struct AIReadingRetryView: View {
     }
 }
 
+struct AIReadingLocalSessionNotice: View {
+    let isRetrying: Bool
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.warmGold)
+                    .frame(width: 28, height: 28)
+
+                Text("Não foi possível preparar as explicações agora. Sua leitura de hoje está aqui — as explicações voltam quando a conexão for restabelecida.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button(action: retry) {
+                HStack(spacing: 8) {
+                    if isRetrying {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Color.sageButton)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    Text(isRetrying ? "Tentando novamente" : "Tentar novamente")
+                }
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.sageButton)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(Color.sageButton.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.sageButton.opacity(0.45), lineWidth: 1)
+                )
+            }
+            .disabled(isRetrying)
+            .accessibilityLabel(isRetrying ? "Tentando preparar as explicações" : "Tentar preparar as explicações novamente")
+        }
+        .padding(16)
+        .limiarPanel()
+    }
+}
+
 struct SpiritualReadingCard: View {
     let item: SpiritualReadingItem
     let isSaved: Bool

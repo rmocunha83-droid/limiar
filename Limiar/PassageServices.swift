@@ -194,11 +194,79 @@ struct PassageRecommendationService {
     }
 }
 
+enum DailyReadingSessionSource: String, Codable {
+    case remote
+    case local
+}
+
 struct DailyReadingSessionSnapshot: Codable {
     let dayKey: String
     let profileKey: String
     let items: [SpiritualReadingItem]
     let reflection: AIReflection
+    let source: DailyReadingSessionSource
+    let failureReason: String?
+
+    init(
+        dayKey: String,
+        profileKey: String,
+        items: [SpiritualReadingItem],
+        reflection: AIReflection,
+        source: DailyReadingSessionSource = .remote,
+        failureReason: String? = nil
+    ) {
+        self.dayKey = dayKey
+        self.profileKey = profileKey
+        self.items = items
+        self.reflection = reflection
+        self.source = source
+        self.failureReason = failureReason
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case dayKey
+        case profileKey
+        case items
+        case reflection
+        case source
+        case failureReason
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        dayKey = try container.decode(String.self, forKey: .dayKey)
+        profileKey = try container.decode(String.self, forKey: .profileKey)
+        items = try container.decode([SpiritualReadingItem].self, forKey: .items)
+        reflection = try container.decode(AIReflection.self, forKey: .reflection)
+        source = try container.decodeIfPresent(DailyReadingSessionSource.self, forKey: .source) ?? .remote
+        failureReason = try container.decodeIfPresent(String.self, forKey: .failureReason)
+    }
+}
+
+enum LocalReadingSessionFactory {
+    static func items(from passages: [ScripturePassage], itemCount: Int) -> [SpiritualReadingItem] {
+        guard itemCount > 0 else { return [] }
+        return passages.prefix(itemCount).map { passage in
+            SpiritualReadingItem(
+                id: "local.\(passage.id)",
+                reference: passage.reference,
+                text: passage.text,
+                homily: "",
+                practicalConclusion: "",
+                passageID: passage.id
+            )
+        }
+    }
+}
+
+enum LocalSessionUpgradePolicy {
+    static func shouldAttempt(
+        source: DailyReadingSessionSource,
+        isReadingSessionActive: Bool,
+        hasCompletedCurrentCycle: Bool
+    ) -> Bool {
+        source == .local && !isReadingSessionActive && !hasCompletedCurrentCycle
+    }
 }
 
 /// Guarda até duas sessões: a de hoje e a pré-gerada para o próximo ciclo
@@ -520,6 +588,11 @@ struct RemoteReadingSessionResult {
     let reflection: AIReflection
 }
 
+enum RemoteReadingSessionOutcome {
+    case success(RemoteReadingSessionResult)
+    case failure(reason: String)
+}
+
 struct RemoteAIReadingSessionService {
     private let client: RemoteAIBackendClient
 
@@ -532,7 +605,7 @@ struct RemoteAIReadingSessionService {
         profile: UserFaithProfile,
         recentPassageIDs: [String],
         recentReflections: [RecentAIReflectionDigest]
-    ) async -> RemoteReadingSessionResult? {
+    ) async -> RemoteReadingSessionOutcome {
         let payload = RemoteReadingSessionRequestPayload(
             profile: RemoteAIProfilePayload(profile: profile),
             passages: passages.map(RemotePassagePayload.init),
@@ -557,7 +630,7 @@ struct RemoteAIReadingSessionService {
                     "reason": "unexpected_item_count",
                     "count": "\(items.count)"
                 ])
-                return nil
+                return .failure(reason: "unexpected_item_count")
             }
             let reflection = try response.reflection.validatedReflection()
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
@@ -565,13 +638,41 @@ struct RemoteAIReadingSessionService {
             values["endpoint"] = "reading-session"
             values["items"] = "\(items.count)"
             LimiarAIDiagnostics.log("ai_reading_session_loaded", values: values)
-            return RemoteReadingSessionResult(items: Array(items.prefix(expectedItemCount)), reflection: reflection)
+            return .success(
+                RemoteReadingSessionResult(
+                    items: Array(items.prefix(expectedItemCount)),
+                    reflection: reflection
+                )
+            )
         } catch {
+            let reason = diagnosticReason(for: error)
             LimiarAIDiagnostics.log("ai_fallback", values: [
                 "endpoint": "reading-session",
-                "reason": String(describing: error)
+                "reason": reason
             ])
-            return nil
+            return .failure(reason: reason)
+        }
+    }
+
+    private func diagnosticReason(for error: Error) -> String {
+        if let urlError = error as? URLError {
+            return "url_error_\(urlError.code.rawValue)"
+        }
+        if error is DecodingError {
+            return "invalid_response_payload"
+        }
+        guard let remoteError = error as? RemoteAIError else {
+            return "request_failed"
+        }
+        switch remoteError {
+        case .invalidURL:
+            return "invalid_url"
+        case .invalidResponse:
+            return "invalid_response"
+        case .invalidPayload:
+            return "invalid_payload"
+        case .emptyContent:
+            return "empty_content"
         }
     }
 }

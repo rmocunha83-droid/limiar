@@ -397,6 +397,13 @@ private struct DashboardView: View {
                     model.retryReadingGeneration()
                 }
             } else {
+                if model.aiContentState == .localSession {
+                    AIReadingLocalSessionNotice(
+                        isRetrying: model.isRetryingLocalSession,
+                        retry: model.retryReadingGeneration
+                    )
+                }
+
                 ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
                     let explanationSegment = [item.homily, item.practicalConclusion]
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -637,7 +644,7 @@ private struct DashboardView: View {
 
     private func requestReviewIfEligibleAfterCompletion() {
         let history = model.history
-        let readingWasHealthy = model.aiContentState != .fallback
+        let readingWasHealthy = model.aiContentState != .fallback && model.aiContentState != .localSession
 
         // Aguarda o encerramento visual da travessia para não interromper a
         // ação de concluir a leitura.

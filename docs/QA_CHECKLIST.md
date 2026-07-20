@@ -30,6 +30,14 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Conferir se os apps selecionados ficam disponíveis depois da leitura.
 - Confirmar que a pausa diária volta a ser aplicada no ciclo seguinte, às 5h da manhã.
 
+## Contingência sem conexão
+
+- Ativar o modo avião antes de abrir a travessia e confirmar que 1, 2 ou 3 leituras locais aparecem com o aviso discreto, sem explicações vazias visíveis.
+- Concluir a leitura local e confirmar histórico, recentes e liberação dos apps selecionados.
+- Repetir sem concluir, restabelecer a conexão e tocar em `Tentar novamente`; confirmar que uma resposta remota válida substitui a sessão uma única vez.
+- Repetir concluindo antes da reconexão; confirmar que o conteúdo concluído não é substituído.
+- Repetir no Modo Essencial e confirmar anúncios, bloqueios Premium e conclusão normal.
+
 ## Rotação de trechos
 
 - Manter o Limiar aberto em segundo plano.
