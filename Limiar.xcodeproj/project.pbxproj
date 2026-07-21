@@ -27,6 +27,7 @@
 		LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000320 /* ProfileImageStore.swift */; };
 		LIMI00000000000000000323 /* LimiarPrewarmCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */; };
 		LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000202 /* GoogleMobileAds */; };
+		LIMI00000000000000000203 /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000205 /* FacebookCore */; };
 		LIMI00000000000000000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000017 /* Assets.xcassets */; };
 		LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */; };
 		LIMI00000000000000000306 /* passages.json in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000305 /* passages.json */; };
@@ -130,7 +131,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		LIMI00000000000000000020 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000020 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */, LIMI00000000000000000203 /* FacebookCore in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000021 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000022 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000023 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
@@ -252,6 +253,7 @@
 			name = Limiar;
 			packageProductDependencies = (
 				LIMI00000000000000000202 /* GoogleMobileAds */,
+				LIMI00000000000000000205 /* FacebookCore */,
 			);
 			productName = Limiar;
 			productReference = LIMI00000000000000000010 /* Limiar.app */;
@@ -340,6 +342,7 @@
 			mainGroup = LIMI00000000000000000030;
 			packageReferences = (
 				LIMI00000000000000000201 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				LIMI00000000000000000204 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 			);
 			productRefGroup = LIMI00000000000000000038 /* Products */;
 			projectDirPath = "";
@@ -424,6 +427,14 @@
 				minimumVersion = 13.0.0;
 			};
 		};
+		LIMI00000000000000000204 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 18.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -431,6 +442,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = LIMI00000000000000000201 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
+		};
+		LIMI00000000000000000205 /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = LIMI00000000000000000204 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 

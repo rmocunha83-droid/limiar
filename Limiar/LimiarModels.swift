@@ -922,12 +922,17 @@ final class LimiarAppModel {
     }
 
     func completeOnboarding() {
+        let wasCompleted = hasCompletedOnboarding
         hasCompletedOnboarding = true
         policyStore.saveOnboardingState(true)
         saveProfile()
         beginNewReading(avoidingCurrent: true)
         if hasPauseAccess {
             applyBlocking()
+        }
+
+        if !wasCompleted {
+            MetaAppEvents.trackCompletedRegistration()
         }
     }
 

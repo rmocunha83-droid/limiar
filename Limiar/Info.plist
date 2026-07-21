@@ -4,11 +4,6 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>pt-BR</string>
-		<string>pt</string>
-	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Limiar</string>
 	<key>CFBundleExecutable</key>
@@ -21,6 +16,15 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb27700219559573880</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
@@ -31,20 +35,24 @@
 	<array>
 		<string>com.romeucunha.Limiar.prewarm</string>
 	</array>
+	<key>FacebookAppID</key>
+	<string>27700219559573880</string>
+	<key>FacebookClientToken</key>
+	<string>039b5d5faeca349daae5eed3e18b76f0</string>
+	<key>FacebookDisplayName</key>
+	<string>Limiar: Pausa Espiritual</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>O Limiar pede sua permissão para medir a eficácia das campanhas e melhorar a divulgação do app. Suas escolhas de Tempo de Uso e preferências espirituais não são usadas para publicidade.</string>
 	<key>LimiarAppSecret</key>
 	<string>$(LIMIAR_APP_SECRET)</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

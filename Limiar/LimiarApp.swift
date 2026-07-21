@@ -1,3 +1,5 @@
+import AppTrackingTransparency
+import FacebookCore
 import Observation
 import SwiftUI
 import UIKit
@@ -18,6 +20,7 @@ struct LimiarApp: App {
         MobileAds.shared.requestConfiguration.publisherPrivacyPersonalizationState = .disabled
         MobileAds.shared.requestConfiguration.setPublisherFirstPartyIDEnabled(false)
         MobileAds.shared.start()
+        MetaAppEvents.initializeIfAuthorized()
     }
 
     var body: some Scene {
@@ -150,5 +153,79 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
             }
         }
         completionHandler()
+    }
+}
+
+@MainActor
+enum MetaAppEvents {
+    private static let completedRegistrationKey = "limiar.meta.completedRegistration"
+    private static let startedTrialKey = "limiar.meta.startedTrial"
+    private static var didInitializeSDK = false
+
+    static func requestTrackingPermissionIfNeeded() {
+        switch ATTrackingManager.trackingAuthorizationStatus {
+        case .authorized:
+            initializeIfAuthorized()
+        case .notDetermined:
+            ATTrackingManager.requestTrackingAuthorization { status in
+                guard status == .authorized else { return }
+                Task { @MainActor in
+                    initializeIfAuthorized()
+                }
+            }
+        case .denied, .restricted:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    static func trackCompletedRegistration() {
+        trackAfterAuthorization(event: .completedRegistration, defaultsKey: completedRegistrationKey)
+    }
+
+    static func trackStartedTrial() {
+        trackAfterAuthorization(event: .startTrial, defaultsKey: startedTrialKey)
+    }
+
+    static func initializeIfAuthorized() {
+        guard ATTrackingManager.trackingAuthorizationStatus == .authorized,
+              !didInitializeSDK else {
+            return
+        }
+
+        didInitializeSDK = true
+        ApplicationDelegate.shared.application(
+            UIApplication.shared,
+            didFinishLaunchingWithOptions: nil
+        )
+    }
+
+    private static func trackAfterAuthorization(event: AppEvents.Name, defaultsKey: String) {
+        guard !UserDefaults.standard.bool(forKey: defaultsKey) else { return }
+
+        switch ATTrackingManager.trackingAuthorizationStatus {
+        case .authorized:
+            log(event, defaultsKey: defaultsKey)
+        case .notDetermined:
+            ATTrackingManager.requestTrackingAuthorization { status in
+                guard status == .authorized else { return }
+                Task { @MainActor in
+                    log(event, defaultsKey: defaultsKey)
+                }
+            }
+        case .denied, .restricted:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    private static func log(_ event: AppEvents.Name, defaultsKey: String) {
+        initializeIfAuthorized()
+        guard didInitializeSDK else { return }
+
+        AppEvents.shared.logEvent(event)
+        UserDefaults.standard.set(true, forKey: defaultsKey)
     }
 }

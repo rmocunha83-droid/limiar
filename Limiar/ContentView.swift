@@ -144,6 +144,9 @@ struct ContentView: View {
         }
         .task {
             subscription.start()
+            if model.hasCompletedOnboarding {
+                MetaAppEvents.requestTrackingPermissionIfNeeded()
+            }
             model.updateAccess(
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode

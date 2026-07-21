@@ -396,6 +396,7 @@ final class SubscriptionManager {
             TrialStartStore.save(now)
             defaults.set(now, forKey: Constants.trialStartDefaultsKey)
             message = "Seu acesso inicial de 7 dias começou."
+            MetaAppEvents.trackStartedTrial()
         }
 
         refreshAccessState()
