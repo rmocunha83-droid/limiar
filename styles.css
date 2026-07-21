@@ -1043,6 +1043,22 @@ h1 {
   }
 }
 
+@media (max-width: 480px) {
+  .button.app-store-download {
+    gap: 10px;
+    min-height: 56px;
+    padding-inline: 12px;
+    font-size: clamp(16px, 4.6vw, 19px);
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .button.app-store-download .apple-mark {
+    flex: 0 0 auto;
+    font-size: 1.3em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
