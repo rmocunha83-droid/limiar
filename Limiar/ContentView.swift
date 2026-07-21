@@ -179,6 +179,7 @@ private struct DashboardView: View {
     @State private var showingPaywall = false
     @State private var unlockPhase = UnlockButtonPhase.locked
     @State private var unlockAnimationTick = 0
+    @State private var showingCompletionScreen = false
 
     private static var forceEssentialBannerScreenshot: Bool {
         #if DEBUG
@@ -274,6 +275,12 @@ private struct DashboardView: View {
                         proxy.scrollTo("readingTop", anchor: .top)
                     }
                 }
+            }
+
+            if showingCompletionScreen {
+                completionScreen
+                    .transition(.opacity)
+                    .zIndex(1)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -597,7 +604,6 @@ private struct DashboardView: View {
                 Image(systemName: unlockPhase.trailingIconName)
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.deepInk)
-                    .opacity(unlockPhase == .unlocked ? 0.9 : 1)
             }
             .padding(.horizontal, 34)
             .frame(height: 104)
@@ -606,7 +612,7 @@ private struct DashboardView: View {
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(unlockPhase.strokeColor, lineWidth: 1)
             )
-            .shadow(color: unlockPhase.shadowColor, radius: unlockPhase == .unlocked ? 18 : 8, x: 0, y: 10)
+            .shadow(color: unlockPhase.shadowColor, radius: 8, x: 0, y: 10)
             .animation(.spring(response: 0.38, dampingFraction: 0.78), value: unlockPhase)
         }
         .disabled(unlockPhase != .locked)
@@ -624,6 +630,46 @@ private struct DashboardView: View {
         .padding(.top, 4)
     }
 
+    private var completionScreen: some View {
+        ZStack {
+            LimiarBackground()
+
+            VStack(spacing: 24) {
+                Spacer()
+
+                Image(systemName: "sunrise.fill")
+                    .font(.system(size: 46, weight: .regular))
+                    .foregroundStyle(Color.warmGold)
+                    .symbolEffect(.bounce, value: showingCompletionScreen)
+
+                Text("Portas abertas")
+                    .font(.system(size: 40, weight: .regular, design: .serif))
+                    .foregroundStyle(Color.ivory)
+
+                Text("Seus apps estão disponíveis até a próxima manhã.\nLeve a leitura de hoje com você — o dia é seu.")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.softText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .padding(.horizontal, 36)
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        showingCompletionScreen = false
+                    }
+                } label: {
+                    Text("Permanecer no Limiar")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.sageButton)
+                }
+                .accessibilityHint("Fecha a tela de conclusão e volta para a leitura")
+                .padding(.bottom, 44)
+            }
+        }
+    }
+
     private func completeReadingWithUnlockAnimation() {
         guard unlockPhase == .locked else { return }
 
@@ -632,12 +678,12 @@ private struct DashboardView: View {
         model.finishReading()
         requestReviewIfEligibleAfterCompletion()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            unlockPhase = .unlocked
-            unlockAnimationTick += 1
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+            withAnimation(.easeInOut(duration: 0.7)) {
+                showingCompletionScreen = true
+            }
+            // O botão volta ao estado inicial escondido atrás da tela final,
+            // pronto para o próximo ciclo.
             unlockPhase = .locked
         }
     }
@@ -664,13 +710,11 @@ private struct DashboardView: View {
 private enum UnlockButtonPhase: Equatable {
     case locked
     case opening
-    case unlocked
 
     var iconName: String {
         switch self {
         case .locked: "sunrise.fill"
         case .opening: "sparkles"
-        case .unlocked: "checkmark.circle.fill"
         }
     }
 
@@ -678,7 +722,6 @@ private enum UnlockButtonPhase: Equatable {
         switch self {
         case .locked: "arrow.right"
         case .opening: "sparkles"
-        case .unlocked: "checkmark"
         }
     }
 
@@ -686,7 +729,6 @@ private enum UnlockButtonPhase: Equatable {
         switch self {
         case .locked: "Despausar apps, continuar"
         case .opening: "Travessia concluída"
-        case .unlocked: "Apps disponíveis"
         }
     }
 
@@ -694,7 +736,6 @@ private enum UnlockButtonPhase: Equatable {
         switch self {
         case .locked: Color.sageButton
         case .opening: Color.warmGold
-        case .unlocked: Color(red: 0.78, green: 0.89, blue: 0.80)
         }
     }
 
@@ -702,7 +743,6 @@ private enum UnlockButtonPhase: Equatable {
         switch self {
         case .locked: Color.ivory.opacity(0.26)
         case .opening: Color.ivory.opacity(0.34)
-        case .unlocked: Color.ivory.opacity(0.42)
         }
     }
 
@@ -710,7 +750,6 @@ private enum UnlockButtonPhase: Equatable {
         switch self {
         case .locked: Color.black.opacity(0.20)
         case .opening: Color.warmGold.opacity(0.22)
-        case .unlocked: Color.sageButton.opacity(0.28)
         }
     }
 }
