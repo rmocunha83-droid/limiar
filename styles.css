@@ -959,9 +959,7 @@ h1 {
     justify-items: center;
     gap: 18px;
     padding: 34px 18px 56px;
-    background:
-      radial-gradient(circle at 50% 0%, rgba(212, 159, 110, 0.16), transparent 42%),
-      linear-gradient(180deg, #020809 0%, #06100f 100%);
+    background: var(--deep-ink);
   }
 
   .mobile-video-copy {
