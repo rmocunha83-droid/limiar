@@ -1,6 +1,12 @@
 const META_PIXEL_ID = "1567751021802834";
 const META_GRAPH_VERSION = "v22.0";
-const WEB_EVENTS = new Set(["PageView", "ViewContent", "Lead"]);
+const VIDEO_WATCH_EVENTS = new Map([
+  ["VideoWatched25", 25],
+  ["VideoWatched50", 50],
+  ["VideoWatched70", 70]
+]);
+const APP_STORE_CLICK_EVENT = "AppStoreDownloadClick";
+const WEB_EVENTS = new Set(["PageView", "ViewContent", "Lead", APP_STORE_CLICK_EVENT, ...VIDEO_WATCH_EVENTS.keys()]);
 
 function applyHeaders(res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -134,7 +140,16 @@ module.exports = async function handler(req, res) {
             event_source_url: eventSourceURL,
             event_id: eventID,
             user_data: userData,
-            custom_data: eventName === "Lead" ? { content_name: "app_store_download_click" } : undefined
+            custom_data: eventName === "Lead" || eventName === APP_STORE_CLICK_EVENT
+              ? { content_name: "app_store_download_click" }
+              : VIDEO_WATCH_EVENTS.has(eventName)
+                ? {
+                    content_name: "Demonstracao do app Limiar",
+                    content_type: "video",
+                    video_id: "limiar_app_demo",
+                    video_percent: VIDEO_WATCH_EVENTS.get(eventName)
+                  }
+                : undefined
           }]
         })
       }
