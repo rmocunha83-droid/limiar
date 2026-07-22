@@ -20,7 +20,7 @@ struct LimiarApp: App {
         MobileAds.shared.requestConfiguration.publisherPrivacyPersonalizationState = .disabled
         MobileAds.shared.requestConfiguration.setPublisherFirstPartyIDEnabled(false)
         MobileAds.shared.start()
-        MetaAppEvents.initializeIfAuthorized()
+        MetaAppEvents.initialize()
     }
 
     var body: some Scene {
@@ -165,12 +165,12 @@ enum MetaAppEvents {
     static func requestTrackingPermissionIfNeeded() {
         switch ATTrackingManager.trackingAuthorizationStatus {
         case .authorized:
-            initializeIfAuthorized()
+            initialize()
         case .notDetermined:
             ATTrackingManager.requestTrackingAuthorization { status in
                 guard status == .authorized else { return }
                 Task { @MainActor in
-                    initializeIfAuthorized()
+                    initialize()
                 }
             }
         case .denied, .restricted:
@@ -188,9 +188,8 @@ enum MetaAppEvents {
         trackAfterAuthorization(event: .startTrial, defaultsKey: startedTrialKey)
     }
 
-    static func initializeIfAuthorized() {
-        guard ATTrackingManager.trackingAuthorizationStatus == .authorized,
-              !didInitializeSDK else {
+    static func initialize() {
+        guard !didInitializeSDK else {
             return
         }
 
@@ -222,7 +221,7 @@ enum MetaAppEvents {
     }
 
     private static func log(_ event: AppEvents.Name, defaultsKey: String) {
-        initializeIfAuthorized()
+        initialize()
         guard didInitializeSDK else { return }
 
         AppEvents.shared.logEvent(event)
