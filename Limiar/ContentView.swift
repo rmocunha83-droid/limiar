@@ -180,8 +180,6 @@ private struct DashboardView: View {
     @State private var showingPicker = false
     @State private var showingSettings = false
     @State private var showingPaywall = false
-    @State private var unlockPhase = UnlockButtonPhase.locked
-    @State private var unlockAnimationTick = 0
     @State private var showingCompletionScreen = false
 
     private static var forceEssentialBannerScreenshot: Bool {
@@ -587,39 +585,35 @@ private struct DashboardView: View {
 
     private var unlockButton: some View {
         Button {
-            completeReadingWithUnlockAnimation()
+            completeReading()
         } label: {
             HStack(spacing: 18) {
-                Image(systemName: unlockPhase.iconName)
+                Image(systemName: "sunrise.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.deepInk.opacity(0.70))
-                    .scaleEffect(unlockPhase == .opening ? 1.10 : 1)
-                    .rotationEffect(.degrees(unlockPhase == .opening ? -4 : 0))
-                    .symbolEffect(.bounce, value: unlockAnimationTick)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(unlockPhase.title)
+                    Text("Despausar apps, continuar")
                         .font(.system(size: 22, weight: .regular, design: .serif))
                         .foregroundStyle(Color.deepInk)
                 }
                 Spacer()
-                Image(systemName: unlockPhase.trailingIconName)
+                Image(systemName: "arrow.right")
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.deepInk)
             }
             .padding(.horizontal, 34)
             .frame(height: 104)
-            .background(unlockPhase.backgroundColor, in: RoundedRectangle(cornerRadius: 24))
+            .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 24))
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(unlockPhase.strokeColor, lineWidth: 1)
+                    .stroke(Color.ivory.opacity(0.26), lineWidth: 1)
             )
-            .shadow(color: unlockPhase.shadowColor, radius: 8, x: 0, y: 10)
-            .animation(.spring(response: 0.38, dampingFraction: 0.78), value: unlockPhase)
+            .shadow(color: Color.black.opacity(0.20), radius: 8, x: 0, y: 10)
         }
-        .disabled(unlockPhase != .locked)
-        .accessibilityLabel(unlockPhase.title)
+        .disabled(showingCompletionScreen)
+        .accessibilityLabel("Despausar apps, continuar")
     }
 
     private var footer: some View {
@@ -673,21 +667,14 @@ private struct DashboardView: View {
         }
     }
 
-    private func completeReadingWithUnlockAnimation() {
-        guard unlockPhase == .locked else { return }
+    private func completeReading() {
+        guard !showingCompletionScreen else { return }
 
-        unlockPhase = .opening
-        unlockAnimationTick += 1
         model.finishReading()
         requestReviewIfEligibleAfterCompletion()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-            withAnimation(.easeInOut(duration: 0.7)) {
-                showingCompletionScreen = true
-            }
-            // O botão volta ao estado inicial escondido atrás da tela final,
-            // pronto para o próximo ciclo.
-            unlockPhase = .locked
+        withAnimation(.easeInOut(duration: 0.8)) {
+            showingCompletionScreen = true
         }
     }
 
@@ -706,53 +693,6 @@ private struct DashboardView: View {
             }
 
             requestReview()
-        }
-    }
-}
-
-private enum UnlockButtonPhase: Equatable {
-    case locked
-    case opening
-
-    var iconName: String {
-        switch self {
-        case .locked: "sunrise.fill"
-        case .opening: "sparkles"
-        }
-    }
-
-    var trailingIconName: String {
-        switch self {
-        case .locked: "arrow.right"
-        case .opening: "sparkles"
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .locked: "Despausar apps, continuar"
-        case .opening: "Travessia concluída"
-        }
-    }
-
-    var backgroundColor: Color {
-        switch self {
-        case .locked: Color.sageButton
-        case .opening: Color.warmGold
-        }
-    }
-
-    var strokeColor: Color {
-        switch self {
-        case .locked: Color.ivory.opacity(0.26)
-        case .opening: Color.ivory.opacity(0.34)
-        }
-    }
-
-    var shadowColor: Color {
-        switch self {
-        case .locked: Color.black.opacity(0.20)
-        case .opening: Color.warmGold.opacity(0.22)
         }
     }
 }
