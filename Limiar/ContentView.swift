@@ -272,6 +272,7 @@ private struct DashboardView: View {
                     }
                 }
                 .onChange(of: model.readingTopResetID) { _, _ in
+                    showingCompletionScreen = false
                     withAnimation(.easeOut(duration: 0.28)) {
                         proxy.scrollTo("readingTop", anchor: .top)
                     }
