@@ -286,7 +286,7 @@ private struct DashboardView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if model.showsAds {
+            if model.showsAds && !showingCompletionScreen {
                 // O safeAreaInset mantem o anuncio fixo e reduz a area rolavel
                 // pela altura real do slot. Assim o CTA nunca fica encoberto.
                 LimiarAnchoredAdSlot()
@@ -644,7 +644,7 @@ private struct DashboardView: View {
                     .font(.system(size: 40, weight: .regular, design: .serif))
                     .foregroundStyle(Color.ivory)
 
-                Text("Seus apps estão disponíveis até a próxima manhã.\nLeve a leitura de hoje com você — o dia é seu.")
+                Text("Seus apps estão disponíveis até o próximo ciclo.\nLeve a leitura de hoje com você — o dia é seu.")
                     .font(.system(size: 18))
                     .foregroundStyle(Color.softText)
                     .multilineTextAlignment(.center)
@@ -671,6 +671,7 @@ private struct DashboardView: View {
     private func completeReading() {
         guard !showingCompletionScreen else { return }
 
+        narration.stop()
         model.finishReading()
         requestReviewIfEligibleAfterCompletion()
 
