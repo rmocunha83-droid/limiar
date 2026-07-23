@@ -20,7 +20,6 @@ struct LimiarApp: App {
         MobileAds.shared.requestConfiguration.publisherPrivacyPersonalizationState = .disabled
         MobileAds.shared.requestConfiguration.setPublisherFirstPartyIDEnabled(false)
         MobileAds.shared.start()
-        MetaAppEvents.initialize()
     }
 
     var body: some Scene {
@@ -43,7 +42,33 @@ final class LimiarAppDelegate: NSObject, UIApplicationDelegate {
         // o toque que iniciou um cold launch pela notificação.
         UNUserNotificationCenter.current().delegate = LimiarNotificationCoordinator.shared
         LimiarPrewarmCoordinator.shared.register()
-        return true
+        return MetaAppEvents.initialize(
+            application: application,
+            launchOptions: launchOptions
+        )
+    }
+
+    func application(
+        _ application: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        ApplicationDelegate.shared.application(
+            application,
+            open: url,
+            options: options
+        )
+    }
+
+    func application(
+        _ application: UIApplication,
+        continue userActivity: NSUserActivity,
+        restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+    ) -> Bool {
+        ApplicationDelegate.shared.application(
+            application,
+            continue: userActivity
+        )
     }
 }
 
@@ -160,6 +185,11 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
 enum MetaAppEvents {
     private static let completedRegistrationKey = "limiar.meta.completedRegistration"
     private static let startedTrialKey = "limiar.meta.startedTrial"
+    private static let pauseConfiguredKey = "limiar.meta.pauseConfigured"
+    private static let checkoutStartedEvent = AppEvents.Name("LimiarCheckoutStarted")
+    private static let subscriptionActivatedEvent = AppEvents.Name("LimiarSubscriptionActivated")
+    private static let readingCompletedEvent = AppEvents.Name("LimiarReadingCompleted")
+    private static let pauseConfiguredEvent = AppEvents.Name("LimiarPauseConfigured")
     private static var didInitializeSDK = false
 
     static func requestTrackingPermissionIfNeeded() {
@@ -188,20 +218,48 @@ enum MetaAppEvents {
         trackAfterAuthorization(event: .startTrial, defaultsKey: startedTrialKey)
     }
 
-    static func initialize() {
-        guard !didInitializeSDK else {
-            return
-        }
+    static func trackPaywallViewed() {
+        trackAfterAuthorization(event: .viewedContent)
+    }
 
-        didInitializeSDK = true
-        ApplicationDelegate.shared.application(
-            UIApplication.shared,
-            didFinishLaunchingWithOptions: nil
+    static func trackCheckoutStarted() {
+        trackAfterAuthorization(event: checkoutStartedEvent)
+    }
+
+    static func trackSubscriptionActivated(originalTransactionID: UInt64) {
+        trackAfterAuthorization(
+            event: subscriptionActivatedEvent,
+            defaultsKey: "limiar.meta.subscriptionActivated.\(originalTransactionID)"
         )
     }
 
-    private static func trackAfterAuthorization(event: AppEvents.Name, defaultsKey: String) {
-        guard !UserDefaults.standard.bool(forKey: defaultsKey) else { return }
+    static func trackReadingCompleted() {
+        trackAfterAuthorization(event: readingCompletedEvent)
+    }
+
+    static func trackPauseConfigured() {
+        trackAfterAuthorization(event: pauseConfiguredEvent, defaultsKey: pauseConfiguredKey)
+    }
+
+    static func initialize(
+        application: UIApplication = .shared,
+        launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        guard !didInitializeSDK else {
+            return true
+        }
+
+        didInitializeSDK = true
+        return ApplicationDelegate.shared.application(
+            application,
+            didFinishLaunchingWithOptions: launchOptions
+        )
+    }
+
+    private static func trackAfterAuthorization(event: AppEvents.Name, defaultsKey: String? = nil) {
+        if let defaultsKey, UserDefaults.standard.bool(forKey: defaultsKey) {
+            return
+        }
 
         switch ATTrackingManager.trackingAuthorizationStatus {
         case .authorized:
@@ -220,11 +278,13 @@ enum MetaAppEvents {
         }
     }
 
-    private static func log(_ event: AppEvents.Name, defaultsKey: String) {
-        initialize()
+    private static func log(_ event: AppEvents.Name, defaultsKey: String?) {
+        _ = initialize()
         guard didInitializeSDK else { return }
 
         AppEvents.shared.logEvent(event)
-        UserDefaults.standard.set(true, forKey: defaultsKey)
+        if let defaultsKey {
+            UserDefaults.standard.set(true, forKey: defaultsKey)
+        }
     }
 }

@@ -560,6 +560,7 @@ final class SubscriptionManager {
             return
         }
 
+        MetaAppEvents.trackCheckoutStarted()
         state = .purchasing
         message = ""
 
@@ -573,6 +574,11 @@ final class SubscriptionManager {
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
                 message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium ativo." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
+                if hasActiveSubscription {
+                    MetaAppEvents.trackSubscriptionActivated(
+                        originalTransactionID: transaction.originalID
+                    )
+                }
             case .pending:
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
@@ -669,6 +675,11 @@ final class SubscriptionManager {
             let transaction = try checkVerified(transactionResult)
             await transaction.finish()
             await refreshEntitlements()
+            if hasActiveSubscription {
+                MetaAppEvents.trackSubscriptionActivated(
+                    originalTransactionID: transaction.originalID
+                )
+            }
         } catch {
             state = .failed(error.localizedDescription)
             message = "A Apple não conseguiu verificar uma transação recente."
