@@ -47,6 +47,14 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceCompletionScreenForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceCompletionScreen")
+        #else
+        false
+        #endif
+    }
+
     private var effectiveHasPremiumAccess: Bool {
         Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
     }
@@ -72,7 +80,9 @@ struct ContentView: View {
 
         NavigationStack {
             Group {
-                if Self.forceFreeTrialStartForDebugging {
+                if Self.forceCompletionScreenForDebugging {
+                    DashboardView()
+                } else if Self.forceFreeTrialStartForDebugging {
                     FreeTrialStartView()
                 } else if Self.forcedConversionScreen == "D6" {
                     TrialConversionView {}
@@ -182,6 +192,14 @@ private struct DashboardView: View {
     @State private var showingPaywall = false
     @State private var showingCompletionScreen = false
 
+    private static var forceCompletionScreenForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceCompletionScreen")
+        #else
+        false
+        #endif
+    }
+
     private static var forceEssentialBannerScreenshot: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-LimiarEssentialBannerScreenshot")
@@ -257,6 +275,9 @@ private struct DashboardView: View {
                 }
                 .onAppear {
                     proxy.scrollTo("readingTop", anchor: .top)
+                    if Self.forceCompletionScreenForDebugging {
+                        showingCompletionScreen = true
+                    }
                 }
                 .task {
                     guard Self.forceEssentialBannerScreenshot || Self.forceEssentialMiddleScreenshot else { return }
@@ -629,27 +650,49 @@ private struct DashboardView: View {
     }
 
     private var completionScreen: some View {
-        ZStack {
+        let presentation = completionPresentation
+
+        return ZStack {
             LimiarBackground()
 
             VStack(spacing: 24) {
                 Spacer()
 
-                Image(systemName: "sunrise.fill")
-                    .font(.system(size: 46, weight: .regular))
-                    .foregroundStyle(Color.warmGold)
-                    .symbolEffect(.bounce, value: showingCompletionScreen)
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: presentation.iconName)
+                        .font(.system(size: 46, weight: .regular))
+                        .foregroundStyle(Color.warmGold)
+                        .symbolEffect(.bounce, value: showingCompletionScreen)
 
-                Text("Portas abertas")
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.deepInk)
+                        .frame(width: 22, height: 22)
+                        .background(Color.sageButton, in: Circle())
+                        .overlay(Circle().stroke(Color.ivory.opacity(0.35), lineWidth: 1))
+                        .offset(x: 10, y: -7)
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Travessia concluída no turno da \(presentation.turn.title.lowercased())")
+
+                Text("Travessia concluída")
                     .font(.system(size: 40, weight: .regular, design: .serif))
                     .foregroundStyle(Color.ivory)
-
-                Text("Seus apps estão disponíveis até o próximo ciclo.\nLeve a leitura de hoje com você — o dia é seu.")
-                    .font(.system(size: 18))
-                    .foregroundStyle(Color.softText)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(6)
-                    .padding(.horizontal, 36)
+
+                VStack(spacing: 12) {
+                    Text("Seus apps estão liberados até o próximo ciclo, \(presentation.nextCycleReference).")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.ivory)
+
+                    Text("Pode fechar o Limiar e seguir seu dia. Leve a leitura de hoje com você.")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundStyle(Color.softText)
+                }
+                .multilineTextAlignment(.center)
+                .lineSpacing(5)
+                .padding(.horizontal, 36)
 
                 Spacer()
 
@@ -666,6 +709,63 @@ private struct DashboardView: View {
                 .padding(.bottom, 44)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+    }
+
+    private var completionPresentation: CompletionScreenPresentation {
+        let now = Date()
+        let calendar = ScreenTimePolicyStore.cycleCalendar
+        let turn = debugCompletionTurn ?? model.pauseCycleTurn
+        let nextCycleStart: Date
+
+        if let debugTiming = debugCompletionTiming {
+            let dayOffset = debugTiming == "today" ? 0 : 1
+            let day = calendar.date(byAdding: .day, value: dayOffset, to: now) ?? now
+            nextCycleStart = calendar.date(
+                bySettingHour: turn.rawValue,
+                minute: 0,
+                second: 0,
+                of: day
+            ) ?? day
+        } else {
+            nextCycleStart = ScreenTimePolicyStore.nextCycleStart(after: now, calendar: calendar)
+        }
+
+        return CompletionScreenPresentation(
+            turn: turn,
+            now: now,
+            nextCycleStart: nextCycleStart,
+            calendar: calendar
+        )
+    }
+
+    private var debugCompletionTurn: PauseCycleTurn? {
+        #if DEBUG
+        guard let value = Self.debugArgument(after: "-LimiarCompletionTurn") else { return nil }
+        switch value {
+        case "morning": return .morning
+        case "afternoon": return .afternoon
+        case "evening": return .evening
+        default: return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+
+    private var debugCompletionTiming: String? {
+        #if DEBUG
+        Self.debugArgument(after: "-LimiarCompletionTiming")
+        #else
+        nil
+        #endif
+    }
+
+    private static func debugArgument(after flag: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: flag),
+              arguments.indices.contains(index + 1) else { return nil }
+        return arguments[index + 1]
     }
 
     private func completeReading() {

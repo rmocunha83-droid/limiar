@@ -27,6 +27,44 @@ enum PauseCycleTurn: Int, CaseIterable, Codable, Identifiable {
     var hourLabel: String { "\(rawValue)h" }
 }
 
+struct CompletionScreenPresentation {
+    let turn: PauseCycleTurn
+    let now: Date
+    let nextCycleStart: Date
+    let calendar: Calendar
+
+    var iconName: String {
+        switch turn {
+        case .morning: "sunrise.fill"
+        case .afternoon: "sun.max.fill"
+        case .evening: "moon.stars.fill"
+        }
+    }
+
+    var nextCycleReference: String {
+        let today = calendar.startOfDay(for: now)
+        let nextCycleDay = calendar.startOfDay(for: nextCycleStart)
+
+        if nextCycleDay == today {
+            return "hoje às \(turn.hourLabel)"
+        }
+
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
+           nextCycleDay == tomorrow {
+            return "amanhã às \(turn.hourLabel)"
+        }
+
+        // O agendamento normal sempre cai hoje ou amanhã. Este fallback mantém
+        // uma mensagem honesta caso o calendário do sistema mude durante a tela.
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "d 'de' MMMM 'às' HH'h'"
+        return formatter.string(from: nextCycleStart)
+    }
+}
+
 struct ScreenTimePolicyStore {
     static let appGroupIdentifier = "group.com.romeucunha.Limiar"
     static let defaultCycleStartHour = PauseCycleTurn.morning.rawValue

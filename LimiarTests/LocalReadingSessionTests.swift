@@ -2,6 +2,32 @@ import XCTest
 @testable import Limiar
 
 final class LocalReadingSessionTests: XCTestCase {
+    func testCompletionScreenUsesTurnSpecificIcons() {
+        XCTAssertEqual(completionPresentation(turn: .morning).iconName, "sunrise.fill")
+        XCTAssertEqual(completionPresentation(turn: .afternoon).iconName, "sun.max.fill")
+        XCTAssertEqual(completionPresentation(turn: .evening).iconName, "moon.stars.fill")
+    }
+
+    func testCompletionScreenReferencesTomorrowForMorningAfternoonAndEvening() throws {
+        let cases: [(PauseCycleTurn, String)] = [
+            (.morning, "amanhã às 5h"),
+            (.afternoon, "amanhã às 13h"),
+            (.evening, "amanhã às 19h")
+        ]
+
+        for (turn, expected) in cases {
+            let presentation = completionPresentation(turn: turn, dayOffset: 1)
+            XCTAssertEqual(presentation.nextCycleReference, expected)
+        }
+    }
+
+    func testCompletionScreenReferencesTodayForOvernightEveningCycle() {
+        XCTAssertEqual(
+            completionPresentation(turn: .evening, dayOffset: 0).nextCycleReference,
+            "hoje às 19h"
+        )
+    }
+
     func testLocalFactoryRespectsRequestedCountAndKeepsOnlyCanonicalReading() {
         let passages = (1...3).map { index in
             ScripturePassage(
@@ -106,6 +132,29 @@ final class LocalReadingSessionTests: XCTestCase {
             practicalApplication: "",
             conclusion: "",
             meditationQuestion: ""
+        )
+    }
+
+    private func completionPresentation(
+        turn: PauseCycleTurn,
+        dayOffset: Int = 1
+    ) -> CompletionScreenPresentation {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "pt_BR")
+        calendar.timeZone = TimeZone(identifier: "America/Sao_Paulo")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 22, hour: 8))!
+        let targetDay = calendar.date(byAdding: .day, value: dayOffset, to: now)!
+        let nextCycleStart = calendar.date(
+            bySettingHour: turn.rawValue,
+            minute: 0,
+            second: 0,
+            of: targetDay
+        )!
+        return CompletionScreenPresentation(
+            turn: turn,
+            now: now,
+            nextCycleStart: nextCycleStart,
+            calendar: calendar
         )
     }
 }
