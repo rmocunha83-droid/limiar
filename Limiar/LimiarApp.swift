@@ -48,6 +48,10 @@ final class LimiarAppDelegate: NSObject, UIApplicationDelegate {
         )
     }
 
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        MetaAppEvents.activateApp()
+    }
+
     func application(
         _ application: UIApplication,
         open url: URL,
@@ -195,12 +199,12 @@ enum MetaAppEvents {
     static func requestTrackingPermissionIfNeeded() {
         switch ATTrackingManager.trackingAuthorizationStatus {
         case .authorized:
-            initialize()
+            _ = initialize()
         case .notDetermined:
             ATTrackingManager.requestTrackingAuthorization { status in
                 guard status == .authorized else { return }
                 Task { @MainActor in
-                    initialize()
+                    _ = initialize()
                 }
             }
         case .denied, .restricted:
@@ -256,6 +260,14 @@ enum MetaAppEvents {
         )
     }
 
+    static func activateApp() {
+        guard ATTrackingManager.trackingAuthorizationStatus == .authorized else { return }
+
+        _ = initialize()
+        AppEvents.shared.activateApp()
+        AppEvents.shared.flush()
+    }
+
     private static func trackAfterAuthorization(event: AppEvents.Name, defaultsKey: String? = nil) {
         if let defaultsKey, UserDefaults.standard.bool(forKey: defaultsKey) {
             return
@@ -280,9 +292,13 @@ enum MetaAppEvents {
 
     private static func log(_ event: AppEvents.Name, defaultsKey: String?) {
         _ = initialize()
-        guard didInitializeSDK else { return }
+        guard didInitializeSDK,
+              ATTrackingManager.trackingAuthorizationStatus == .authorized else {
+            return
+        }
 
         AppEvents.shared.logEvent(event)
+        AppEvents.shared.flush()
         if let defaultsKey {
             UserDefaults.standard.set(true, forKey: defaultsKey)
         }
