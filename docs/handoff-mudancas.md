@@ -142,6 +142,14 @@ Geração leva ~11-13s; agora ela acontece em tempo morto, não na frente do usu
 - Cobertura automática no target `LimiarTests`: quantidade e campos vazios da fábrica local, migração de snapshots antigos e política de atualização. Para QA visual em Debug, usar `-LimiarForceLocalSession`; combinar com `-LimiarForceEssential` para o Modo Essencial.
 - **QA ainda obrigatório em iPhone físico:** concluir em modo avião, confirmar histórico/recentes e liberação dos apps; reconectar antes do início e depois da conclusão; repetir no Modo Essencial. Family Controls não é validável no simulador.
 
+## 5i. Tela de conclusão por turno — build 142
+
+- Após “Despausar apps”, a confirmação agora diz **“Travessia concluída”** e deixa explícito que a pessoa pode fechar o Limiar e seguir o dia. A ação **“Permanecer no Limiar”** continua com o mesmo comportamento.
+- O ícone acompanha o turno configurado: nascer do sol pela manhã, sol pleno à tarde e lua à noite. Um selo verde-sálvia com check confirma visualmente a conclusão.
+- A referência do próximo ciclo usa a data real calculada pelo mesmo `nextCycleStart` do agendamento: **“hoje às …”** quando o ciclo seguinte começa no mesmo dia e **“amanhã às …”** quando começa no dia seguinte. Isso cobre corretamente o turno noturno concluído depois da meia-noite.
+- QA visual em Debug: `-LimiarForceCompletionScreen -LimiarCompletionTurn morning|afternoon|evening -LimiarCompletionTiming today|tomorrow`. Esses argumentos alteram somente a apresentação de teste.
+- Evidências visuais: [`morning-tomorrow.jpg`](qa/completion-build-142/morning-tomorrow.jpg), [`afternoon-tomorrow.jpg`](qa/completion-build-142/afternoon-tomorrow.jpg), [`evening-tomorrow.jpg`](qa/completion-build-142/evening-tomorrow.jpg) e [`evening-today.jpg`](qa/completion-build-142/evening-today.jpg).
+
 ---
 
 ## 6. Marketing / rastreamento Meta (site — JÁ EM PRODUÇÃO)
