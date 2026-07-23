@@ -89,7 +89,10 @@ struct PaywallView: View {
         }
         .preferredColorScheme(.dark)
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-        .task { subscription.start() }
+        .task {
+            MetaAppEvents.trackPaywallViewed()
+            subscription.start()
+        }
     }
 }
 

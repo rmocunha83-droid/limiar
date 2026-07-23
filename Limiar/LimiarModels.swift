@@ -1375,6 +1375,7 @@ final class LimiarAppModel {
         )
         prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
         LimiarPrewarmCoordinator.shared.schedule(now: completedAt)
+        MetaAppEvents.trackReadingCompleted()
     }
 
     func applyBlocking() {
@@ -1394,6 +1395,8 @@ final class LimiarAppModel {
             screenTimeController.clearShield()
             return
         }
+
+        MetaAppEvents.trackPauseConfigured()
 
         if policyStore.hasCompletedPauseInCurrentCycle() {
             screenTimeController.clearShield()

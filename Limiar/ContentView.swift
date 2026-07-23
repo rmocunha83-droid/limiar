@@ -307,7 +307,7 @@ private struct DashboardView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if model.showsAds {
+            if model.showsAds && !showingCompletionScreen {
                 // O safeAreaInset mantem o anuncio fixo e reduz a area rolavel
                 // pela altura real do slot. Assim o CTA nunca fica encoberto.
                 LimiarAnchoredAdSlot()
@@ -771,6 +771,7 @@ private struct DashboardView: View {
     private func completeReading() {
         guard !showingCompletionScreen else { return }
 
+        narration.stop()
         model.finishReading()
         requestReviewIfEligibleAfterCompletion()
 
