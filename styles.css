@@ -814,6 +814,34 @@ h1 {
 }
 
 @media (max-width: 860px) {
+  :root {
+    --mobile-cta-green: #7d8759;
+    --mobile-cta-green-rgb: 125, 135, 89;
+    --sage: var(--mobile-cta-green);
+    --sage-2: #626b45;
+    --line: rgba(var(--mobile-cta-green-rgb), 0.28);
+  }
+
+  .privacy-consent button.primary {
+    background: var(--mobile-cta-green);
+    border-color: var(--mobile-cta-green);
+  }
+
+  .button.app-store-download {
+    border-color: var(--mobile-cta-green);
+    background: var(--mobile-cta-green);
+  }
+
+  .price-card.featured {
+    background:
+      linear-gradient(145deg, rgba(var(--mobile-cta-green-rgb), 0.18), rgba(255, 255, 255, 0.035)),
+      rgba(255, 255, 255, 0.045);
+  }
+
+  .included-list li::before {
+    box-shadow: 0 0 0 4px rgba(var(--mobile-cta-green-rgb), 0.12);
+  }
+
   .desktop-section-store-cta {
     display: none;
   }
@@ -989,10 +1017,10 @@ h1 {
     width: min(72vw, 286px);
     aspect-ratio: 9 / 16;
     padding: 12px;
-    border: 1px solid rgba(179, 207, 184, 0.32);
+    border: 1px solid rgba(var(--mobile-cta-green-rgb), 0.32);
     border-radius: 36px;
     background:
-      linear-gradient(145deg, rgba(240, 233, 216, 0.12), rgba(179, 207, 184, 0.04)),
+      linear-gradient(145deg, rgba(240, 233, 216, 0.12), rgba(var(--mobile-cta-green-rgb), 0.04)),
       rgba(3, 8, 8, 0.92);
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
   }
@@ -1027,7 +1055,7 @@ h1 {
 
   .mobile-video-actions button {
     min-height: 44px;
-    border: 1px solid rgba(179, 207, 184, 0.34);
+    border: 1px solid rgba(var(--mobile-cta-green-rgb), 0.34);
     border-radius: 14px;
     background: rgba(240, 233, 216, 0.07);
     color: var(--ivory);
