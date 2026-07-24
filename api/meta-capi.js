@@ -11,6 +11,11 @@ const SCROLL_DEPTH_EVENTS = new Map([
   ["ScrollDepth70", 70]
 ]);
 const APP_STORE_CLICK_EVENT = "AppStoreDownloadClick";
+const ALLOWED_EVENT_SOURCE_PREFIXES = [
+  "https://applimiar.com.br/",
+  "https://www.applimiar.com.br/",
+  "https://limiar-five.vercel.app/"
+];
 const WEB_EVENTS = new Set([
   "PageView",
   "ViewContent",
@@ -124,7 +129,7 @@ module.exports = async function handler(req, res) {
     const eventID = trimText(body.eventID, 160);
     const eventSourceURL = trimText(body.eventSourceURL, 2048);
 
-    if (!WEB_EVENTS.has(eventName) || !eventID || !eventSourceURL.startsWith("https://limiar-five.vercel.app/")) {
+    if (!WEB_EVENTS.has(eventName) || !eventID || !ALLOWED_EVENT_SOURCE_PREFIXES.some((prefix) => eventSourceURL.startsWith(prefix))) {
       res.statusCode = 400;
       res.end(JSON.stringify({ error: "invalid_event" }));
       return;
