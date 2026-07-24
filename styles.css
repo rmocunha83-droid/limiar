@@ -814,6 +814,12 @@ h1 {
 }
 
 @media (max-width: 860px) {
+  body,
+  .mobile-video-section,
+  .cta-band {
+    background: #020809;
+  }
+
   .desktop-section-store-cta {
     display: none;
   }

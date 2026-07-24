@@ -45,7 +45,10 @@
 
     <main>
       <section class="mobile-hero" aria-label="Limiar no iPhone">
-        <img class="mobile-first-fold-art" src="assets/mobile-first-fold-app-store.png?v=20260723-arcads-hero" alt="Limiar: transforme cada distração em um encontro com Deus. Baixar grátis na App Store.">
+        <picture>
+          <source srcset="assets/mobile-first-fold-app-store.avif?v=20260723-mobile-fast" type="image/avif">
+          <img class="mobile-first-fold-art" src="assets/mobile-first-fold-app-store.png?v=20260723-mobile-fast" alt="Limiar: transforme cada distração em um encontro com Deus. Baixar grátis na App Store." fetchpriority="high" decoding="async">
+        </picture>
         <a class="mobile-first-fold-cta" href="https://apps.apple.com/br/app/limiar/id6783115468" target="_blank" rel="noopener noreferrer" aria-label="Baixar o Limiar na App Store"></a>
       </section>
 
