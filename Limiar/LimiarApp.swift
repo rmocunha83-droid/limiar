@@ -197,20 +197,15 @@ enum MetaAppEvents {
     private static var didInitializeSDK = false
 
     static func requestTrackingPermissionIfNeeded() {
-        switch ATTrackingManager.trackingAuthorizationStatus {
-        case .authorized:
-            _ = initialize()
-        case .notDetermined:
-            ATTrackingManager.requestTrackingAuthorization { status in
-                guard status == .authorized else { return }
-                Task { @MainActor in
-                    _ = initialize()
-                }
+        guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else { return }
+
+        ATTrackingManager.requestTrackingAuthorization { _ in
+            // Qualquer resposta vale: o SDK lê o status do ATT sozinho e só
+            // decide se pode vincular os eventos a um perfil. Reativamos a
+            // sessão para que o próximo lote já carregue o novo status.
+            Task { @MainActor in
+                activateApp()
             }
-        case .denied, .restricted:
-            break
-        @unknown default:
-            break
         }
     }
 
@@ -254,15 +249,19 @@ enum MetaAppEvents {
         }
 
         didInitializeSDK = true
-        return ApplicationDelegate.shared.application(
+        let result = ApplicationDelegate.shared.application(
             application,
             didFinishLaunchingWithOptions: launchOptions
         )
+        Settings.shared.isAutoLogAppEventsEnabled = true
+        Settings.shared.isAdvertiserIDCollectionEnabled = true
+        return result
     }
 
     static func activateApp() {
-        guard ATTrackingManager.trackingAuthorizationStatus == .authorized else { return }
-
+        // Os eventos seguem para a Meta em qualquer status de ATT: quem
+        // recusou contribui de forma agregada (SKAdNetwork e modelagem);
+        // o SDK só usa o IDFA quando a pessoa autorizou.
         _ = initialize()
         AppEvents.shared.activateApp()
         AppEvents.shared.flush()
@@ -273,29 +272,12 @@ enum MetaAppEvents {
             return
         }
 
-        switch ATTrackingManager.trackingAuthorizationStatus {
-        case .authorized:
-            log(event, defaultsKey: defaultsKey)
-        case .notDetermined:
-            ATTrackingManager.requestTrackingAuthorization { status in
-                guard status == .authorized else { return }
-                Task { @MainActor in
-                    log(event, defaultsKey: defaultsKey)
-                }
-            }
-        case .denied, .restricted:
-            break
-        @unknown default:
-            break
-        }
+        log(event, defaultsKey: defaultsKey)
     }
 
     private static func log(_ event: AppEvents.Name, defaultsKey: String?) {
         _ = initialize()
-        guard didInitializeSDK,
-              ATTrackingManager.trackingAuthorizationStatus == .authorized else {
-            return
-        }
+        guard didInitializeSDK else { return }
 
         AppEvents.shared.logEvent(event)
         AppEvents.shared.flush()
