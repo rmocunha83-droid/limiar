@@ -57,10 +57,10 @@ Campos:
 - Texto promocional: usar o campo `Texto promocional`.
 - Descrição: usar o campo `Descrição`.
 - Palavras-chave: `foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos`
-- Marketing URL: `https://limiar-five.vercel.app/`
-- Política de Privacidade: `https://limiar-five.vercel.app/privacy.html`
-- Suporte: `https://limiar-five.vercel.app/support.html`
-- Termos: `https://limiar-five.vercel.app/terms.html`
+- Marketing URL: `https://applimiar.com.br`
+- Política de Privacidade: `https://applimiar.com.br/privacy`
+- Suporte: `https://applimiar.com.br/support`
+- Termos: `https://applimiar.com.br/terms`
 
 ## Screenshots
 

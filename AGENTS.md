@@ -40,6 +40,7 @@ Leia conforme a tarefa:
 |---|---|
 | `docs/AI_ARCHITECTURE.md` | Mexer em seleção de trechos, geração de explicações, narração ou cache |
 | `docs/META_TRACKING_2026-07-24.md` | **Mexer em rastreamento, SDK da Meta, ATT, SKAdNetwork, `api/meta-capi.js` ou política de privacidade** |
+| `docs/DOMINIO_APPLIMIAR_2026-07-24.md` | **Mexer em URLs, domínio, e-mail ou `baseURL` do backend** — lista o que ainda aponta para o endereço antigo |
 | `docs/handoff-mudancas.md` | Panorama histórico das entregas |
 | `docs/QA_CHECKLIST.md` | Antes de publicar |
 | `docs/APP_STORE_CONNECT_CHECKLIST.md` | Submissão à loja |

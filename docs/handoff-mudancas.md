@@ -1,11 +1,13 @@
 # Limiar — Resumo de mudanças (handoff para o desenvolvedor)
 
 Repositório: `rmocunha83-droid/limiar` · Branch principal: `main` (push em main = deploy automático do Vercel).
-App iOS em `Limiar/` · Backend serverless em `api/` (Vercel, produção `https://limiar-five.vercel.app`).
+App iOS em `Limiar/` · Backend serverless em `api/` (Vercel, produção `https://applimiar.com.br`; o antigo `https://limiar-five.vercel.app` continua respondendo).
 
 Este documento combina o histórico já entregue com mudanças ainda em validação. A seção 0 descreve o trabalho da branch adaptativa e ainda não está no `main` nem em produção. As demais seções registram entregas anteriores e devem ser conferidas contra o histórico do Git antes de qualquer publicação.
 
-> **Rastreamento da Meta (24/07/2026):** as mudanças no SDK da Meta, no ATT, na SKAdNetwork, em `api/meta-capi.js` e na política de privacidade estão documentadas em `docs/META_TRACKING_2026-07-24.md`. Leia esse arquivo antes de mexer em qualquer coisa relacionada a medição ou publicidade — ele explica por que o envio de eventos deixou de depender da autorização do ATT.
+> **Mudanças de 24/07/2026 — leia antes de mexer nessas áreas:**
+> - `docs/DOMINIO_APPLIMIAR_2026-07-24.md` — migração para o domínio próprio `applimiar.com.br` e o e-mail `contato@applimiar.com.br`. Inclui os quatro pontos do app iOS que **ainda apontam para o endereço antigo**.
+> - `docs/META_TRACKING_2026-07-24.md` — SDK da Meta, ATT, SKAdNetwork, `api/meta-capi.js` e política de privacidade. Explica por que o envio de eventos deixou de depender da autorização do ATT.
 
 ---
 
