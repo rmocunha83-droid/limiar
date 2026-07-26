@@ -112,6 +112,100 @@
         </div>
       </section>
 
+      <section id="depoimentos" class="testimonials-section" aria-labelledby="testimonials-heading">
+        <div class="testimonials-desktop">
+          <div class="testimonials-editorial-intro">
+            <p class="eyebrow">Depoimentos reais</p>
+            <span class="testimonials-editorial-rule" aria-hidden="true"></span>
+            <h2 id="testimonials-heading">O que muda<br>quando a pausa<br>chega na hora certa.</h2>
+            <p class="testimonials-rating" aria-label="Avaliação de cinco estrelas">
+              <span aria-hidden="true">★★★★★</span>
+              <span>5 estrelas</span>
+            </p>
+          </div>
+
+          <div class="testimonials-editorial-window" aria-label="Depoimentos de usuários do Limiar">
+            <div class="testimonials-editorial-track">
+              <article class="testimonial-editorial-item">
+                <blockquote>Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo.</blockquote>
+                <p><strong>Mariana,</strong> São Paulo</p>
+              </article>
+              <article class="testimonial-editorial-item">
+                <blockquote>Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus.</blockquote>
+                <p><strong>Rafael,</strong> Curitiba</p>
+              </article>
+              <article class="testimonial-editorial-item">
+                <blockquote>Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar.</blockquote>
+                <p><strong>Ana Clara,</strong> Belo Horizonte</p>
+              </article>
+              <article class="testimonial-editorial-item">
+                <blockquote>Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia.</blockquote>
+                <p><strong>Fernanda,</strong> Brasília</p>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonials-mobile">
+          <div class="testimonials-mobile-heading">
+            <p class="eyebrow">Depoimentos reais</p>
+            <h2>Pausas que já mudaram o dia.</h2>
+          </div>
+          <div class="testimonials-carousel" data-testimonials-carousel aria-roledescription="carrossel" aria-label="Depoimentos de usuários do Limiar">
+            <div class="testimonials-viewport">
+              <div class="testimonials-track" data-testimonials-track>
+                <article class="testimonial-slide" aria-roledescription="slide" aria-label="1 de 5">
+                  <div class="testimonial-card">
+                    <span class="testimonial-stars" aria-label="Cinco estrelas">★★★★★</span>
+                    <blockquote>“Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo.”</blockquote>
+                    <p class="testimonial-author">Mariana, São Paulo</p>
+                  </div>
+                </article>
+                <article class="testimonial-slide" aria-roledescription="slide" aria-label="2 de 5">
+                  <div class="testimonial-card">
+                    <span class="testimonial-stars" aria-label="Cinco estrelas">★★★★★</span>
+                    <blockquote>“Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus.”</blockquote>
+                    <p class="testimonial-author">Rafael, Curitiba</p>
+                  </div>
+                </article>
+                <article class="testimonial-slide" aria-roledescription="slide" aria-label="3 de 5">
+                  <div class="testimonial-card">
+                    <span class="testimonial-stars" aria-label="Cinco estrelas">★★★★★</span>
+                    <blockquote>“Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar.”</blockquote>
+                    <p class="testimonial-author">Ana Clara, Belo Horizonte</p>
+                  </div>
+                </article>
+                <article class="testimonial-slide" aria-roledescription="slide" aria-label="4 de 5">
+                  <div class="testimonial-card">
+                    <span class="testimonial-stars" aria-label="Cinco estrelas">★★★★★</span>
+                    <blockquote>“Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia.”</blockquote>
+                    <p class="testimonial-author">Fernanda, Brasília</p>
+                  </div>
+                </article>
+                <article class="testimonial-slide" aria-roledescription="slide" aria-label="5 de 5">
+                  <div class="testimonial-card">
+                    <span class="testimonial-stars" aria-label="Cinco estrelas">★★★★★</span>
+                    <blockquote>“O Limiar virou um lembrete simples de colocar Deus antes das distrações.”</blockquote>
+                    <p class="testimonial-author">João, Belo Horizonte</p>
+                  </div>
+                </article>
+              </div>
+            </div>
+            <div class="testimonial-controls" aria-label="Controles dos depoimentos">
+              <button class="testimonial-arrow" type="button" data-testimonial-previous aria-label="Ver depoimento anterior">&#8592;</button>
+              <div class="testimonial-dots" aria-label="Escolher depoimento">
+                <button type="button" aria-label="Ver depoimento 1" aria-current="true" data-testimonial-dot="0"></button>
+                <button type="button" aria-label="Ver depoimento 2" data-testimonial-dot="1"></button>
+                <button type="button" aria-label="Ver depoimento 3" data-testimonial-dot="2"></button>
+                <button type="button" aria-label="Ver depoimento 4" data-testimonial-dot="3"></button>
+                <button type="button" aria-label="Ver depoimento 5" data-testimonial-dot="4"></button>
+              </div>
+              <button class="testimonial-arrow" type="button" data-testimonial-next aria-label="Ver próximo depoimento">&#8594;</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="como-funciona" class="section">
         <p class="eyebrow">Como funciona</p>
         <h2>Uma pausa pequena pode mudar o resto do seu dia.</h2>
@@ -259,6 +353,67 @@
             video.play().catch(() => {});
           });
         });
+
+        document.querySelectorAll("[data-testimonials-carousel]").forEach((carousel) => {
+          const track = carousel.querySelector("[data-testimonials-track]");
+          const slides = Array.from(track?.children || []);
+          const dots = Array.from(carousel.querySelectorAll("[data-testimonial-dot]"));
+          const previous = carousel.querySelector("[data-testimonial-previous]");
+          const next = carousel.querySelector("[data-testimonial-next]");
+          let current = 0;
+          let intervalId;
+          let touchStartX = 0;
+
+          if (!track || slides.length < 2 || !previous || !next) return;
+
+          const render = (index) => {
+            current = (index + slides.length) % slides.length;
+            track.style.transform = `translateX(-${current * 100}%)`;
+            dots.forEach((dot, dotIndex) => {
+              dot.setAttribute("aria-current", String(dotIndex === current));
+            });
+          };
+
+          const stop = () => window.clearInterval(intervalId);
+          const start = () => {
+            if (reduceMotion) return;
+            stop();
+            intervalId = window.setInterval(() => render(current + 1), 5200);
+          };
+
+          previous.addEventListener("click", () => {
+            render(current - 1);
+            start();
+          });
+          next.addEventListener("click", () => {
+            render(current + 1);
+            start();
+          });
+          dots.forEach((dot, index) => dot.addEventListener("click", () => {
+            render(index);
+            start();
+          }));
+          carousel.addEventListener("mouseenter", stop);
+          carousel.addEventListener("mouseleave", start);
+          carousel.addEventListener("focusin", stop);
+          carousel.addEventListener("focusout", (event) => {
+            if (!carousel.contains(event.relatedTarget)) start();
+          });
+          carousel.addEventListener("touchstart", (event) => {
+            touchStartX = event.touches[0]?.clientX || 0;
+            stop();
+          }, { passive: true });
+          carousel.addEventListener("touchend", (event) => {
+            const touchEndX = event.changedTouches[0]?.clientX || touchStartX;
+            const distance = touchEndX - touchStartX;
+            if (Math.abs(distance) > 42) render(current + (distance < 0 ? 1 : -1));
+            start();
+          }, { passive: true });
+
+          render(0);
+          start();
+        });
+
       })();
     </script>
   </body>
