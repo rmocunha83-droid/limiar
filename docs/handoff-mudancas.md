@@ -5,6 +5,8 @@ App iOS em `Limiar/` · Backend serverless em `api/` (Vercel, produção `https:
 
 Este documento combina o histórico já entregue com mudanças ainda em validação. A seção 0 descreve o trabalho da branch adaptativa e ainda não está no `main` nem em produção. As demais seções registram entregas anteriores e devem ser conferidas contra o histórico do Git antes de qualquer publicação.
 
+> **Rastreamento da Meta (24/07/2026):** as mudanças no SDK da Meta, no ATT, na SKAdNetwork, em `api/meta-capi.js` e na política de privacidade estão documentadas em `docs/META_TRACKING_2026-07-24.md`. Leia esse arquivo antes de mexer em qualquer coisa relacionada a medição ou publicidade — ele explica por que o envio de eventos deixou de depender da autorização do ATT.
+
 ---
 
 ## 0. Travessia adaptada ao ritmo escolhido — EM VALIDAÇÃO
