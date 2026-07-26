@@ -1177,10 +1177,7 @@ h1 {
   }
 
   .testimonials-section {
-    background:
-      linear-gradient(180deg, rgba(5, 10, 11, 0.98) 0%, rgba(5, 10, 11, 0.9) 100%),
-      url("assets/hero-wide.jpg") 67% center / auto 100% no-repeat,
-      var(--deep-ink);
+    background: var(--deep-ink);
   }
 
   .testimonials-section::before {
