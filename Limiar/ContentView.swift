@@ -773,10 +773,25 @@ private struct DashboardView: View {
 
         narration.stop()
         model.finishReading()
+        requestTrackingPermissionAfterCompletion()
         requestReviewIfEligibleAfterCompletion()
 
         withAnimation(.easeInOut(duration: 0.8)) {
             showingCompletionScreen = true
+        }
+    }
+
+    /// Pede a permissão de rastreamento na travessia concluída — o momento de
+    /// maior boa vontade, quando a pessoa acabou de receber o que veio buscar
+    /// e vê os apps liberados. O alerta do sistema só aparece uma vez por
+    /// instalação, então esta é a única chance de perguntar; oferecê-la aqui,
+    /// e não numa abertura futura, alcança também quem instala pelo anúncio e
+    /// não volta no dia seguinte.
+    private func requestTrackingPermissionAfterCompletion() {
+        // Espera o encerramento visual da travessia (0.8s de animação) para o
+        // alerta não subir por cima da transição.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            MetaAppEvents.requestTrackingPermissionIfNeeded()
         }
     }
 
@@ -785,8 +800,14 @@ private struct DashboardView: View {
         let readingWasHealthy = model.aiContentState != .fallback && model.aiContentState != .localSession
 
         // Aguarda o encerramento visual da travessia para não interromper a
-        // ação de concluir a leitura.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+        // ação de concluir a leitura. Quando o alerta de rastreamento ainda
+        // está pendente, ele tem a vez: só aparece uma vez por instalação,
+        // enquanto o pedido de avaliação volta a ficar elegível em outra
+        // travessia. Sem essa folga o iOS descartaria um dos dois.
+        let delay: TimeInterval = MetaAppEvents.isTrackingPromptPending ? 12.0 : 3.0
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            guard !MetaAppEvents.isTrackingPromptPending else { return }
             guard subscription.claimReviewRequestIfEligible(
                 history: history,
                 readingWasHealthy: readingWasHealthy

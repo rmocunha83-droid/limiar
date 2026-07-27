@@ -196,8 +196,15 @@ enum MetaAppEvents {
     private static let pauseConfiguredEvent = AppEvents.Name("LimiarPauseConfigured")
     private static var didInitializeSDK = false
 
+    /// `true` enquanto a pessoa ainda não respondeu ao alerta do sistema. Serve
+    /// para quem agenda outros alertas não empilhar um em cima do outro: o
+    /// iOS descarta o segundo em vez de enfileirá-lo.
+    static var isTrackingPromptPending: Bool {
+        ATTrackingManager.trackingAuthorizationStatus == .notDetermined
+    }
+
     static func requestTrackingPermissionIfNeeded() {
-        guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else { return }
+        guard isTrackingPromptPending else { return }
 
         ATTrackingManager.requestTrackingAuthorization { _ in
             // Qualquer resposta vale: o SDK lê o status do ATT sozinho e só
