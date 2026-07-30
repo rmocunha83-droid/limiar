@@ -247,7 +247,7 @@ struct OnboardingView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.warmGold)
 
-                if selectedCount == 2 {
+                if selectedCount == 3 {
                     Text("Dica: escolher mais estilos traz mais variedade às suas manhãs.")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.softText.opacity(0.86))
@@ -416,13 +416,21 @@ struct OnboardingView: View {
     }
 
     private func reflectionDepthSubtitle(for depth: ExplanationDepth) -> String {
+        let passageCount = depth.readingItemCount
+        let passageDescription: String
+        if model.faithProfile.tradition == .jewish {
+            passageDescription = passageCount == 1 ? "1 trecho" : "\(passageCount) trechos"
+        } else {
+            passageDescription = passageCount == 1 ? "1 trecho bíblico" : "\(passageCount) trechos bíblicos"
+        }
+
         switch depth {
         case .short:
-            return "Uma pausa breve, direta e fácil de concluir."
+            return "\(passageDescription). Uma pausa breve, direta e fácil de concluir."
         case .medium:
-            return "Equilíbrio recomendado para começar."
+            return "\(passageDescription). Equilíbrio recomendado para começar."
         case .deep:
-            return "Mais contexto, aplicação e pergunta de meditação."
+            return "\(passageDescription), mais contexto e pergunta de meditação."
         }
     }
 

@@ -125,6 +125,27 @@ final class LocalReadingSessionTests: XCTestCase {
         )
     }
 
+    func testEveryTraditionRequiresThreeReadingStylesAndStartsWithThreeDefaults() {
+        for tradition in FaithTradition.allCases {
+            let config = tradition.readingConfig
+
+            XCTAssertEqual(config.minSelected, 3, "\(tradition) deve exigir 3 estilos")
+            XCTAssertEqual(config.defaultCategoryIDs.count, 3, "\(tradition) deve iniciar com 3 estilos")
+        }
+    }
+
+    func testLegacyProfileWithTwoReadingStylesIsNotExpandedDuringNormalization() {
+        var profile = UserFaithProfile.starter
+        profile.selectedReadingCategoryIDs = ["evangelhos", "salmos"]
+
+        profile.normalizeReadingPreferencesForTradition()
+
+        XCTAssertEqual(profile.selectedReadingCategoryIDs, ["evangelhos", "salmos"])
+        XCTAssertEqual(profile.selectedCategories.count, 2)
+        XCTAssertFalse(profile.favoriteBooks.isEmpty)
+        XCTAssertFalse(profile.favoriteBibleSections.isEmpty)
+    }
+
     private var emptyReflection: AIReflection {
         AIReflection(
             summary: "",

@@ -17,6 +17,19 @@ Quatro tradições atendidas: **católica, evangélica, judaica e cristã ampla*
 - **Site institucional** na raiz (`index.html`, `privacy.html`, `terms.html`, `support.html`) — domínio `https://applimiar.com.br` (o antigo `limiar-five.vercel.app` continua respondendo)
 - **Push em `main` = deploy automático do Vercel + build automática no Xcode Cloud**
 
+## Autoridade para releases
+
+Para preparar, diagnosticar ou enviar uma nova versão do Limiar, siga a skill
+`/Users/romeucunha/.codex/skills/xcodecloud-romeu/SKILL.md` e a referência
+`references/release-validation.md` indicada por ela. Se houver divergência entre
+este arquivo e esse procedimento, a skill e sua referência prevalecem.
+
+O fluxo distribuível normal continua sendo: alterações prontas no `main` →
+Xcode Cloud → processamento no App Store Connect → associação da compilação →
+revisão da Apple. Respeite as confirmações imediatas exigidas pela skill antes
+de cancelar um envio, remover uma compilação associada, distribuir a testers ou
+clicar no envio final.
+
 ### Não invente o que não existe
 
 O Limiar **não tem contas de usuário, login, banco de dados nem sincronização entre aparelhos**. Tudo é local ao dispositivo. Se uma tarefa parecer exigir "o usuário logado" ou "buscar do banco", a premissa está errada — pergunte antes de construir.
@@ -25,7 +38,7 @@ O Limiar **não tem contas de usuário, login, banco de dados nem sincronizaçã
 
 1. **A IA explica, nunca escolhe.** A seleção dos trechos é determinística, feita a partir do catálogo local. O modelo só recebe o trecho já escolhido e escreve a explicação. Não mova a escolha para o modelo.
 2. **O bloqueio é sagrado.** Qualquer mudança em shield, DeviceActivity ou ManagedSettings precisa ser testada em aparelho real. Um bug aí deixa a pessoa presa fora dos próprios apps.
-3. **Nunca compilar localmente para a App Store.** Use a compilação que o Xcode Cloud gera a cada push. Ver `docs/META_TRACKING_2026-07-24.md`, seção 6.
+3. **Distribuição segue a skill do Xcode Cloud.** Use a compilação que o Xcode Cloud gera a partir do `main` e valide Build/Archive e processamento no App Store Connect conforme a skill `xcodecloud-romeu`. Não gere um binário local para distribuição salvo se um procedimento futuro da própria skill autorizar explicitamente esse caminho. Ver também `docs/META_TRACKING_2026-07-24.md`, seção 6.
 4. **Texto de narração é contrato.** O formato `"{referência}.\n{texto}"` precisa ser idêntico entre app, backend e pré-aquecimento, senão o cache de áudio quebra.
 5. **Modo Essencial não chama o backend.** Ele mostra trechos e explicações do catálogo local e exibe anúncios do AdMob. Não introduza chamadas de rede nesse caminho.
 6. **Privacidade é posicionamento.** Conteúdo espiritual, tradição, temas e a seleção de apps bloqueados **nunca** vão para publicidade ou medição. Ao mexer em rastreamento, atualize `privacy.html` e a ficha da App Store Connect junto.

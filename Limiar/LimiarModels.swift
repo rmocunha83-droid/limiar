@@ -302,7 +302,7 @@ extension FaithTradition {
         case .catholic:
             TraditionReadingConfig(
                 question: "O que você quer ler nas pausas?",
-                subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
+                subtitle: "Escolha pelo menos 3 estilos que falam com você. Você pode mudar depois.",
                 categories: [
                     ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .mark, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e orações", hint: "Salmos e cânticos", sections: [.psalms], books: [.psalms], defaultSelected: true),
@@ -313,12 +313,12 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "deuterocanon", label: "Livros deuterocanônicos", hint: "Tobias, Judite, Macabeus e Baruque", sections: [.deuterocanonical], books: [.tobias, .judith, .maccabees, .baruch])
                 ],
                 optionalBooks: [.genesis, .exodus, .joshua, .judges, .psalms, .proverbs, .job, .ecclesiastes, .wisdom, .sirach, .isaiah, .jeremiah, .ezekiel, .daniel, .matthew, .mark, .luke, .john, .romans, .corinthians, .galatians, .ephesians, .james, .peter, .tobias, .judith, .maccabees, .baruch],
-                minSelected: 2
+                minSelected: 3
             )
         case .protestant:
             TraditionReadingConfig(
                 question: "O que você quer ler nas pausas?",
-                subtitle: "Escolha os estilos que mais falam com você. Você pode mudar depois.",
+                subtitle: "Escolha pelo menos 3 estilos que falam com você. Você pode mudar depois.",
                 categories: [
                     ReadingStyleCategory(id: "evangelhos", label: "Evangelhos", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .mark, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "salmos", label: "Salmos e louvor", hint: "Salmos", sections: [.psalms], books: [.psalms], defaultSelected: true),
@@ -329,12 +329,12 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "historias", label: "Histórias e origens", hint: "Gênesis, Êxodo e livros históricos", sections: [.torah, .historicalBooks], books: [.genesis, .exodus, .joshua, .judges, .ruth, .esther])
                 ],
                 optionalBooks: [.genesis, .exodus, .joshua, .judges, .ruth, .esther, .psalms, .proverbs, .job, .ecclesiastes, .songOfSongs, .isaiah, .jeremiah, .ezekiel, .daniel, .matthew, .mark, .luke, .john, .romans, .corinthians, .galatians, .ephesians, .hebrews, .james, .peter, .revelation],
-                minSelected: 2
+                minSelected: 3
             )
         case .jewish:
             TraditionReadingConfig(
                 question: "O que você quer ler nas pausas?",
-                subtitle: "Vamos criar leituras próximas da sua tradição. Você pode mudar depois.",
+                subtitle: "Vamos criar leituras próximas da sua tradição. Escolha pelo menos 3 estilos — você pode mudar depois.",
                 categories: [
                     ReadingStyleCategory(id: "tora", label: "Torá — Leis e origens", hint: "Bereshit, Shemot, Vayikra e Devarim", sections: [.torah], books: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy], defaultSelected: true),
                     ReadingStyleCategory(id: "neviim", label: "Profetas — Nevi\u{2019}im", hint: "Yeshayahu, Yirmiyahu e Yechezkel", sections: [.prophets], books: [.isaiah, .jeremiah, .ezekiel, .joshua, .judges]),
@@ -344,12 +344,12 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "etica", label: "Ética e vida prática", hint: "Trechos morais e de conduta", sections: [.ethicalWisdom], books: [.proverbs, .ecclesiastes, .leviticus, .deuteronomy])
                 ],
                 optionalBooks: [.genesis, .exodus, .leviticus, .numbers, .deuteronomy, .joshua, .judges, .isaiah, .jeremiah, .ezekiel, .psalms, .proverbs, .job, .ecclesiastes, .ruth, .esther, .daniel],
-                minSelected: 2
+                minSelected: 3
             )
         case .spiritist:
             TraditionReadingConfig(
                 question: "Quais textos inspiram sua leitura?",
-                subtitle: "Fontes que orientam suas reflexões. Você pode mudar depois.",
+                subtitle: "Escolha pelo menos 3 fontes que orientam suas reflexões. Você pode mudar depois.",
                 categories: [
                     ReadingStyleCategory(id: "evangelho", label: "Evangelho de Jesus", hint: "Mateus, Marcos, Lucas e João", sections: [.gospels], books: [.matthew, .mark, .luke, .john], defaultSelected: true),
                     ReadingStyleCategory(id: "sermao", label: "Sermão da Montanha e parábolas", hint: "Mateus 5–7 e parábolas", sections: [.sermonOnMount, .parablesOfJesus], books: [.matthew, .luke], defaultSelected: true),
@@ -358,7 +358,7 @@ extension FaithTradition {
                     ReadingStyleCategory(id: "cartas", label: "Cartas dos apóstolos", hint: "Paulo, Tiago, Pedro e João", sections: [.paulineLetters], books: [.romans, .corinthians, .james, .peter])
                 ],
                 optionalBooks: [.matthew, .mark, .luke, .john, .psalms, .proverbs, .ecclesiastes, .job, .romans, .corinthians, .james, .peter],
-                minSelected: 2
+                minSelected: 3
             )
         }
     }
