@@ -366,6 +366,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     @Published var isPaused = false
 
     private let speechService = RemoteAISpeechService()
+    private let eventLog = LimiarEventLog(source: "narration")
     private var player: AVAudioPlayer?
     private var playbackTask: Task<Void, Never>?
     private var prefetchTask: Task<Void, Never>?
@@ -375,6 +376,25 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     private var pendingSegmentIndex: Int?
     private var prefetchedAudio: Data?
     private var prefetchedSegmentIndex: Int?
+    private var wasPausedByInterruption = false
+
+    override init() {
+        super.init()
+        let notificationCenter = NotificationCenter.default
+        let audioSession = AVAudioSession.sharedInstance()
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(audioSessionInterruptionNotification(_:)),
+            name: AVAudioSession.interruptionNotification,
+            object: audioSession
+        )
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(audioSessionRouteChangeNotification(_:)),
+            name: AVAudioSession.routeChangeNotification,
+            object: audioSession
+        )
+    }
 
     func toggle(text: String) {
         toggle(segments: [text])
@@ -431,23 +451,26 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         }
 
         guard let player else {
+            logSegmentFailure(index: currentSegmentIndex, reason: "queue_state_failure")
             finishQueue()
             return
         }
 
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true)
-            guard player.play() else {
-                finishQueue()
-                return
-            }
-            isPaused = false
-            isSpeaking = true
+            try activateAudioSession()
         } catch {
+            logSegmentFailure(index: currentSegmentIndex, reason: "audio_session_activation_failure")
             finishQueue()
+            return
         }
+
+        guard player.play() else {
+            logSegmentFailure(index: currentSegmentIndex, reason: "audio_player_failure")
+            finishQueue()
+            return
+        }
+        isPaused = false
+        isSpeaking = true
     }
 
     func stop() {
@@ -466,6 +489,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isSpeaking = false
         isGenerating = false
         isPaused = false
+        wasPausedByInterruption = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -479,11 +503,14 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isGenerating = true
         isSpeaking = false
         isPaused = false
+        wasPausedByInterruption = false
+        eventLog.log("narration_started", ["segments": String(segments.count)])
         loadAndPlaySegment(at: 0)
     }
 
     private func loadAndPlaySegment(at index: Int) {
         guard queue.indices.contains(index) else {
+            logSegmentFailure(index: index, reason: "queue_state_failure")
             finishQueue()
             return
         }
@@ -491,6 +518,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         playbackTask?.cancel()
         let expectedIdentifier = activeSpeechText
         let segment = queue[index]
+        pendingSegmentIndex = index
         isGenerating = true
         isSpeaking = false
         isPaused = false
@@ -505,8 +533,13 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
                     self?.play(audio, at: index)
                 }
             } catch {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     guard self?.activeSpeechText == expectedIdentifier else { return }
+                    self?.logSegmentFailure(
+                        index: index,
+                        reason: Self.networkFailureReason(for: error)
+                    )
                     self?.finishQueue()
                 }
             }
@@ -515,22 +548,35 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
 
     private func play(_ data: Data, at index: Int) {
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true)
+            try activateAudioSession()
+        } catch {
+            logSegmentFailure(index: index, reason: "audio_session_activation_failure")
+            finishQueue()
+            return
+        }
 
+        do {
             let audioPlayer = try AVAudioPlayer(data: data)
             audioPlayer.delegate = self
-            audioPlayer.prepareToPlay()
+            guard audioPlayer.prepareToPlay() else {
+                logSegmentFailure(index: index, reason: "audio_player_failure")
+                finishQueue()
+                return
+            }
             player = audioPlayer
             currentSegmentIndex = index
             pendingSegmentIndex = nil
             isGenerating = false
-            isSpeaking = true
             isPaused = false
-            audioPlayer.play()
+            guard audioPlayer.play() else {
+                logSegmentFailure(index: index, reason: "audio_player_failure")
+                finishQueue()
+                return
+            }
+            isSpeaking = true
             prefetchSegment(after: index)
         } catch {
+            logSegmentFailure(index: index, reason: "audio_player_failure")
             finishQueue()
         }
     }
@@ -561,7 +607,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     private func continueQueue() {
         let nextIndex = currentSegmentIndex + 1
         guard queue.indices.contains(nextIndex) else {
-            finishQueue()
+            finishQueue(completedNaturally: true)
             return
         }
 
@@ -587,6 +633,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
 
     private func playPendingSegment(at index: Int) {
         guard queue.indices.contains(index) else {
+            logSegmentFailure(index: index, reason: "queue_state_failure")
             finishQueue()
             return
         }
@@ -611,7 +658,105 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         segments.joined(separator: "\u{001F}")
     }
 
-    private func finishQueue() {
+    private func activateAudioSession() throws {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+        try session.setActive(true)
+    }
+
+    private func logSegmentFailure(index: Int, reason: String) {
+        eventLog.log("narration_segment_failed", [
+            "index": String(index),
+            "reason": reason
+        ])
+    }
+
+    private static func networkFailureReason(for error: Error) -> String {
+        if let urlError = error as? URLError, urlError.code == .timedOut {
+            return "network_timeout"
+        }
+        return "network_error"
+    }
+
+    private func pauseForSystemEvent(deactivateSession: Bool) {
+        guard !activeSpeechText.isEmpty, !isPaused else { return }
+
+        player?.pause()
+        playbackTask?.cancel()
+        playbackTask = nil
+        if player == nil, pendingSegmentIndex == nil {
+            pendingSegmentIndex = currentSegmentIndex
+        }
+        isGenerating = false
+        isSpeaking = false
+        isPaused = true
+        if deactivateSession {
+            try? AVAudioSession.sharedInstance().setActive(
+                false,
+                options: .notifyOthersOnDeactivation
+            )
+        }
+    }
+
+    @objc nonisolated private func audioSessionInterruptionNotification(_ notification: Notification) {
+        let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+        let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt
+        Task { @MainActor [weak self] in
+            self?.handleInterruption(typeValue: typeValue, optionsValue: optionsValue)
+        }
+    }
+
+    private func handleInterruption(typeValue: UInt?, optionsValue: UInt?) {
+        guard let typeValue,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        switch type {
+        case .began:
+            guard !activeSpeechText.isEmpty, !isPaused else { return }
+            wasPausedByInterruption = true
+            eventLog.log("narration_interrupted", ["type": "began"])
+            pauseForSystemEvent(deactivateSession: false)
+        case .ended:
+            guard wasPausedByInterruption else { return }
+            wasPausedByInterruption = false
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
+            if options.contains(.shouldResume) {
+                eventLog.log("narration_interrupted", ["type": "ended_should_resume"])
+                resume()
+            } else {
+                eventLog.log("narration_interrupted", ["type": "ended_paused"])
+            }
+        @unknown default:
+            break
+        }
+    }
+
+    @objc nonisolated private func audioSessionRouteChangeNotification(_ notification: Notification) {
+        let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+        Task { @MainActor [weak self] in
+            self?.handleRouteChange(reasonValue: reasonValue)
+        }
+    }
+
+    private func handleRouteChange(reasonValue: UInt?) {
+        guard let reasonValue,
+              AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable,
+              !activeSpeechText.isEmpty,
+              !isPaused else {
+            return
+        }
+
+        wasPausedByInterruption = false
+        eventLog.log("narration_interrupted", ["type": "old_device_unavailable"])
+        pauseForSystemEvent(deactivateSession: true)
+    }
+
+    private func finishQueue(completedNaturally: Bool = false) {
+        if completedNaturally {
+            eventLog.log("narration_completed")
+        }
         player?.stop()
         player = nil
         playbackTask?.cancel()
@@ -626,23 +771,32 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isGenerating = false
         isSpeaking = false
         isPaused = false
+        wasPausedByInterruption = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor [weak self] in
-            self?.player = nil
+            guard let self, self.player === player else { return }
+            // Uma interrupção pode avisar que o player parou sem a fila ter
+            // terminado. Já um término natural ocorrido no mesmo instante em
+            // que a pessoa pausou deve avançar e preservar a fila como pausada.
+            guard flag || !self.isPaused else { return }
+            self.player = nil
             if flag {
-                self?.continueQueue()
+                self.continueQueue()
             } else {
-                self?.finishQueue()
+                self.logSegmentFailure(index: self.currentSegmentIndex, reason: "audio_player_failure")
+                self.finishQueue()
             }
         }
     }
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         Task { @MainActor [weak self] in
-            self?.finishQueue()
+            guard let self, self.player === player else { return }
+            self.logSegmentFailure(index: self.currentSegmentIndex, reason: "audio_player_failure")
+            self.finishQueue()
         }
     }
 
@@ -651,5 +805,6 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         prefetchTask?.cancel()
         player?.stop()
         activeSpeechText = ""
+        NotificationCenter.default.removeObserver(self)
     }
 }

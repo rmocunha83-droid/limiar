@@ -681,7 +681,7 @@ struct RemoteAISpeechService {
     private static let limiarNarrationVoiceID = "21m00Tcm4TlvDq8ikWAM"
     private let client: RemoteAIBackendClient
 
-    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 30)) {
+    init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 90)) {
         self.client = client
     }
 

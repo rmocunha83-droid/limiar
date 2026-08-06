@@ -146,6 +146,23 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertFalse(profile.favoriteBibleSections.isEmpty)
     }
 
+    func testNarrationExplanationIsSplitIntoTrimmedParagraphs() {
+        XCTAssertEqual(
+            narrationExplanationSegments([
+                "Primeiro parágrafo.\n\nSegundo parágrafo.",
+                "  Aplicação final.  "
+            ]),
+            ["Primeiro parágrafo.", "Segundo parágrafo.", "Aplicação final."]
+        )
+    }
+
+    func testNarrationExplanationIgnoresEmptyParagraphsAndNormalizesWindowsNewlines() {
+        XCTAssertEqual(
+            narrationExplanationSegments(["\r\n\r\nPrimeiro.\r\n\r\nSegundo.\r\n\r\n"]),
+            ["Primeiro.", "Segundo."]
+        )
+    }
+
     private var emptyReflection: AIReflection {
         AIReflection(
             summary: "",

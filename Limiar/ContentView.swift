@@ -3,6 +3,16 @@ import FamilyControls
 import ManagedSettings
 import SwiftUI
 
+func narrationExplanationSegments(_ parts: [String]) -> [String] {
+    parts.flatMap { part in
+        part
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+}
+
 struct ContentView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
@@ -435,15 +445,9 @@ private struct DashboardView: View {
                 }
 
                 ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
-                    let explanationSegment = [item.homily, item.practicalConclusion]
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        .filter { !$0.isEmpty }
-                        .joined(separator: "\n\n")
                     let narrationSegments = [
-                        canonicalPassageNarrationText(reference: item.reference, text: item.text),
-                        explanationSegment
-                    ]
-                    .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                        canonicalPassageNarrationText(reference: item.reference, text: item.text)
+                    ] + narrationExplanationSegments([item.homily, item.practicalConclusion])
 
                     SpiritualReadingCard(
                         item: item,
