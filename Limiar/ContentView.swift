@@ -434,15 +434,28 @@ private struct DashboardView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    let tokens = Array(model.selection.applicationTokens)
-                    if tokens.isEmpty {
-                        InstagramIcon()
-                            .frame(width: 58, height: 58)
-                            .scaleEffect(1.12)
-                            .accessibilityLabel("Instagram")
+                    let categoryTokens = Array(model.selection.categoryTokens)
+                        .sorted { "\($0)" < "\($1)" }
+                    let applicationTokens = Array(model.selection.applicationTokens)
+                        .sorted { "\($0)" < "\($1)" }
+                    let webDomainTokens = Array(model.selection.webDomainTokens)
+                        .sorted { "\($0)" < "\($1)" }
+
+                    if categoryTokens.isEmpty,
+                       applicationTokens.isEmpty,
+                       webDomainTokens.isEmpty {
+                        BlockedAppsPlaceholderIcon()
                     } else {
-                        ForEach(tokens, id: \.self) { token in
+                        ForEach(categoryTokens, id: \.self) { token in
+                            BlockedCategoryIcon(token: token)
+                        }
+
+                        ForEach(applicationTokens, id: \.self) { token in
                             BlockedApplicationIcon(token: token)
+                        }
+
+                        ForEach(webDomainTokens, id: \.self) { token in
+                            BlockedWebDomainIcon(token: token)
                         }
                     }
                 }
