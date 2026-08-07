@@ -3,11 +3,49 @@ import FamilyControls
 import ManagedSettings
 import SwiftUI
 
+enum OnboardingNavigationDirection {
+    case forward
+    case backward
+
+    var insertionEdge: Edge {
+        switch self {
+        case .forward: .trailing
+        case .backward: .leading
+        }
+    }
+
+    var removalEdge: Edge {
+        switch self {
+        case .forward: .leading
+        case .backward: .trailing
+        }
+    }
+}
+
+enum OnboardingPageMotion {
+    static let duration = 0.32
+    static let animation = Animation.easeInOut(duration: duration)
+
+    static func transition(
+        direction: OnboardingNavigationDirection,
+        reduceMotion: Bool
+    ) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: direction.insertionEdge)),
+            removal: .opacity.combined(with: .move(edge: direction.removalEdge))
+        )
+    }
+}
+
 struct OnboardingView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(LimiarNotificationCoordinator.self) private var notifications
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: Int
+    @State private var navigationDirection: OnboardingNavigationDirection = .forward
     @State private var status = ""
     @State private var readingPreferenceMessage = ""
     @State private var showingPicker = false
@@ -39,8 +77,10 @@ struct OnboardingView: View {
         ZStack {
             if step == 0 {
                 WelcomeHeroScreen {
-                    withAnimation { step = 1 }
+                    move(to: 1, direction: .forward)
                 }
+                .id("welcome")
+                .transition(pageTransition)
             } else {
                 LimiarBackground()
 
@@ -66,8 +106,7 @@ struct OnboardingView: View {
                         }
                     }
                     .id(displayedStep)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-                    .animation(.easeInOut(duration: 0.22), value: step)
+                    .transition(pageTransition)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
                     HStack(spacing: 12) {
@@ -110,6 +149,8 @@ struct OnboardingView: View {
                     .padding(.horizontal, Layout.horizontalInset)
                     .padding(.bottom, 24)
                 }
+                .id("onboarding-steps")
+                .transition(pageTransition)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -160,6 +201,13 @@ struct OnboardingView: View {
     }
 
     private var displayedStep: Int { step }
+
+    private var pageTransition: AnyTransition {
+        OnboardingPageMotion.transition(
+            direction: navigationDirection,
+            reduceMotion: reduceMotion
+        )
+    }
 
     private var progressIndex: Int {
         visibleSteps.firstIndex(of: displayedStep) ?? 0
@@ -466,7 +514,7 @@ struct OnboardingView: View {
 
         model.saveProfile()
         if let nextStep = nextStep(after: displayedStep) {
-            withAnimation { step = nextStep }
+            move(to: nextStep, direction: .forward)
         } else {
             completeOnboarding()
         }
@@ -498,13 +546,29 @@ struct OnboardingView: View {
 
     private func moveToPreviousStep() {
         guard let previousStep = previousStep(before: displayedStep) else { return }
-        withAnimation { step = previousStep }
+        move(to: previousStep, direction: .backward)
+    }
+
+    private func move(to newStep: Int, direction: OnboardingNavigationDirection) {
+        navigationDirection = direction
+
+        // A view atual precisa recomputar sua transição com a nova direção
+        // antes de ser removida. O próximo tick evita que o SwiftUI reutilize
+        // a transição capturada quando ela entrou na hierarquia.
+        DispatchQueue.main.async {
+            withAnimation(OnboardingPageMotion.animation) {
+                step = newStep
+            }
+        }
     }
 
     private func completeOnboarding() {
         if subscription.cohort == .new {
-            withAnimation(.easeInOut(duration: 0.22)) {
-                model.completeOnboarding()
+            navigationDirection = .forward
+            DispatchQueue.main.async {
+                withAnimation(OnboardingPageMotion.animation) {
+                    model.completeOnboarding()
+                }
             }
         } else {
             model.completeOnboarding()

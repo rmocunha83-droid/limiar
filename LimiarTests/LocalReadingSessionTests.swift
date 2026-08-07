@@ -1,8 +1,17 @@
 import XCTest
 import StoreKit
+import SwiftUI
 @testable import Limiar
 
 final class LocalReadingSessionTests: XCTestCase {
+    func testOnboardingNavigationDirectionMirrorsPageEdges() {
+        XCTAssertEqual(OnboardingNavigationDirection.forward.insertionEdge, .trailing)
+        XCTAssertEqual(OnboardingNavigationDirection.forward.removalEdge, .leading)
+        XCTAssertEqual(OnboardingNavigationDirection.backward.insertionEdge, .leading)
+        XCTAssertEqual(OnboardingNavigationDirection.backward.removalEdge, .trailing)
+        XCTAssertEqual(OnboardingPageMotion.duration, 0.32, accuracy: 0.001)
+    }
+
     func testStarterProfileUsesShortExplanationDepth() {
         XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
     }

@@ -18,6 +18,7 @@ struct ContentView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(LimiarNotificationCoordinator.self) private var notifications
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(
         ConversionFunnelPersistence.d6DismissedKey,
         store: UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
@@ -113,7 +114,7 @@ struct ContentView: View {
                     DashboardView()
                 } else if Self.forceSubscriptionGateForDebugging {
                     SubscriptionGateView()
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                        .transition(onboardingForwardTransition)
                 } else if Self.forceFreeTrialStartForDebugging {
                     FreeTrialStartView()
                 } else if Self.forcedConversionScreen == "D6" {
@@ -128,9 +129,10 @@ struct ContentView: View {
                     DashboardView()
                 } else if !model.hasCompletedOnboarding {
                     OnboardingView()
+                        .transition(onboardingForwardTransition)
                 } else if subscription.requiresSubscriptionGate {
                     SubscriptionGateView()
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                        .transition(onboardingForwardTransition)
                 } else if notifications.shieldBridgeRouteID != nil {
                     // O toque na ponte do shield é uma intenção explícita de
                     // atravessar. Para usuários com acesso ele entra direto no
@@ -214,6 +216,13 @@ struct ContentView: View {
         .onChange(of: model.faithProfile) { _, _ in
             syncAnalyticsUserProperties()
         }
+    }
+
+    private var onboardingForwardTransition: AnyTransition {
+        OnboardingPageMotion.transition(
+            direction: .forward,
+            reduceMotion: reduceMotion
+        )
     }
 
     private func attemptNextCyclePrewarmForForeground() {
