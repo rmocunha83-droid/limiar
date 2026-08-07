@@ -257,7 +257,7 @@ function depthGuidance(depth) {
     return [
       "Profundidade curta:",
       "- A profundidade curta significa um único trecho, não uma explicação rasa. Explore esse trecho por inteiro com a mesma riqueza editorial da profundidade mais profunda;",
-      "- homily: exatamente 2 ou 3 parágrafos desenvolvidos, separados por uma linha em branco. Não comprima a homilia em um único parágrafo. Contextualize quem fala, para quem e em que situação. Explique o trecho por inteiro e conecte-o de modo natural à tradição informada;",
+      "- homily: exatamente 2 parágrafos desenvolvidos, separados por uma linha em branco (\\n\\n). Nunca entregue um único parágrafo. No primeiro, contextualize quem fala, para quem e em que situação. No segundo, explique o trecho por inteiro e conecte-o à tradição informada e à vida concreta;",
       "- spiritualMeaning: denso, conectando o trecho, um tema preferido e a vida concreta;",
       "- practicalApplication: exatamente 2 ou 3 frases com uma decisão clara e aplicável hoje, sem moralismo;",
       "- conclusion: 1 a 2 frases, pastorais e específicas;",
@@ -645,6 +645,7 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
       "- A conclusion deve ser específica, não uma frase fixa reaproveitada.",
       "- A meditationQuestion deve ser nova em relação ao histórico recente.",
       "- Na sessão de um único trecho, practicalApplication e meditationQuestion devem avançar a homily do item. Não repita nem parafraseie as mesmas ideias ou frases.",
+      "- Na sessão de um único trecho, items[0].homily e reflection.homily devem ter exatamente 2 parágrafos separados por uma linha em branco (\\n\\n).",
       "- Na sessão de um único trecho, reflection.practicalApplication também deve ter exatamente 2 ou 3 frases."
     );
   }
