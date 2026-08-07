@@ -426,9 +426,9 @@ struct OnboardingView: View {
 
         switch depth {
         case .short:
-            return "\(passageDescription). Uma pausa breve, direta e fácil de concluir."
+            return "\(passageDescription). Recomendada para começar — breve, direta e fácil de concluir."
         case .medium:
-            return "\(passageDescription). Equilíbrio recomendado para começar."
+            return "\(passageDescription). Para quem quer um passo além no dia a dia."
         case .deep:
             return "\(passageDescription), mais contexto e pergunta de meditação."
         }

@@ -2,6 +2,10 @@ import XCTest
 @testable import Limiar
 
 final class LocalReadingSessionTests: XCTestCase {
+    func testStarterProfileUsesShortExplanationDepth() {
+        XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
+    }
+
     func testCompletionScreenUsesTurnSpecificIcons() {
         XCTAssertEqual(completionPresentation(turn: .morning).iconName, "sunrise.fill")
         XCTAssertEqual(completionPresentation(turn: .afternoon).iconName, "sun.max.fill")

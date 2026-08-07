@@ -227,7 +227,8 @@ function normalizeDepth(value) {
 
 // Mantém compatibilidade binária com builds publicados: sem `itemCount`, a
 // sessão continua com três itens e respeita a profundidade antiga. Builds
-// novos enviam a contagem e passam a usar a explicação média como régua fixa.
+// novos enviam a contagem; o card único usa a diretriz curta enriquecida e os
+// demais mantêm a explicação média como régua fixa.
 function resolveReadingSessionOptions(body = {}, profileDepth = "média", passageCount = SESSION_ITEM_COUNT) {
   const hasItemCount = Object.prototype.hasOwnProperty.call(body, "itemCount")
     && body.itemCount !== null
@@ -238,15 +239,17 @@ function resolveReadingSessionOptions(body = {}, profileDepth = "média", passag
     : SESSION_ITEM_COUNT;
   const availableCount = Math.max(0, Math.trunc(Number(passageCount) || 0));
   const itemCount = Math.min(requestedItemCount, availableCount);
-  const generationDepth = hasItemCount ? "média" : normalizeDepth(profileDepth);
+  const generationDepth = hasItemCount
+    ? (itemCount === 1 ? "curta" : "média")
+    : normalizeDepth(profileDepth);
 
   return {
     hasItemCount,
     requestedItemCount,
     itemCount,
     generationDepth,
-    // O card único ganha mais espaço de resposta, sem trocar a instrução
-    // editorial média pela antiga instrução "grande".
+    // O card único ganha margem de saída grande sem receber a instrução
+    // editorial "grande".
     outputBudgetDepth: hasItemCount && itemCount === 1 ? "grande" : generationDepth
   };
 }
@@ -255,7 +258,7 @@ function depthGuidance(depth) {
   if (depth === "curta") {
     return [
       "Profundidade curta:",
-      "- homily: 1 parágrafo breve com 2 frases no máximo;",
+      "- homily: 1 a 2 parágrafos concisos que expliquem o sentido espiritual central do trecho e o conectem com a vida concreta — completa o suficiente para sustentar sozinha a leitura do dia;",
       "- spiritualMeaning: 1 parágrafo objetivo, direto ao sentido espiritual central;",
       "- practicalApplication e conclusion: 1 frase cada, concreta e sem rodeio;",
       "- meditationQuestion: pergunta curta."

@@ -496,8 +496,10 @@ private struct DashboardView: View {
                 .tracking(1.2)
                 .foregroundStyle(Color.warmGold)
                 .padding(.top, 4)
-            ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
-            ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
+            if model.currentSpiritualReadingItems.count > 1 {
+                ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
+                ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
+            }
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
             ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
         }

@@ -441,7 +441,7 @@ struct UserFaithProfile: Codable, Equatable {
         favoriteBibleSections: [.psalms, .gospels],
         favoriteBooks: [.psalms, .john],
         favoriteThemes: [.presence, .discipline],
-        explanationDepth: .medium,
+        explanationDepth: .short,
         selectedReadingCategoryIDs: ["evangelhos", "salmos", "sabedoria"]
     )
 
