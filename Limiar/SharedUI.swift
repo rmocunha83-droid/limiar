@@ -40,16 +40,74 @@ struct BlockedApplicationIcon: View {
     let token: ApplicationToken
 
     var body: some View {
-        Label(token)
-            .labelStyle(.iconOnly)
-            .scaleEffect(1.22)
-            .frame(width: 58, height: 58)
+        BlockedSelectionTile {
+            Label(token)
+                .labelStyle(.iconOnly)
+                .scaleEffect(1.22)
+        }
+        .accessibilityLabel("App selecionado")
+    }
+}
+
+struct BlockedCategoryIcon: View {
+    let token: ActivityCategoryToken
+
+    var body: some View {
+        BlockedSelectionTile(width: 150) {
+            Label(token)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 12)
+        }
+        .accessibilityLabel("Categoria selecionada")
+    }
+}
+
+struct BlockedWebDomainIcon: View {
+    let token: WebDomainToken
+
+    var body: some View {
+        BlockedSelectionTile(width: 150) {
+            Label(token)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 12)
+        }
+        .accessibilityLabel("Site selecionado")
+    }
+}
+
+struct BlockedAppsPlaceholderIcon: View {
+    var body: some View {
+        BlockedSelectionTile {
+            InstagramIcon()
+                .frame(width: 42, height: 42)
+        }
+        .accessibilityLabel("Instagram")
+    }
+}
+
+private struct BlockedSelectionTile<Content: View>: View {
+    let width: CGFloat
+    @ViewBuilder let content: Content
+
+    init(width: CGFloat = 58, @ViewBuilder content: () -> Content) {
+        self.width = width
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .frame(width: width, height: 58)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.sageButton.opacity(0.20), lineWidth: 1)
             )
-            .accessibilityLabel("App selecionado")
     }
 }
 
@@ -672,4 +730,34 @@ extension Color {
 #Preview {
     ContentView()
         .environment(LimiarAppModel())
+}
+
+#Preview("Tiles da seleção") {
+    ZStack {
+        Color.deepInk.ignoresSafeArea()
+
+        HStack(spacing: 14) {
+            BlockedSelectionTile(width: 150) {
+                Label("Redes Sociais", systemImage: "square.stack.3d.up.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 12)
+            }
+
+            BlockedAppsPlaceholderIcon()
+
+            BlockedSelectionTile(width: 150) {
+                Label("youtube.com", systemImage: "globe")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 12)
+            }
+        }
+        .padding(18)
+    }
+    .preferredColorScheme(.dark)
 }
