@@ -571,6 +571,7 @@ test("builds an explanation prompt that fixes the passages and order", () => {
   assert.match(prompt, /items\[0\] corresponde ao Trecho 1/);
   assert.match(prompt, /Trecho 1\nReferência: Salmo 23/);
   assert.match(prompt, /Regras para reflection/);
+  assert.match(prompt, /reflection\.practicalApplication também deve ter exatamente 2 ou 3 frases/);
   assert.match(prompt, /Resumo anterior/);
   assert.doesNotMatch(prompt, /Selecione|escolha os 3/i);
 });

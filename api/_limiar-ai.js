@@ -644,7 +644,8 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
       "- A practicalApplication deve nascer dos trechos e dos temas preferidos, com uma ação concreta para o restante do dia.",
       "- A conclusion deve ser específica, não uma frase fixa reaproveitada.",
       "- A meditationQuestion deve ser nova em relação ao histórico recente.",
-      "- Na sessão de um único trecho, practicalApplication e meditationQuestion devem avançar a homily do item. Não repita nem parafraseie as mesmas ideias ou frases."
+      "- Na sessão de um único trecho, practicalApplication e meditationQuestion devem avançar a homily do item. Não repita nem parafraseie as mesmas ideias ou frases.",
+      "- Na sessão de um único trecho, reflection.practicalApplication também deve ter exatamente 2 ou 3 frases."
     );
   }
 
