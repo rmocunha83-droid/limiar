@@ -218,7 +218,7 @@ struct SpiritualReadingCard: View {
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if showsReflection {
+            if showsReflection && item.hasExplanationContent {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Explicação espiritual \(item.reference)")
                         .font(.system(size: 13, weight: .bold))

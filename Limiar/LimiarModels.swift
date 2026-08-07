@@ -618,7 +618,29 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
     let passageTitle: String
     let reference: String
     let text: String?
+    let homily: String?
+    let practicalConclusion: String?
     let savedAt: Date
+
+    init(
+        id: UUID,
+        passageID: String,
+        passageTitle: String,
+        reference: String,
+        text: String?,
+        homily: String? = nil,
+        practicalConclusion: String? = nil,
+        savedAt: Date
+    ) {
+        self.id = id
+        self.passageID = passageID
+        self.passageTitle = passageTitle
+        self.reference = reference
+        self.text = text
+        self.homily = homily
+        self.practicalConclusion = practicalConclusion
+        self.savedAt = savedAt
+    }
 }
 
 enum LockState: Equatable {
@@ -1328,11 +1350,25 @@ final class LimiarAppModel {
                     passageTitle: item.reference,
                     reference: item.reference,
                     text: item.text,
+                    homily: item.homily,
+                    practicalConclusion: item.practicalConclusion,
                     savedAt: Date()
                 ),
                 at: 0
             )
         }
+        policyStore.saveFavorites(favoritePassages)
+    }
+
+    func removeFavorites(at offsets: IndexSet) {
+        let idsToRemove = Set(
+            offsets.compactMap { index in
+                favoritePassages.indices.contains(index) ? favoritePassages[index].id : nil
+            }
+        )
+        guard !idsToRemove.isEmpty else { return }
+
+        favoritePassages.removeAll { idsToRemove.contains($0.id) }
         policyStore.saveFavorites(favoritePassages)
     }
 

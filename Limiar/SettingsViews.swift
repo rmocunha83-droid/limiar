@@ -176,7 +176,7 @@ struct SettingsView: View {
                         }
                     }
                     Button("Ver trechos salvos") {
-                        if subscription.hasPremiumAccess {
+                        if subscription.hasPremiumAccess || subscription.isEssentialMode {
                             showingFavorites = true
                         } else {
                             showingPaywall = true
@@ -450,6 +450,8 @@ struct HistoryView: View {
 
 struct FavoritePassagesView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
+    @State private var showingPaywall = false
 
     var body: some View {
         List {
@@ -458,25 +460,125 @@ struct FavoritePassagesView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(model.favoritePassages) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.passageTitle)
-                            .font(.headline)
-                        let passageText = model.favoritePassageText(for: item)
-                        if !passageText.isEmpty {
-                            Text(passageText)
+                    NavigationLink {
+                        FavoritePassageDetailView(favorite: item)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.passageTitle)
+                                .font(.headline)
+                            let passageText = model.favoritePassageText(for: item)
+                            if !passageText.isEmpty {
+                                Text(passageText)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(3)
+                                    .truncationMode(.tail)
+                            }
+                            Text(item.savedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                                .lineLimit(3)
-                                .truncationMode(.tail)
                         }
-                        Text(item.savedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
+                .onDelete(perform: removeFavorites)
             }
         }
         .navigationTitle("Trechos salvos")
         .scrollContentBackground(.hidden)
         .background(LimiarBackground())
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+                .environment(subscription)
+        }
+    }
+
+    private func removeFavorites(at offsets: IndexSet) {
+        if model.isEssentialMode {
+            showingPaywall = true
+        } else {
+            model.removeFavorites(at: offsets)
+        }
+    }
+}
+
+private struct FavoritePassageDetailView: View {
+    @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var narration = PassageNarrationService()
+    @State private var showingPaywall = false
+
+    let favorite: FavoritePassageItem
+
+    private var readingItem: SpiritualReadingItem {
+        SpiritualReadingItem(
+            id: favorite.passageID,
+            reference: favorite.reference,
+            text: model.favoritePassageText(for: favorite),
+            homily: favorite.homily ?? "",
+            practicalConclusion: favorite.practicalConclusion ?? "",
+            passageID: favorite.passageID
+        )
+    }
+
+    private var narrationSegments: [String] {
+        [
+            canonicalPassageNarrationText(
+                reference: readingItem.reference,
+                text: readingItem.text
+            )
+        ] + narrationExplanationSegments([
+            readingItem.homily,
+            readingItem.practicalConclusion
+        ])
+    }
+
+    var body: some View {
+        ZStack {
+            LimiarBackground()
+
+            ScrollView {
+                SpiritualReadingCard(
+                    item: readingItem,
+                    isSaved: true,
+                    saveAction: removeFavorite,
+                    listenAction: listen,
+                    narrationState: model.isEssentialMode
+                        ? .idle
+                        : narration.state(for: narrationSegments),
+                    showsReflection: true,
+                    showsNarration: model.hasPremiumAccess || model.isEssentialMode,
+                    isSaveLocked: model.isEssentialMode,
+                    isNarrationLocked: model.isEssentialMode
+                )
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+        }
+        .navigationTitle(favorite.reference)
+        .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            narration.stop()
+        }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+                .environment(subscription)
+        }
+    }
+
+    private func removeFavorite() {
+        if model.isEssentialMode {
+            showingPaywall = true
+        } else {
+            model.toggleFavorite(readingItem)
+            dismiss()
+        }
+    }
+
+    private func listen() {
+        if model.isEssentialMode {
+            showingPaywall = true
+        } else {
+            narration.toggle(segments: narrationSegments)
+        }
     }
 }

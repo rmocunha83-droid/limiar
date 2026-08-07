@@ -167,6 +167,53 @@ final class LocalReadingSessionTests: XCTestCase {
         )
     }
 
+    func testFavoritePassagePreservesExplanationThroughCodableRoundTrip() throws {
+        let favorite = FavoritePassageItem(
+            id: UUID(),
+            passageID: "salmo-23",
+            passageTitle: "Salmo 23",
+            reference: "Salmo 23, 1",
+            text: "O Senhor é meu pastor.",
+            homily: "A presença de Deus oferece direção.",
+            practicalConclusion: "Confie o próximo passo a Ele.",
+            savedAt: Date(timeIntervalSinceReferenceDate: 123)
+        )
+
+        let decoded = try JSONDecoder().decode(
+            FavoritePassageItem.self,
+            from: JSONEncoder().encode(favorite)
+        )
+
+        XCTAssertEqual(decoded, favorite)
+        XCTAssertEqual(decoded.homily, favorite.homily)
+        XCTAssertEqual(decoded.practicalConclusion, favorite.practicalConclusion)
+    }
+
+    func testLegacyFavoritePassageDecodesWithoutExplanation() throws {
+        let favorite = FavoritePassageItem(
+            id: UUID(),
+            passageID: "salmo-23",
+            passageTitle: "Salmo 23",
+            reference: "Salmo 23, 1",
+            text: "O Senhor é meu pastor.",
+            savedAt: Date(timeIntervalSinceReferenceDate: 123)
+        )
+        var legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(favorite)) as? [String: Any]
+        )
+        legacyObject.removeValue(forKey: "homily")
+        legacyObject.removeValue(forKey: "practicalConclusion")
+
+        let decoded = try JSONDecoder().decode(
+            FavoritePassageItem.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+
+        XCTAssertNil(decoded.homily)
+        XCTAssertNil(decoded.practicalConclusion)
+        XCTAssertEqual(decoded.text, favorite.text)
+    }
+
     private var emptyReflection: AIReflection {
         AIReflection(
             summary: "",
