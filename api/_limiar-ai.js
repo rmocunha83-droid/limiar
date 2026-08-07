@@ -259,7 +259,7 @@ function depthGuidance(depth) {
       "- A profundidade curta significa um único trecho, não uma explicação rasa. Explore esse trecho por inteiro com a mesma riqueza editorial da profundidade mais profunda;",
       "- homily: 2 a 3 parágrafos desenvolvidos. Contextualize quem fala, para quem e em que situação. Explique o trecho por inteiro e conecte-o de modo natural à tradição informada;",
       "- spiritualMeaning: denso, conectando o trecho, um tema preferido e a vida concreta;",
-      "- practicalApplication: 2 a 3 frases com uma decisão clara e aplicável hoje, sem moralismo;",
+      "- practicalApplication: exatamente 2 ou 3 frases com uma decisão clara e aplicável hoje, sem moralismo;",
       "- conclusion: 1 a 2 frases, pastorais e específicas;",
       "- meditationQuestion: pergunta capaz de sustentar um minuto de meditação;",
       "- Não redundância: practicalApplication e meditationQuestion não podem repetir ideias nem frases da homily. Devem avançar a reflexão, nunca resumi-la."

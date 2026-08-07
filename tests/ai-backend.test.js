@@ -770,6 +770,7 @@ test("normalizes depth synonyms and changes guidance clearly", () => {
   assert.equal(normalizeProfile({ explanationDepth: "Mais profunda" }).explanationDepth, "grande");
   assert.match(depthGuidance("curta"), /2 a 3 parágrafos desenvolvidos/);
   assert.match(depthGuidance("curta"), /quem fala, para quem e em que situação/);
+  assert.match(depthGuidance("curta"), /exatamente 2 ou 3 frases/);
   assert.match(depthGuidance("curta"), /não podem repetir ideias nem frases da homily/);
   assert.match(depthGuidance("média"), /1 a 2 parágrafos/);
   assert.match(depthGuidance("grande"), /2 a 3 parágrafos/);
