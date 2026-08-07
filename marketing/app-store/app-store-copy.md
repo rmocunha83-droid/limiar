@@ -10,15 +10,16 @@ Pausa espiritual antes de apps
 Crie uma pausa antes de abrir apps que puxam sua atenção. Leia uma jornada com trechos e explicações espirituais, conclua com calma e retome o uso com mais presença.
 
 ## Descrição
-Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar, oferece um acesso inicial completo e, depois desse período, mantém um Modo Essencial com trechos principais.
+Limiar ajuda você a transformar o impulso em escolha. O app é gratuito para baixar: você experimenta 7 dias com tudo incluído e, depois do teste, a assinatura mensal ou anual mantém o acesso completo. Cancele a qualquer momento durante o teste sem pagar nada.
 
 Escolha apps, categorias ou sites que costumam puxar sua atenção. Quando chegar a hora de atravessar esse limiar, o app mostra uma travessia diária adaptada ao ritmo escolhido, com explicações espirituais e opção individual de salvar cada leitura.
 
 O app foi pensado para quem quer menos automático e mais presença no celular.
 
 Recursos:
-- Acesso inicial com experiência completa antes da assinatura.
-- Modo Essencial depois do acesso inicial, com trechos principais, explicações essenciais e anúncios.
+- 7 dias de teste grátis com a experiência completa.
+- Limiar Premium com assinatura mensal ou anual, renovação automática e restauração de compra.
+- Cancelamento a qualquer momento em Ajustes > Assinaturas.
 - Pausas com recursos nativos do Tempo de Uso do iPhone.
 - Apps selecionados exibidos apenas pelos ícones originais, sem nome, horário ou descrição do uso.
 - Uma, duas ou três leituras por travessia, conforme a profundidade escolhida.
@@ -28,18 +29,21 @@ Recursos:
 - Temas como disciplina, esperança, sabedoria, família, trabalho, ansiedade e propósito.
 - Rotação de trechos para evitar repetições próximas a cada nova abertura relevante do app.
 - Botão “Despausar apps, continuar” com retorno temporário aos apps selecionados.
-- Limiar Premium com assinatura mensal ou anual, renovação automática e restauração de compra.
 
 Limiar não substitui orientação religiosa, pastoral, rabínica, psicológica ou médica. Ele oferece uma pausa simples para você retomar sua atenção com mais consciência.
 
 ## Palavras-chave sugeridas
 foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos
 
+## O que há de novo — 1.13
+
+Novo início com 7 dias de teste grátis completo e melhorias de estabilidade.
+
 ## URLs para App Store Connect
-- Marketing URL: publicar `marketing/site/index.html`
-- Privacy Policy URL: publicar `marketing/site/privacy.html`
-- Support URL: publicar `marketing/site/support.html`
-- Terms URL: publicar `marketing/site/terms.html`
+- Marketing URL: https://applimiar.com.br
+- Privacy Policy URL: https://applimiar.com.br/privacy
+- Support URL: https://applimiar.com.br/support
+- Terms URL: https://applimiar.com.br/terms
 
 ## Compras dentro do app
 
@@ -55,4 +59,4 @@ Disponibilidade comercial inicial: Brasil. App gratuito para baixar, com vendas 
 ## Observações de revisão
 O app usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia um acesso inicial com experiência completa. Se esse período terminar sem assinatura, o app entra no Modo Essencial: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração. Para testar a assinatura, toque em “Ver planos” ou “Assinar Premium” e escolha o plano mensal ou anual. Recursos Premium: reflexões completas, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e uso completo da versão completa do Limiar. A tela do paywall mostra preço, renovação automática, restauração de compra, Termos de Uso e Política de Privacidade.
+Depois do onboarding, usuários novos encontram um portão de assinatura sem opção de pular. O plano mensal e o anual oferecem 7 dias grátis aos clientes elegíveis; um entitlement ativo, inclusive durante o teste, libera o dashboard. Usuários legados preservam o fluxo anterior, inclusive o Modo Essencial. Para testar, escolha um plano no portão ou use “Restaurar compras”. A tela mostra preço localizado, elegibilidade da oferta, renovação automática, restauração, Termos de Uso e Política de Privacidade.

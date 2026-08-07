@@ -7,8 +7,8 @@ Este guia consolida o que falta fazer no App Store Connect para vender o Limiar 
 ## Estado atual comprovado
 
 - Repositório GitHub: `main` estava atualizado até `208444c` no início desta checagem.
-- Site público: `https://limiar-five.vercel.app/`.
-- Build enviada à Apple: `1.0 (23)`.
+- Site público: `https://applimiar.com.br`.
+- Versão em preparação: `1.13`; o número de build será atribuído pelo Xcode Cloud.
 - App Apple ID: `6783115468`.
 - Bundle ID: `com.romeucunha.Limiar`.
 - Archive local: `build/TestFlight/Limiar-1.0-23.xcarchive`.
@@ -65,8 +65,8 @@ Produto mensal:
 
 Produto anual:
 
-- Product ID: `limiar_premium_yearly`
-- Reference Name: `Limiar Premium Yearly`
+- Product ID: `limiar_premium_annual_2026`
+- Reference Name: `Limiar Premium Anual`
 - Display Name: `Limiar Premium Anual`
 - Duration: `1 Year`
 - Price: `R$ 89,90`
@@ -75,13 +75,13 @@ Produto anual:
 
 Os dois produtos devem ficar no mesmo grupo de assinatura `Limiar Premium`.
 
-Sobre teste gratuito: o teste de 7 dias atual é uma experiência interna do app antes da compra. Não configure oferta introdutória StoreKit agora, salvo decisão posterior de produto.
+Oferta introdutória: teste grátis de 1 semana nos dois produtos, somente Brasil, início em 06/08/2026 e sem data final. Usuários novos só entram no dashboard com entitlement StoreKit ativo; usuários legados preservam o trial local anterior.
 
 ## 4. Build para selecionar
 
 Na versão iOS `1.0`, selecione:
 
-- Build: `1.0 (23)`
+- Build: a compilação `1.13` gerada pelo Xcode Cloud após autorização de release
 
 Se a build ainda aparecer como processando, aguarde o processamento terminar no App Store Connect/TestFlight.
 
@@ -97,10 +97,10 @@ Campos principais:
 - Nome: `Limiar`
 - Subtítulo: `Pausa espiritual antes de apps`
 - Palavras-chave: `foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,hábitos`
-- Marketing URL: `https://limiar-five.vercel.app/`
-- Política de Privacidade: `https://limiar-five.vercel.app/privacy.html`
-- Suporte: `https://limiar-five.vercel.app/support.html`
-- Termos: `https://limiar-five.vercel.app/terms.html`
+- Marketing URL: `https://applimiar.com.br`
+- Política de Privacidade: `https://applimiar.com.br/privacy`
+- Suporte: `https://applimiar.com.br/support`
+- Termos: `https://applimiar.com.br/terms`
 
 Screenshots:
 
@@ -153,11 +153,11 @@ Cole este texto em `App Review Notes`:
 ```text
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário antes de apps selecionados. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+Depois do onboarding, usuários novos encontram um portão de assinatura sem opção de pular. Clientes elegíveis podem iniciar 7 dias grátis no plano mensal ou anual; durante o teste, o entitlement ativo libera o dashboard. Sem entitlement, usuários novos voltam ao portão. Usuários legados preservam o fluxo anterior, inclusive o Modo Essencial.
 
-Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
+Para testar a assinatura, escolha o plano mensal ou anual no portão ou toque em "Restaurar compras".
 
-Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
+Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O portão continuará acessível, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
 Recursos Premium: reflexões completas, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e experiência completa do Limiar.
 ```
@@ -171,14 +171,14 @@ Checklist final:
 - App disponível somente no Brasil.
 - Assinaturas mensal e anual disponíveis somente no Brasil.
 - Produto `limiar_premium_monthly` em estado pronto para submissão.
-- Build `1.0 (23)` selecionada.
+- Build `1.13` do Xcode Cloud selecionada.
 - Assinatura mensal selecionada na seção de In-App Purchases/Subscriptions da versão.
 - App Privacy preenchido.
 - Age Rating preenchido.
 - Export Compliance respondido.
 - Screenshots enviados.
 - URLs de suporte, privacidade e termos abrindo corretamente.
-- TestFlight/Sandbox validado com teste grátis, paywall, assinatura, restauração e Modo Essencial.
+- TestFlight/Sandbox validado com portão, elegibilidade do teste grátis, assinatura, restauração, expiração da coorte nova e regressão do Modo Essencial legado.
 
 ## Status
 

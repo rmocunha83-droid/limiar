@@ -58,6 +58,24 @@ enum IntroductoryOfferEligibility: Equatable {
     case ineligible
 }
 
+enum SubscriptionOfferPolicy {
+    static func isSevenDayPeriod(
+        unit: Product.SubscriptionPeriod.Unit,
+        value: Int
+    ) -> Bool {
+        switch unit {
+        case .day:
+            value == 7
+        case .week:
+            value == 1
+        case .month, .year:
+            false
+        @unknown default:
+            false
+        }
+    }
+}
+
 enum SubscriptionAccessState: Equatable {
     case trialNotStarted
     case trialActive
@@ -582,6 +600,10 @@ final class SubscriptionManager {
     func hasConfirmedFreeTrial(for plan: SubscriptionPlan) -> Bool {
         guard let offer = product(for: plan)?.subscription?.introductoryOffer else { return false }
         return offer.paymentMode == .freeTrial
+            && SubscriptionOfferPolicy.isSevenDayPeriod(
+                unit: offer.period.unit,
+                value: offer.period.value
+            )
     }
 
     func trialText(for plan: SubscriptionPlan) -> String {

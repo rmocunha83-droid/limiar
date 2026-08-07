@@ -6,7 +6,7 @@
 - App compila em Release para iOS.
 - Archive foi criado com sucesso.
 - Export para App Store foi concluído com assinatura de distribuição.
-- Upload para App Store Connect/TestFlight concluído com sucesso na build `1.0 (23)`.
+- O App Store Connect contém a versão `1.12 (165)`; a build `1.13` ainda não deve ser enviada.
 - O entitlement `com.apple.developer.family-controls` aparece no pacote exportado de distribuição.
 - Conta do Xcode em uso: `Romeu Cunha - L38WCHAWJ9`.
 - Bundle ID principal: `com.romeucunha.Limiar`.
@@ -85,8 +85,8 @@ Produtos:
 
 | Product ID | Nome de referência | Nome exibido | Duração | Preço | Oferta introdutória |
 | --- | --- | --- | --- | --- | --- |
-| `limiar_premium_monthly` | `Limiar Premium Monthly` | `Limiar Premium Mensal` | 1 mês | R$ 9,90 | Não configurada por padrão |
-| `limiar_premium_yearly` | `Limiar Premium Yearly` | `Limiar Premium Anual` | 1 ano | R$ 89,90 | Não configurada por padrão |
+| `limiar_premium_monthly` | `Limiar Premium Monthly` | `Limiar Premium Mensal` | 1 mês | R$ 9,90 | 1 semana grátis no Brasil, sem data final |
+| `limiar_premium_annual_2026` | `Limiar Premium Anual` | `Limiar Premium Anual` | 1 ano | R$ 89,90 | 1 semana grátis no Brasil, sem data final |
 
 Descrição curta sugerida para os produtos:
 
@@ -100,7 +100,7 @@ Configuração territorial das assinaturas:
 - Disponibilidade: somente Brasil.
 - Preço mensal: R$ 9,90.
 - Preço anual: R$ 89,90.
-- Oferta introdutória StoreKit: não configurada por padrão. O teste de 7 dias atual é liberado dentro do app antes de qualquer compra.
+- Oferta introdutória StoreKit: teste grátis de 1 semana nos dois produtos, Brasil, início em 06/08/2026 e sem data final.
 
 ## Review notes
 
@@ -109,26 +109,26 @@ Usar este texto em `App Review Notes`:
 ```text
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário antes de apps selecionados. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
 
-Depois do onboarding, o usuário inicia 7 dias grátis com experiência completa. Se o teste terminar sem assinatura, o app entra no Modo Essencial: mantém a travessia diária no ritmo escolhido, explicações essenciais e o fluxo de pausa, com anúncios e sem narração.
+Depois do onboarding, usuários novos encontram um portão de assinatura sem opção de pular. Clientes elegíveis podem iniciar 7 dias grátis no plano mensal ou anual; durante o teste, o entitlement ativo libera o dashboard. Sem entitlement, usuários novos voltam ao portão. Usuários legados preservam o fluxo anterior, inclusive o Modo Essencial.
 
-Para testar a assinatura, toque em "Ver planos" ou "Assinar Premium" e escolha o plano mensal ou anual disponível no StoreKit.
+Para testar a assinatura, escolha o plano mensal ou anual no portão ou toque em "Restaurar compras".
 
-Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O teste gratuito e o paywall continuarão acessíveis, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
+Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O portão de assinatura continuará acessível, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 
 Recursos Premium: reflexões completas, narração, personalização contínua por tradição/temas/livros, histórico, baixa repetição de leituras e experiência completa do Limiar.
 ```
 
 ## App Privacy
 
-Declaração sugerida com base no app atual:
+Declaração conferida para a versão 1.13:
 
-- Tracking: não.
-- Dados usados para rastrear o usuário: não.
-- Dados vinculados à identidade do usuário: não.
-- Dados coletados: `Other Data Types`, finalidade `App Functionality`, não vinculado à identidade.
-- Dados sensíveis, saúde, financeiro, localização precisa, contatos, fotos, áudio, conteúdo do usuário, histórico de navegação: não declarar, salvo se algum recurso novo passar a coletar isso.
+- Tracking: sim.
+- Dados usados para rastrear o usuário: `Identifiers`, `Usage Data` e `Advertising Data`; a ficha publicada também marca `Purchase History` para rastreamento.
+- A versão 1.13 não adiciona novas categorias de coleta; confirmar que a ficha preserva essas declarações antes da submissão.
+- A URL da política ainda aparece no App Store Connect como `https://limiar-five.vercel.app/privacy.html`; atualizar para `https://applimiar.com.br/privacy` ao criar a versão 1.13.
+- Dados sensíveis, saúde, financeiro, localização precisa, contatos, fotos, áudio, conteúdo do usuário e histórico de navegação: não declarar, salvo se algum recurso futuro passar a coletar isso.
 
-O app usa UserDefaults/local storage para preferências, histórico local e estado de assinatura. As seleções de apps via Screen Time devem permanecer no dispositivo e não ser vendidas ou compartilhadas.
+O app usa UserDefaults/local storage para preferências, histórico local e estado de assinatura. As seleções de apps via Screen Time permanecem no dispositivo e não são usadas para publicidade ou medição.
 
 ## Age Rating
 
@@ -166,7 +166,7 @@ Sem isso, o app pode até ser preparado, mas não fica livre para vender assinat
 
 ## Próximos passos no App Store Connect
 
-1. Aguardar a build `1.0 (23)` terminar processamento no App Store Connect.
+1. Depois da autorização de release, aguardar a build `1.13` do Xcode Cloud terminar o processamento no App Store Connect.
 2. Selecionar a build `23` na versão iOS `1.0`.
 3. Conferir distribuição pública somente para Brasil.
 4. Conferir disponibilidade das assinaturas somente para Brasil.

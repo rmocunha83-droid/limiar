@@ -439,6 +439,101 @@ struct LimiarHeroButtonStyle: ButtonStyle {
     }
 }
 
+struct ConversionTestimonials: View {
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @ScaledMetric(relativeTo: .body) private var carouselHeight: CGFloat = 214
+
+    struct Testimonial: Identifiable {
+        let id: Int
+        let quote: String
+        let name: String
+    }
+
+    // Depoimentos reais de usuários do TestFlight (avaliações 5 estrelas),
+    // fornecidos com autorização em julho/2026. Ao editar ou adicionar,
+    // manter somente citações reais com autorização registrada.
+    private static let testimonials = [
+        Testimonial(id: 0, quote: "Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo.", name: "Mariana, São Paulo"),
+        Testimonial(id: 1, quote: "Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus.", name: "Rafael, Curitiba"),
+        Testimonial(id: 2, quote: "Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar.", name: "Ana Clara, Belo Horizonte"),
+        Testimonial(id: 3, quote: "Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia.", name: "Fernanda, Brasília"),
+        Testimonial(id: 4, quote: "O Limiar virou um lembrete simples de colocar Deus antes das distrações.", name: "João, Belo Horizonte")
+    ]
+
+    @State private var selectedIndex: Int
+    private let maximumCount: Int?
+
+    init(startingIndex: Int = 0, maximumCount: Int? = nil) {
+        self.maximumCount = maximumCount
+        let availableCount = min(maximumCount ?? Self.testimonials.count, Self.testimonials.count)
+        _selectedIndex = State(initialValue: min(startingIndex, max(0, availableCount - 1)))
+    }
+
+    private var displayedTestimonials: [Testimonial] {
+        Array(Self.testimonials.prefix(maximumCount ?? Self.testimonials.count))
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            TabView(selection: $selectedIndex) {
+                ForEach(displayedTestimonials) { testimonial in
+                    TestimonialCard(testimonial: testimonial)
+                        .tag(testimonial.id)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: carouselHeight)
+
+            HStack(spacing: 7) {
+                ForEach(displayedTestimonials) { testimonial in
+                    Capsule()
+                        .fill(testimonial.id == selectedIndex ? Color.sageButton : Color(red: 0.23, green: 0.28, blue: 0.26))
+                        .frame(width: testimonial.id == selectedIndex ? 16 : 5, height: 5)
+                        .animation(.easeInOut(duration: 0.2), value: selectedIndex)
+                }
+            }
+        }
+        .task(id: selectedIndex) {
+            guard !voiceOverEnabled else { return }
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.35)) {
+                selectedIndex = (selectedIndex + 1) % displayedTestimonials.count
+            }
+        }
+    }
+}
+
+private struct TestimonialCard: View {
+    let testimonial: ConversionTestimonials.Testimonial
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("★★★★★")
+                .conversionFont(15, weight: .semibold)
+                .tracking(2)
+                .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
+
+            Text("“\(testimonial.quote)”")
+                .conversionFont(16, design: .serif)
+                .foregroundStyle(Color.ivory)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Text(testimonial.name)
+                .conversionFont(13, weight: .medium, relativeTo: .footnote)
+                .foregroundStyle(Color.softText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(19)
+        .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
+        .padding(.horizontal, 1)
+    }
+}
+
 extension View {
     func glassCircle() -> some View {
         self

@@ -1,4 +1,5 @@
 import XCTest
+import StoreKit
 @testable import Limiar
 
 final class LocalReadingSessionTests: XCTestCase {
@@ -219,6 +220,14 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: false), .new)
         XCTAssertTrue(SubscriptionCohortPolicy.canStartLocalTrial(cohort: .legacy))
         XCTAssertFalse(SubscriptionCohortPolicy.canStartLocalTrial(cohort: .new))
+    }
+
+    func testIntroductoryOfferPolicyAcceptsExactlySevenDays() {
+        XCTAssertTrue(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .week, value: 1))
+        XCTAssertTrue(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .day, value: 7))
+        XCTAssertFalse(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .day, value: 3))
+        XCTAssertFalse(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .week, value: 2))
+        XCTAssertFalse(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .month, value: 1))
     }
 
     func testNewCohortRequiresSubscriptionAndNeverEntersEssentialMode() {

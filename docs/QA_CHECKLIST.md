@@ -11,6 +11,17 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Selecionar tradições religiosas, incluindo católica, evangélica, judaica e espírita.
 - Configurar preferências bíblicas, temas favoritos e profundidade da explicação.
 
+## Assinatura e coortes
+
+- Em instalação limpa, concluir o onboarding e confirmar que o portão não pode ser fechado ou contornado.
+- Confirmar preços localizados reais nos planos mensal e anual.
+- Em conta elegível, confirmar “7 dias grátis” nos dois planos; em conta não elegível, confirmar que a promessa não aparece.
+- Comprar no sandbox e confirmar acesso imediato ao dashboard, inclusive durante o teste.
+- Cancelar durante o teste e confirmar acesso até a expiração; depois, retorno ao portão sem anúncios e sem Modo Essencial.
+- Restaurar uma assinatura ativa e confirmar entrada no dashboard.
+- Simular coorte legada com `TrialStartStore` preenchido e confirmar trial local, funil D6/D7/D8 e Modo Essencial sem qualquer portão novo.
+- Validar os eventos Meta de início do teste e ativação paga no Gerenciador de Eventos, sem duplicatas.
+
 ## Apps que ativam o Limiar
 
 - Abrir a seleção nativa de apps.
@@ -36,7 +47,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Concluir a leitura local e confirmar histórico, recentes e liberação dos apps selecionados.
 - Repetir sem concluir, restabelecer a conexão e tocar em `Tentar novamente`; confirmar que uma resposta remota válida substitui a sessão uma única vez.
 - Repetir concluindo antes da reconexão; confirmar que o conteúdo concluído não é substituído.
-- Repetir no Modo Essencial e confirmar anúncios, bloqueios Premium e conclusão normal.
+- Repetir na coorte legada em Modo Essencial e confirmar anúncios, bloqueios Premium e conclusão normal.
 
 ## Rotação de trechos
 
@@ -54,8 +65,8 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar que a resposta contém resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
 - Verificar se o texto não inventa conteúdo bíblico.
 - Reabrir o mesmo trecho com o mesmo perfil e profundidade.
-- Confirmar que usuários em teste gratuito ativo e assinantes recebem a experiência completa com IA.
-- Confirmar que o Modo Essencial mostra os trechos principais com explicações essenciais, anúncios e sem narração.
+- Confirmar que usuários novos com entitlement ativo, inclusive no teste, e assinantes legados recebem a experiência completa com IA.
+- Confirmar que o Modo Essencial aparece somente para legados e mostra os trechos principais com explicações essenciais, anúncios e sem narração.
 
 ## Favoritos e histórico
 
@@ -72,7 +83,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar que a narração usa voz local do iOS em português do Brasil quando disponível.
 - Pausar ou interromper a narração.
 - Sair da tela durante a narração e confirmar que o áudio não fica preso indevidamente.
-- Confirmar que tocar em “Ouvir este trecho” no Modo Essencial abre o paywall e não chama a narração.
+- Confirmar que tocar em “Ouvir este trecho” no Modo Essencial legado abre o paywall e não chama a narração.
 
 ## Configurações
 

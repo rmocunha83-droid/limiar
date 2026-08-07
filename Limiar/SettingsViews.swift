@@ -19,8 +19,8 @@ struct SettingsView: View {
 
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
-    private let privacyURL = URL(string: "https://limiar-five.vercel.app/privacy.html")!
-    private let supportURL = URL(string: "https://limiar-five.vercel.app/support.html")!
+    private let privacyURL = URL(string: "https://applimiar.com.br/privacy")!
+    private let supportURL = URL(string: "https://applimiar.com.br/support")!
 
     var body: some View {
         @Bindable var model = model
