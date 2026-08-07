@@ -440,7 +440,9 @@ struct UserFaithProfile: Codable, Equatable {
         tradition: .catholic,
         favoriteBibleSections: [.psalms, .gospels],
         favoriteBooks: [.psalms, .john],
-        favoriteThemes: [.presence, .discipline],
+        // O onboarding começa com os oito primeiros temas exibidos na grade.
+        // Preferências já salvas não passam por essa configuração inicial.
+        favoriteThemes: Array(SpiritualTheme.standaloneOptions.prefix(8)),
         explanationDepth: .short,
         selectedReadingCategoryIDs: ["evangelhos", "salmos", "sabedoria"]
     )

@@ -7,6 +7,13 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
     }
 
+    func testStarterProfileSelectsTheFirstEightStandaloneThemes() {
+        XCTAssertEqual(
+            UserFaithProfile.starter.favoriteThemes,
+            Array(SpiritualTheme.standaloneOptions.prefix(8))
+        )
+    }
+
     func testCompletionScreenUsesTurnSpecificIcons() {
         XCTAssertEqual(completionPresentation(turn: .morning).iconName, "sunrise.fill")
         XCTAssertEqual(completionPresentation(turn: .afternoon).iconName, "sun.max.fill")
