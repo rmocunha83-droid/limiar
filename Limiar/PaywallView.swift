@@ -40,6 +40,7 @@ struct PaywallView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
+    var analyticsOrigin: LimiarAnalytics.PaywallOrigin = .settings
     var continueEssential: (() -> Void)? = nil
 
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
@@ -91,6 +92,7 @@ struct PaywallView: View {
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .task {
             MetaAppEvents.trackPaywallViewed()
+            LimiarAnalytics.trackPaywallViewed(origin: analyticsOrigin)
             subscription.start()
         }
     }
@@ -138,6 +140,7 @@ struct SubscriptionGateView: View {
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .task {
             MetaAppEvents.trackPaywallViewed()
+            LimiarAnalytics.trackGateViewed()
             subscription.start()
         }
     }
@@ -192,7 +195,9 @@ private struct SubscriptionGatePlanPicker: View {
         VStack(spacing: 10) {
             ForEach(SubscriptionPlan.allCases.sorted { $0.sortOrder < $1.sortOrder }) { plan in
                 Button {
+                    guard selection != plan else { return }
                     selection = plan
+                    LimiarAnalytics.trackGatePlanSelected(plan)
                 } label: {
                     VStack(alignment: .leading, spacing: 7) {
                         if plan == .yearly {
@@ -280,7 +285,9 @@ private struct SubscriptionGateCompliance: View {
     var body: some View {
         VStack(spacing: 9) {
             Button {
-                Task { await subscription.purchaseSelectedPlan() }
+                Task {
+                    await subscription.purchaseSelectedPlan(origin: .subscriptionGate)
+                }
             } label: {
                 HStack(spacing: 9) {
                     if subscription.state == .purchasing {
@@ -314,7 +321,9 @@ private struct SubscriptionGateCompliance: View {
             }
 
             Button {
-                Task { await subscription.restorePurchases() }
+                Task {
+                    await subscription.restorePurchases(origin: .subscriptionGate)
+                }
             } label: {
                 Label("Restaurar compras", systemImage: "arrow.clockwise")
                     .conversionFont(13, weight: .semibold, relativeTo: .footnote)

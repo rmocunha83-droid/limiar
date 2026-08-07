@@ -955,6 +955,9 @@ final class LimiarAppModel {
 
         if !wasCompleted {
             MetaAppEvents.trackCompletedRegistration()
+            LimiarAnalytics.trackOnboardingCompleted()
+            LimiarAnalytics.setReadingTradition(faithProfile.tradition)
+            LimiarAnalytics.setDepthPreference(faithProfile.explanationDepth)
         }
     }
 
@@ -1014,6 +1017,7 @@ final class LimiarAppModel {
         faithProfile.normalizeStandaloneThemesForCurrentTradition()
         saveProfile()
         if didChangeTradition {
+            LimiarAnalytics.setReadingTradition(tradition)
             beginNewReading(avoidingCurrent: true)
         }
     }
@@ -1043,6 +1047,7 @@ final class LimiarAppModel {
     func selectExplanationDepth(_ depth: ExplanationDepth) {
         faithProfile.explanationDepth = depth
         saveProfile()
+        LimiarAnalytics.setDepthPreference(depth)
     }
 
     func selectPauseCycleTurn(_ turn: PauseCycleTurn) {
@@ -1356,6 +1361,7 @@ final class LimiarAppModel {
                 ),
                 at: 0
             )
+            LimiarAnalytics.trackPassageSaved()
         }
         policyStore.saveFavorites(favoritePassages)
     }
@@ -1412,6 +1418,10 @@ final class LimiarAppModel {
         prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
         LimiarPrewarmCoordinator.shared.schedule(now: completedAt)
         MetaAppEvents.trackReadingCompleted()
+        LimiarAnalytics.trackTraversalCompleted(
+            turn: pauseCycleTurn,
+            depth: faithProfile.explanationDepth
+        )
     }
 
     func applyBlocking() {

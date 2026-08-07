@@ -122,9 +122,11 @@ struct OnboardingView: View {
             applyDebugTraditionIfNeeded()
             normalizeCurrentStepForTradition()
             prewarmIfEnteringActivation(step)
+            trackOnboardingStep(step)
         }
         .onChange(of: step) { _, newStep in
             prewarmIfEnteringActivation(newStep)
+            trackOnboardingStep(newStep)
         }
         .onChange(of: model.selection) { _, _ in
             model.saveProfile()
@@ -391,7 +393,22 @@ struct OnboardingView: View {
 
     private func selectTradition(_ tradition: FaithTradition) {
         model.selectTradition(tradition)
+        LimiarAnalytics.trackTraditionSelected(tradition)
         readingPreferenceMessage = ""
+    }
+
+    private func trackOnboardingStep(_ step: Int) {
+        let analyticsStep: LimiarAnalytics.OnboardingStep
+        switch step {
+        case 0: analyticsStep = .welcome
+        case 1: analyticsStep = .tradition
+        case 2: analyticsStep = .readings
+        case 3: analyticsStep = .themes
+        case 4: analyticsStep = .depth
+        case 5: analyticsStep = .screenTime
+        default: analyticsStep = .activation
+        }
+        LimiarAnalytics.trackOnboardingStepViewed(analyticsStep, index: step)
     }
 
     private func applyDebugTraditionIfNeeded() {

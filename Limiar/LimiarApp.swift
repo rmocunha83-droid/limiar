@@ -1,5 +1,6 @@
 import AppTrackingTransparency
 import FacebookCore
+import FirebaseCore
 import Observation
 import SwiftUI
 import UIKit
@@ -42,6 +43,7 @@ final class LimiarAppDelegate: NSObject, UIApplicationDelegate {
         // o toque que iniciou um cold launch pela notificação.
         UNUserNotificationCenter.current().delegate = LimiarNotificationCoordinator.shared
         LimiarPrewarmCoordinator.shared.register()
+        FirebaseApp.configure()
         return MetaAppEvents.initialize(
             application: application,
             launchOptions: launchOptions
@@ -206,11 +208,13 @@ enum MetaAppEvents {
     static func requestTrackingPermissionIfNeeded() {
         guard isTrackingPromptPending else { return }
 
-        ATTrackingManager.requestTrackingAuthorization { _ in
+        LimiarAnalytics.trackATTPromptShown()
+        ATTrackingManager.requestTrackingAuthorization { status in
             // Qualquer resposta vale: o SDK lê o status do ATT sozinho e só
             // decide se pode vincular os eventos a um perfil. Reativamos a
             // sessão para que o próximo lote já carregue o novo status.
             Task { @MainActor in
+                LimiarAnalytics.trackATTPromptResult(granted: status == .authorized)
                 activateApp()
             }
         }

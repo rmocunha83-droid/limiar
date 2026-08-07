@@ -47,6 +47,11 @@ enum SubscriptionPurchaseState: Equatable {
     case failed(String)
 }
 
+enum SubscriptionPurchaseOrigin {
+    case subscriptionGate
+    case legacyPaywall
+}
+
 enum SubscriptionCohort: Equatable {
     case legacy
     case new
@@ -176,6 +181,7 @@ enum ConversionFunnelPersistence {
 final class SubscriptionManager {
     private enum Constants {
         static let entitlementCacheKey = "limiar.subscription.hasActiveSubscription"
+        static let firebaseLifecycleMonitoringStartedAtKey = "limiar.analytics.subscriptionLifecycleStartedAt"
         static let trialStartDefaultsKey = "limiar.subscription.trialStartedAt"
         static let reviewRequestDefaultsKeyPrefix = "limiar.review.requested"
         static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
@@ -193,6 +199,7 @@ final class SubscriptionManager {
     private(set) var accessState = SubscriptionAccessState.trialNotStarted
     private(set) var trialStartedAt: Date?
     private(set) var activeEntitlementStartedAt: Date?
+    private(set) var activeEntitlementIsIntroductoryTrial = false
     private(set) var activeProductIDs: Set<String> = []
     private(set) var introductoryOfferEligibility: [String: IntroductoryOfferEligibility] = [:]
     private(set) var state = SubscriptionPurchaseState.idle
@@ -217,6 +224,9 @@ final class SubscriptionManager {
         cohort = SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: legacyTrialStartedAt != nil)
         hasActiveSubscription = defaults.bool(forKey: Constants.entitlementCacheKey)
         trialStartedAt = legacyTrialStartedAt
+        if defaults.object(forKey: Constants.firebaseLifecycleMonitoringStartedAtKey) == nil {
+            defaults.set(Date(), forKey: Constants.firebaseLifecycleMonitoringStartedAtKey)
+        }
         refreshAccessState()
     }
 
@@ -246,6 +256,19 @@ final class SubscriptionManager {
 
     var requiresSubscriptionGate: Bool {
         cohort == .new && !hasActiveSubscription
+    }
+
+    var analyticsAccess: LimiarAnalytics.Access? {
+        if hasActiveSubscription {
+            return activeEntitlementIsIntroductoryTrial ? .trial : .premium
+        }
+        if cohort == .legacy, accessState == .trialActive {
+            return .trial
+        }
+        if isEssentialMode {
+            return .essential
+        }
+        return nil
     }
 
     var canShowPaywall: Bool {
@@ -366,6 +389,7 @@ final class SubscriptionManager {
             "activeDays": "\(activeReadingDayCount(history, calendar: .current))",
             "appVersion": appVersion
         ])
+        LimiarAnalytics.trackReviewPromptRequested()
         return true
     }
 
@@ -688,22 +712,33 @@ final class SubscriptionManager {
         product(for: plan) != nil && !isBusy
     }
 
-    func purchaseSelectedPlan() async {
-        await purchase(selectedPlan)
+    func purchaseSelectedPlan(
+        origin: SubscriptionPurchaseOrigin = .legacyPaywall
+    ) async {
+        await purchase(selectedPlan, origin: origin)
     }
 
-    func purchase(_ plan: SubscriptionPlan) async {
+    func purchase(
+        _ plan: SubscriptionPlan,
+        origin: SubscriptionPurchaseOrigin = .legacyPaywall
+    ) async {
         if products.isEmpty {
             await loadProducts()
         }
 
         guard let product = product(for: plan) else {
+            if origin == .subscriptionGate {
+                LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
+            }
             state = .productsUnavailable
             message = "Não encontramos este plano no StoreKit. Confirme o produto \(plan.productID) no App Store Connect."
             return
         }
 
         MetaAppEvents.trackCheckoutStarted()
+        if origin == .subscriptionGate {
+            LimiarAnalytics.trackGatePurchaseStarted(plan)
+        }
         state = .purchasing
         message = ""
 
@@ -713,6 +748,7 @@ final class SubscriptionManager {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
+                trackFirebasePurchaseLifecycle(for: transaction)
                 await transaction.finish()
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
@@ -721,19 +757,30 @@ final class SubscriptionManager {
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
             case .userCancelled:
+                if origin == .subscriptionGate {
+                    LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .cancelled)
+                }
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."
             @unknown default:
+                if origin == .subscriptionGate {
+                    LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
+                }
                 state = .failed("Não foi possível concluir a compra agora.")
                 message = "Não foi possível concluir a compra agora."
             }
         } catch {
+            if origin == .subscriptionGate {
+                LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
+            }
             state = .failed(error.localizedDescription)
             message = "Não foi possível concluir a compra: \(error.localizedDescription)"
         }
     }
 
-    func restorePurchases() async {
+    func restorePurchases(
+        origin: SubscriptionPurchaseOrigin = .legacyPaywall
+    ) async {
         state = .loadingProducts
         message = "Buscando compras anteriores..."
 
@@ -742,6 +789,9 @@ final class SubscriptionManager {
             await refreshEntitlements()
             state = hasActiveSubscription ? .restored : .expired
             message = hasActiveSubscription ? "Assinatura restaurada." : "Nenhuma assinatura ativa foi encontrada."
+            if hasActiveSubscription, origin == .subscriptionGate {
+                LimiarAnalytics.trackRestoreSucceeded()
+            }
         } catch {
             state = .failed(error.localizedDescription)
             message = "Não foi possível restaurar agora: \(error.localizedDescription)"
@@ -784,6 +834,7 @@ final class SubscriptionManager {
     func refreshEntitlements() async {
         var activeIDs = Set<String>()
         var entitlementStartDates: [Date] = []
+        var hasIntroductoryTrialEntitlement = false
 
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
@@ -795,11 +846,16 @@ final class SubscriptionManager {
             }
             activeIDs.insert(transaction.productID)
             entitlementStartDates.append(transaction.purchaseDate)
+            if transactionStartsIntroductoryFreeTrial(transaction) {
+                hasIntroductoryTrialEntitlement = true
+            }
             trackPurchaseLifecycle(for: transaction)
+            trackFirebasePurchaseLifecycleIfObservable(for: transaction)
         }
 
         activeProductIDs = activeIDs
         activeEntitlementStartedAt = entitlementStartDates.min()
+        activeEntitlementIsIntroductoryTrial = hasIntroductoryTrialEntitlement
         hasActiveSubscription = !activeIDs.isEmpty
         defaults.set(hasActiveSubscription, forKey: Constants.entitlementCacheKey)
         refreshAccessState()
@@ -820,6 +876,7 @@ final class SubscriptionManager {
     private func handle(transactionResult: VerificationResult<Transaction>) async {
         do {
             let transaction = try checkVerified(transactionResult)
+            trackFirebasePurchaseLifecycle(for: transaction)
             await transaction.finish()
             await refreshEntitlements()
         } catch {
@@ -863,6 +920,35 @@ final class SubscriptionManager {
                 originalTransactionID: transaction.originalID
             )
         }
+    }
+
+    private func trackFirebasePurchaseLifecycle(for transaction: Transaction) {
+        guard let plan = SubscriptionPlan(rawValue: transaction.productID) else { return }
+
+        if transactionStartsIntroductoryFreeTrial(transaction) {
+            LimiarAnalytics.trackTrialStarted(
+                plan: plan,
+                originalTransactionID: transaction.originalID
+            )
+        } else {
+            LimiarAnalytics.trackSubscriptionActivated(
+                plan: plan,
+                originalTransactionID: transaction.originalID
+            )
+        }
+    }
+
+    /// Evita registrar assinaturas históricas como novas na primeira abertura
+    /// com Firebase, mas captura uma conversão/renovação que ocorreu enquanto o
+    /// app estava fechado depois que a telemetria já havia sido ativada.
+    private func trackFirebasePurchaseLifecycleIfObservable(for transaction: Transaction) {
+        guard let monitoringStartedAt = defaults.object(
+            forKey: Constants.firebaseLifecycleMonitoringStartedAtKey
+        ) as? Date,
+              transaction.purchaseDate >= monitoringStartedAt else {
+            return
+        }
+        trackFirebasePurchaseLifecycle(for: transaction)
     }
 
     private func transactionStartsIntroductoryFreeTrial(_ transaction: Transaction) -> Bool {

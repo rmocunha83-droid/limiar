@@ -505,6 +505,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isPaused = false
         wasPausedByInterruption = false
         eventLog.log("narration_started", ["segments": String(segments.count)])
+        LimiarAnalytics.trackNarrationStarted()
         loadAndPlaySegment(at: 0)
     }
 
@@ -669,6 +670,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             "index": String(index),
             "reason": reason
         ])
+        LimiarAnalytics.trackNarrationFailed(reason: reason)
     }
 
     private static func networkFailureReason(for error: Error) -> String {

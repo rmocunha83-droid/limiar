@@ -109,7 +109,7 @@ struct ContentView: View {
                 } else if Self.forcedConversionScreen == "D7" {
                     EssentialModeIntroView {}
                 } else if Self.forcedConversionScreen == "D8" {
-                    PaywallView()
+                    PaywallView(analyticsOrigin: .d8)
                 } else if Self.forcePaywallForReviewScreenshot {
                     PaywallView()
                 } else if Self.forceEssentialModeForDebugging {
@@ -136,7 +136,7 @@ struct ContentView: View {
                 } else if !presentedFunnelInterstitialThisSession,
                           subscription.shouldShowPostTrialPaywall,
                           !dismissedPostTrialPaywall {
-                    PaywallView {
+                    PaywallView(analyticsOrigin: .d8) {
                         dismissedPostTrialPaywall = true
                         presentedFunnelInterstitialThisSession = true
                     }
@@ -184,6 +184,7 @@ struct ContentView: View {
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode
             )
+            syncAnalyticsUserProperties()
             if scenePhase == .active {
                 attemptNextCyclePrewarmForForeground()
             }
@@ -195,6 +196,10 @@ struct ContentView: View {
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode
             )
+            syncAnalyticsUserProperties()
+        }
+        .onChange(of: model.faithProfile) { _, _ in
+            syncAnalyticsUserProperties()
         }
     }
 
@@ -202,6 +207,14 @@ struct ContentView: View {
         guard !attemptedNextCyclePrewarmThisForeground else { return }
         attemptedNextCyclePrewarmThisForeground = true
         model.prewarmNextCycleFromForeground()
+    }
+
+    private func syncAnalyticsUserProperties() {
+        LimiarAnalytics.syncUserProperties(
+            profile: model.faithProfile,
+            cohort: subscription.cohort,
+            access: subscription.analyticsAccess
+        )
     }
 }
 
@@ -356,6 +369,12 @@ private struct DashboardView: View {
         }
         .task {
             model.reapplyBlockIfNeeded()
+            LimiarAnalytics.trackTraversalStarted(
+                turn: model.pauseCycleTurn,
+                cycleKey: ScreenTimePolicyStore.cycleDayKey(
+                    hour: model.pauseCycleTurn.rawValue
+                )
+            )
         }
         .onDisappear {
             narration.stop()

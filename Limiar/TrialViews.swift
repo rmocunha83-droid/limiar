@@ -44,7 +44,7 @@ struct EssentialModeIntroView: View {
                     .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 8))
 
                     NavigationLink {
-                        PaywallView()
+                        PaywallView(analyticsOrigin: .d7)
                     } label: {
                         ConversionSecondaryActionLabel(title: "Quero o Limiar completo")
                     }
@@ -55,6 +55,9 @@ struct EssentialModeIntroView: View {
             }
         }
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .task {
+            LimiarAnalytics.trackPaywallViewed(origin: .d7)
+        }
     }
 }
 
@@ -184,6 +187,9 @@ struct TrialConversionView: View {
             }
         }
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .task {
+            LimiarAnalytics.trackPaywallViewed(origin: .d6)
+        }
     }
 }
 
