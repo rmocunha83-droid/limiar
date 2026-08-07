@@ -214,6 +214,148 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(decoded.text, favorite.text)
     }
 
+    func testSubscriptionCohortComesOnlyFromLegacyKeychainMarker() {
+        XCTAssertEqual(SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: true), .legacy)
+        XCTAssertEqual(SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: false), .new)
+        XCTAssertTrue(SubscriptionCohortPolicy.canStartLocalTrial(cohort: .legacy))
+        XCTAssertFalse(SubscriptionCohortPolicy.canStartLocalTrial(cohort: .new))
+    }
+
+    func testNewCohortRequiresSubscriptionAndNeverEntersEssentialMode() {
+        let state = SubscriptionCohortPolicy.accessState(
+            cohort: .new,
+            hasActiveSubscription: false,
+            trialStartedAt: nil,
+            now: Date(),
+            trialDuration: 7 * 24 * 60 * 60
+        )
+
+        XCTAssertEqual(state, .subscriptionRequired)
+        XCTAssertFalse(
+            SubscriptionCohortPolicy.hasPremiumAccess(
+                cohort: .new,
+                hasActiveSubscription: false,
+                accessState: state
+            )
+        )
+        XCTAssertFalse(
+            SubscriptionCohortPolicy.isEssentialMode(
+                cohort: .new,
+                hasActiveSubscription: false,
+                accessState: state
+            )
+        )
+    }
+
+    func testNewCohortGetsPremiumOnlyFromActiveStoreKitEntitlement() {
+        let state = SubscriptionCohortPolicy.accessState(
+            cohort: .new,
+            hasActiveSubscription: true,
+            trialStartedAt: nil,
+            now: Date(),
+            trialDuration: 7 * 24 * 60 * 60
+        )
+
+        XCTAssertEqual(state, .subscribed)
+        XCTAssertTrue(
+            SubscriptionCohortPolicy.hasPremiumAccess(
+                cohort: .new,
+                hasActiveSubscription: true,
+                accessState: state
+            )
+        )
+        XCTAssertFalse(
+            SubscriptionCohortPolicy.isEssentialMode(
+                cohort: .new,
+                hasActiveSubscription: true,
+                accessState: state
+            )
+        )
+    }
+
+    func testLegacyCohortKeepsTrialAndEssentialBehavior() {
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let activeTrial = SubscriptionCohortPolicy.accessState(
+            cohort: .legacy,
+            hasActiveSubscription: false,
+            trialStartedAt: now.addingTimeInterval(-24 * 60 * 60),
+            now: now,
+            trialDuration: 7 * 24 * 60 * 60
+        )
+        let expiredTrial = SubscriptionCohortPolicy.accessState(
+            cohort: .legacy,
+            hasActiveSubscription: false,
+            trialStartedAt: now.addingTimeInterval(-8 * 24 * 60 * 60),
+            now: now,
+            trialDuration: 7 * 24 * 60 * 60
+        )
+
+        XCTAssertEqual(activeTrial, .trialActive)
+        XCTAssertTrue(
+            SubscriptionCohortPolicy.hasPremiumAccess(
+                cohort: .legacy,
+                hasActiveSubscription: false,
+                accessState: activeTrial
+            )
+        )
+        XCTAssertEqual(expiredTrial, .trialExpired)
+        XCTAssertTrue(
+            SubscriptionCohortPolicy.isEssentialMode(
+                cohort: .legacy,
+                hasActiveSubscription: false,
+                accessState: expiredTrial
+            )
+        )
+    }
+
+    func testReviewEligibilityUsesStoreKitTransactionDateForNewCohort() {
+        let transactionDate = Date(timeIntervalSinceReferenceDate: 500)
+
+        XCTAssertEqual(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .new,
+                accessState: .subscribed,
+                hasActiveSubscription: true,
+                trialStartedAt: nil,
+                activeEntitlementStartedAt: transactionDate
+            ),
+            transactionDate
+        )
+        XCTAssertNil(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .new,
+                accessState: .subscriptionRequired,
+                hasActiveSubscription: false,
+                trialStartedAt: nil,
+                activeEntitlementStartedAt: transactionDate
+            )
+        )
+    }
+
+    func testReviewEligibilityKeepsLegacyTrialRule() {
+        let trialDate = Date(timeIntervalSinceReferenceDate: 500)
+
+        XCTAssertEqual(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .legacy,
+                accessState: .trialActive,
+                hasActiveSubscription: false,
+                trialStartedAt: trialDate,
+                activeEntitlementStartedAt: nil
+            ),
+            trialDate
+        )
+        XCTAssertNil(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .legacy,
+                accessState: .subscribed,
+                hasActiveSubscription: true,
+                trialStartedAt: trialDate,
+                activeEntitlementStartedAt: Date()
+            )
+        )
+    }
+
     private var emptyReflection: AIReflection {
         AIReflection(
             summary: "",

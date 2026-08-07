@@ -57,6 +57,14 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceSubscriptionGateForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceSubscriptionGate")
+        #else
+        false
+        #endif
+    }
+
     private static var forceCompletionScreenForDebugging: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-LimiarForceCompletionScreen")
@@ -92,6 +100,8 @@ struct ContentView: View {
             Group {
                 if Self.forceCompletionScreenForDebugging {
                     DashboardView()
+                } else if Self.forceSubscriptionGateForDebugging {
+                    SubscriptionGateView()
                 } else if Self.forceFreeTrialStartForDebugging {
                     FreeTrialStartView()
                 } else if Self.forcedConversionScreen == "D6" {
@@ -104,15 +114,17 @@ struct ContentView: View {
                     PaywallView()
                 } else if Self.forceEssentialModeForDebugging {
                     DashboardView()
-                } else if notifications.shieldBridgeRouteID != nil,
-                          model.hasCompletedOnboarding {
-                    // O toque na ponte do shield é uma intenção explícita de
-                    // atravessar. Ele entra direto no dashboard e não pode ser
-                    // interceptado por uma tela automática do funil.
-                    DashboardView()
                 } else if !model.hasCompletedOnboarding {
                     OnboardingView()
-                } else if subscription.accessState == .trialNotStarted {
+                } else if subscription.requiresSubscriptionGate {
+                    SubscriptionGateView()
+                } else if notifications.shieldBridgeRouteID != nil {
+                    // O toque na ponte do shield é uma intenção explícita de
+                    // atravessar. Para usuários com acesso ele entra direto no
+                    // dashboard e não é interceptado pelo funil legado.
+                    DashboardView()
+                } else if subscription.cohort == .legacy,
+                          subscription.accessState == .trialNotStarted {
                     FreeTrialStartView()
                 } else if !presentedFunnelInterstitialThisSession,
                           subscription.shouldShowTrialConversion,
@@ -147,6 +159,7 @@ struct ContentView: View {
             if phase == .active {
                 notifications.handleAppDidBecomeActive()
                 subscription.refreshAccessState()
+                Task { await subscription.refreshEntitlements() }
                 model.updateAccess(
                     hasPremiumAccess: effectiveHasPremiumAccess,
                     isEssentialMode: effectiveIsEssentialMode

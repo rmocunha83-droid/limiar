@@ -47,18 +47,96 @@ enum SubscriptionPurchaseState: Equatable {
     case failed(String)
 }
 
+enum SubscriptionCohort: Equatable {
+    case legacy
+    case new
+}
+
+enum IntroductoryOfferEligibility: Equatable {
+    case unknown
+    case eligible
+    case ineligible
+}
+
 enum SubscriptionAccessState: Equatable {
     case trialNotStarted
     case trialActive
     case trialExpired
+    case subscriptionRequired
     case subscribed
 
     var allowsPremiumFeatures: Bool {
         switch self {
         case .trialActive, .subscribed:
             return true
-        case .trialNotStarted, .trialExpired:
+        case .trialNotStarted, .trialExpired, .subscriptionRequired:
             return false
+        }
+    }
+}
+
+enum SubscriptionCohortPolicy {
+    static func cohort(hasLegacyTrialStart: Bool) -> SubscriptionCohort {
+        hasLegacyTrialStart ? .legacy : .new
+    }
+
+    static func canStartLocalTrial(cohort: SubscriptionCohort) -> Bool {
+        cohort == .legacy
+    }
+
+    static func accessState(
+        cohort: SubscriptionCohort,
+        hasActiveSubscription: Bool,
+        trialStartedAt: Date?,
+        now: Date,
+        trialDuration: TimeInterval
+    ) -> SubscriptionAccessState {
+        if hasActiveSubscription {
+            return .subscribed
+        }
+
+        guard cohort == .legacy else {
+            return .subscriptionRequired
+        }
+
+        guard let trialStartedAt else {
+            return .trialNotStarted
+        }
+
+        let trialEndsAt = trialStartedAt.addingTimeInterval(trialDuration)
+        return now < trialEndsAt ? .trialActive : .trialExpired
+    }
+
+    static func hasPremiumAccess(
+        cohort: SubscriptionCohort,
+        hasActiveSubscription: Bool,
+        accessState: SubscriptionAccessState
+    ) -> Bool {
+        cohort == .new ? hasActiveSubscription : accessState.allowsPremiumFeatures
+    }
+
+    static func isEssentialMode(
+        cohort: SubscriptionCohort,
+        hasActiveSubscription: Bool,
+        accessState: SubscriptionAccessState
+    ) -> Bool {
+        cohort == .legacy && accessState == .trialExpired && !hasActiveSubscription
+    }
+
+    static func reviewAccessStartedAt(
+        cohort: SubscriptionCohort,
+        accessState: SubscriptionAccessState,
+        hasActiveSubscription: Bool,
+        trialStartedAt: Date?,
+        activeEntitlementStartedAt: Date?
+    ) -> Date? {
+        switch cohort {
+        case .legacy:
+            guard accessState == .trialActive else { return nil }
+            return trialStartedAt
+        case .new:
+            guard hasActiveSubscription else { return nil }
+            return activeEntitlementStartedAt
         }
     }
 }
@@ -92,10 +170,13 @@ final class SubscriptionManager {
     }
 
     private(set) var products: [Product] = []
+    private(set) var cohort: SubscriptionCohort
     private(set) var hasActiveSubscription = false
     private(set) var accessState = SubscriptionAccessState.trialNotStarted
     private(set) var trialStartedAt: Date?
+    private(set) var activeEntitlementStartedAt: Date?
     private(set) var activeProductIDs: Set<String> = []
+    private(set) var introductoryOfferEligibility: [String: IntroductoryOfferEligibility] = [:]
     private(set) var state = SubscriptionPurchaseState.idle
     private(set) var message = ""
     var selectedPlan = SubscriptionPlan.yearly
@@ -112,8 +193,12 @@ final class SubscriptionManager {
         // Mantém o último entitlement verificado durante a restauração
         // assíncrona do StoreKit. A verificação atualizada continua sendo a
         // fonte de verdade e corrige este cache logo no start().
+        // O marcador do Keychain é a fronteira definitiva entre coortes.
+        // Usuários novos nunca recebem esse marcador pelo novo fluxo.
+        let legacyTrialStartedAt = TrialStartStore.load()
+        cohort = SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: legacyTrialStartedAt != nil)
         hasActiveSubscription = defaults.bool(forKey: Constants.entitlementCacheKey)
-        trialStartedAt = TrialStartStore.load() ?? defaults.object(forKey: Constants.trialStartDefaultsKey) as? Date
+        trialStartedAt = legacyTrialStartedAt
         refreshAccessState()
     }
 
@@ -126,15 +211,28 @@ final class SubscriptionManager {
     }
 
     var hasPremiumAccess: Bool {
-        return accessState.allowsPremiumFeatures
+        SubscriptionCohortPolicy.hasPremiumAccess(
+            cohort: cohort,
+            hasActiveSubscription: hasActiveSubscription,
+            accessState: accessState
+        )
     }
 
     var isEssentialMode: Bool {
-        return accessState == .trialExpired && !hasActiveSubscription
+        SubscriptionCohortPolicy.isEssentialMode(
+            cohort: cohort,
+            hasActiveSubscription: hasActiveSubscription,
+            accessState: accessState
+        )
+    }
+
+    var requiresSubscriptionGate: Bool {
+        cohort == .new && !hasActiveSubscription
     }
 
     var canShowPaywall: Bool {
-        guard accessState == .trialExpired,
+        guard cohort == .legacy,
+              accessState == .trialExpired,
               !hasActiveSubscription,
               let postTrialPaywallStartsAt else {
             return false
@@ -186,7 +284,7 @@ final class SubscriptionManager {
     }
 
     var shouldShowTrialConversion: Bool {
-        accessState == .trialActive && (trialEndsTomorrow || trialEndsToday)
+        cohort == .legacy && accessState == .trialActive && (trialEndsTomorrow || trialEndsToday)
     }
 
     private static func trialEndDate(
@@ -226,9 +324,14 @@ final class SubscriptionManager {
         readingWasHealthy: Bool,
         now: Date = Date()
     ) -> Bool {
-        guard accessState == .trialActive,
-              let trialStartedAt,
-              now.timeIntervalSince(trialStartedAt) >= Constants.reviewRequestMinimumTrialDuration,
+        guard let accessStartedAt = SubscriptionCohortPolicy.reviewAccessStartedAt(
+            cohort: cohort,
+            accessState: accessState,
+            hasActiveSubscription: hasActiveSubscription,
+            trialStartedAt: trialStartedAt,
+            activeEntitlementStartedAt: activeEntitlementStartedAt
+        ),
+              now.timeIntervalSince(accessStartedAt) >= Constants.reviewRequestMinimumTrialDuration,
               readingWasHealthy,
               history.count >= Constants.reviewRequestMinimumCompletedReadings,
               completedReadingsSpanAtLeastThreeDays(history, calendar: .current),
@@ -369,21 +472,21 @@ final class SubscriptionManager {
     }
 
     func refreshAccessState(now: Date = Date()) {
-        if hasActiveSubscription {
-            accessState = .subscribed
-            return
-        }
-
-        guard let trialStartedAt else {
-            accessState = .trialNotStarted
-            return
-        }
-
-        let trialEndsAt = trialStartedAt.addingTimeInterval(Constants.trialDuration)
-        accessState = now < trialEndsAt ? .trialActive : .trialExpired
+        accessState = SubscriptionCohortPolicy.accessState(
+            cohort: cohort,
+            hasActiveSubscription: hasActiveSubscription,
+            trialStartedAt: trialStartedAt,
+            now: now,
+            trialDuration: Constants.trialDuration
+        )
     }
 
     func startFreeTrial() {
+        guard SubscriptionCohortPolicy.canStartLocalTrial(cohort: cohort) else {
+            refreshAccessState()
+            return
+        }
+
         guard !hasActiveSubscription else {
             refreshAccessState()
             return
@@ -403,7 +506,10 @@ final class SubscriptionManager {
     }
 
     func resetFreeTrialForTesting() {
-        guard Self.isTestEnvironment else { return }
+        guard Self.isTestEnvironment,
+              SubscriptionCohortPolicy.canStartLocalTrial(cohort: cohort) else {
+            return
+        }
 
         let now = Date()
         ConversionFunnelPersistence.resetDismissals(in: defaults)
@@ -416,6 +522,21 @@ final class SubscriptionManager {
 
     func product(for plan: SubscriptionPlan) -> Product? {
         products.first { $0.id == plan.productID }
+    }
+
+    func storeDisplayPrice(for plan: SubscriptionPlan) -> String {
+        guard let product = product(for: plan) else {
+            return products.isEmpty ? "Carregando oferta" : "Plano indisponível"
+        }
+        return product.displayPrice
+    }
+
+    func introductoryOfferEligibility(for plan: SubscriptionPlan) -> IntroductoryOfferEligibility {
+        introductoryOfferEligibility[plan.productID] ?? .unknown
+    }
+
+    func hasEligibleFreeTrial(for plan: SubscriptionPlan) -> Bool {
+        hasConfirmedFreeTrial(for: plan) && introductoryOfferEligibility(for: plan) == .eligible
     }
 
     func displayPrice(for plan: SubscriptionPlan) -> String {
@@ -574,11 +695,6 @@ final class SubscriptionManager {
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
                 message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium ativo." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
-                if hasActiveSubscription {
-                    MetaAppEvents.trackSubscriptionActivated(
-                        originalTransactionID: transaction.originalID
-                    )
-                }
             case .pending:
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
@@ -611,7 +727,10 @@ final class SubscriptionManager {
     }
 
     private func loadProducts() async {
-        guard products.isEmpty else { return }
+        guard products.isEmpty else {
+            await refreshIntroductoryOfferEligibility()
+            return
+        }
 
         state = .loadingProducts
         message = ""
@@ -631,6 +750,8 @@ final class SubscriptionManager {
             state = products.isEmpty ? .productsUnavailable : .idle
             if products.isEmpty {
                 message = "Os produtos de assinatura ainda não foram retornados pelo StoreKit."
+            } else {
+                await refreshIntroductoryOfferEligibility()
             }
         } catch {
             state = .failed(error.localizedDescription)
@@ -638,8 +759,9 @@ final class SubscriptionManager {
         }
     }
 
-    private func refreshEntitlements() async {
+    func refreshEntitlements() async {
         var activeIDs = Set<String>()
+        var entitlementStartDates: [Date] = []
 
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
@@ -650,9 +772,12 @@ final class SubscriptionManager {
                 continue
             }
             activeIDs.insert(transaction.productID)
+            entitlementStartDates.append(transaction.purchaseDate)
+            trackPurchaseLifecycle(for: transaction)
         }
 
         activeProductIDs = activeIDs
+        activeEntitlementStartedAt = entitlementStartDates.min()
         hasActiveSubscription = !activeIDs.isEmpty
         defaults.set(hasActiveSubscription, forKey: Constants.entitlementCacheKey)
         refreshAccessState()
@@ -675,11 +800,6 @@ final class SubscriptionManager {
             let transaction = try checkVerified(transactionResult)
             await transaction.finish()
             await refreshEntitlements()
-            if hasActiveSubscription {
-                MetaAppEvents.trackSubscriptionActivated(
-                    originalTransactionID: transaction.originalID
-                )
-            }
         } catch {
             state = .failed(error.localizedDescription)
             message = "A Apple não conseguiu verificar uma transação recente."
@@ -693,6 +813,45 @@ final class SubscriptionManager {
         case .verified(let safe):
             return safe
         }
+    }
+
+    private func refreshIntroductoryOfferEligibility() async {
+        var eligibility: [String: IntroductoryOfferEligibility] = [:]
+
+        for plan in SubscriptionPlan.allCases {
+            guard let subscription = product(for: plan)?.subscription,
+                  subscription.introductoryOffer?.paymentMode == .freeTrial else {
+                eligibility[plan.productID] = .ineligible
+                continue
+            }
+
+            eligibility[plan.productID] = await subscription.isEligibleForIntroOffer
+                ? .eligible
+                : .ineligible
+        }
+
+        introductoryOfferEligibility = eligibility
+    }
+
+    private func trackPurchaseLifecycle(for transaction: Transaction) {
+        if transactionStartsIntroductoryFreeTrial(transaction) {
+            MetaAppEvents.trackStartedTrial()
+        } else {
+            MetaAppEvents.trackSubscriptionActivated(
+                originalTransactionID: transaction.originalID
+            )
+        }
+    }
+
+    private func transactionStartsIntroductoryFreeTrial(_ transaction: Transaction) -> Bool {
+        if #available(iOS 17.2, *) {
+            return transaction.offer?.type == .introductory
+                && transaction.offer?.paymentMode == .freeTrial
+        }
+
+        // No iOS 17.0/17.1 o StoreKit expõe o tipo, mas não oferece o modo
+        // tipado. Os produtos do Limiar têm somente oferta introdutória grátis.
+        return transaction.offerType == .introductory
     }
 
     private func displayText(for period: Product.SubscriptionPeriod) -> String {

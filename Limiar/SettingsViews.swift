@@ -327,6 +327,8 @@ struct SettingsView: View {
             return "Acesso inicial ativo"
         case .trialExpired:
             return "Acesso inicial encerrado"
+        case .subscriptionRequired:
+            return "Assinatura necessária"
         case .subscribed:
             return "Assinatura ativa"
         }
