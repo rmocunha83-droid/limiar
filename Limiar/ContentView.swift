@@ -73,8 +73,17 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceLocalSessionForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceLocalSession")
+        #else
+        false
+        #endif
+    }
+
     private var effectiveHasPremiumAccess: Bool {
-        Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
+        if Self.forceLocalSessionForDebugging { return true }
+        return Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
     }
 
     private var effectiveIsEssentialMode: Bool {
@@ -99,6 +108,8 @@ struct ContentView: View {
         NavigationStack {
             Group {
                 if Self.forceCompletionScreenForDebugging {
+                    DashboardView()
+                } else if Self.forceLocalSessionForDebugging {
                     DashboardView()
                 } else if Self.forceSubscriptionGateForDebugging {
                     SubscriptionGateView()
@@ -525,15 +536,16 @@ private struct DashboardView: View {
 
     private var reflectionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Reflexão breve", systemImage: "sparkle")
-                .font(.system(size: 13, weight: .bold))
-                .tracking(1.2)
-                .foregroundStyle(Color.warmGold)
-                .padding(.top, 4)
             if model.currentSpiritualReadingItems.count > 1 {
+                Label("Reflexão breve", systemImage: "sparkle")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.warmGold)
+                    .padding(.top, 4)
                 ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
-                ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
             }
+            ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
+                .padding(.top, model.currentSpiritualReadingItems.count == 1 ? 4 : 0)
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
             ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
         }

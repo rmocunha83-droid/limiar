@@ -320,8 +320,8 @@ test("resolves adaptive item counts while preserving the legacy payload", () => 
   const one = resolveReadingSessionOptions({ itemCount: 0 }, "grande", 8);
   assert.equal(one.itemCount, 1);
   assert.equal(one.generationDepth, "curta");
-  assert.equal(one.outputBudgetDepth, "grande");
-  assert.equal(depthOutputTokenLimit(one.outputBudgetDepth, "reading-session"), 4200);
+  assert.equal(one.outputBudgetDepth, "curta");
+  assert.equal(depthOutputTokenLimit(one.outputBudgetDepth, "reading-session"), 2800);
 
   const two = resolveReadingSessionOptions({ itemCount: 2 }, "curta", 8);
   assert.equal(two.itemCount, 2);
@@ -768,14 +768,17 @@ test("normalizes depth synonyms and changes guidance clearly", () => {
   assert.equal(normalizeProfile({ explanationDepth: "curta" }).explanationDepth, "curta");
   assert.equal(normalizeProfile({ explanationDepth: "média" }).explanationDepth, "média");
   assert.equal(normalizeProfile({ explanationDepth: "Mais profunda" }).explanationDepth, "grande");
-  assert.match(depthGuidance("curta"), /1 a 2 parágrafos concisos/);
-  assert.match(depthGuidance("curta"), /sustentar sozinha a leitura do dia/);
+  assert.match(depthGuidance("curta"), /2 a 3 parágrafos desenvolvidos/);
+  assert.match(depthGuidance("curta"), /quem fala, para quem e em que situação/);
+  assert.match(depthGuidance("curta"), /não podem repetir ideias nem frases da homily/);
   assert.match(depthGuidance("média"), /1 a 2 parágrafos/);
   assert.match(depthGuidance("grande"), /2 a 3 parágrafos/);
 });
 
-test("uses different output budgets by depth and endpoint", () => {
-  assert.equal(depthOutputTokenLimit("curta", "reflection") < depthOutputTokenLimit("média", "reflection"), true);
+test("uses output budgets sized for one rich short passage", () => {
+  assert.equal(depthOutputTokenLimit("curta", "reading-session"), 2800);
+  assert.equal(depthOutputTokenLimit("curta", "spiritual-reading"), 2400);
+  assert.equal(depthOutputTokenLimit("curta", "reflection"), 1400);
   assert.equal(depthOutputTokenLimit("média", "reflection") < depthOutputTokenLimit("grande", "reflection"), true);
   assert.equal(
     depthOutputTokenLimit("grande", "reading-session") > depthOutputTokenLimit("grande", "reflection"),
