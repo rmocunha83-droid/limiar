@@ -441,6 +441,7 @@ struct LimiarHeroButtonStyle: ButtonStyle {
 
 struct ConversionTestimonials: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .body) private var carouselHeight: CGFloat = 214
 
     struct Testimonial: Identifiable {
@@ -461,10 +462,18 @@ struct ConversionTestimonials: View {
     ]
 
     @State private var selectedIndex: Int
+    @State private var smoothCarouselHeight: CGFloat = 0
+    @State private var movementDirection = 1
     private let maximumCount: Int?
+    private let usesSmoothTransition: Bool
 
-    init(startingIndex: Int = 0, maximumCount: Int? = nil) {
+    init(
+        startingIndex: Int = 0,
+        maximumCount: Int? = nil,
+        usesSmoothTransition: Bool = false
+    ) {
         self.maximumCount = maximumCount
+        self.usesSmoothTransition = usesSmoothTransition
         let availableCount = min(maximumCount ?? Self.testimonials.count, Self.testimonials.count)
         _selectedIndex = State(initialValue: min(startingIndex, max(0, availableCount - 1)))
     }
@@ -475,14 +484,11 @@ struct ConversionTestimonials: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            TabView(selection: $selectedIndex) {
-                ForEach(displayedTestimonials) { testimonial in
-                    TestimonialCard(testimonial: testimonial)
-                        .tag(testimonial.id)
-                }
+            if usesSmoothTransition {
+                smoothCarousel
+            } else {
+                pagedCarousel
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: carouselHeight)
 
             HStack(spacing: 7) {
                 ForEach(displayedTestimonials) { testimonial in
@@ -497,15 +503,111 @@ struct ConversionTestimonials: View {
             guard !voiceOverEnabled else { return }
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }
-            withAnimation(.easeInOut(duration: 0.35)) {
-                selectedIndex = (selectedIndex + 1) % displayedTestimonials.count
+            advance(by: 1)
+        }
+    }
+
+    private var pagedCarousel: some View {
+        TabView(selection: $selectedIndex) {
+            ForEach(displayedTestimonials) { testimonial in
+                TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: true)
+                    .tag(testimonial.id)
             }
         }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: carouselHeight)
+    }
+
+    private var smoothCarousel: some View {
+        ZStack(alignment: .top) {
+            if let testimonial = selectedTestimonial {
+                TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
+                    .id(testimonial.id)
+                    .transition(testimonialTransition)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: smoothCarouselHeight > 0 ? smoothCarouselHeight : nil, alignment: .top)
+        .background {
+            ZStack {
+                ForEach(displayedTestimonials) { testimonial in
+                    TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .background {
+                            GeometryReader { proxy in
+                                Color.clear.preference(
+                                    key: TestimonialHeightPreferenceKey.self,
+                                    value: proxy.size.height
+                                )
+                            }
+                        }
+                }
+            }
+            .hidden()
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 18)
+                .onEnded { value in
+                    guard abs(value.translation.width) > 44 else { return }
+                    advance(by: value.translation.width < 0 ? 1 : -1)
+                }
+        )
+        .onPreferenceChange(TestimonialHeightPreferenceKey.self) { height in
+            guard height > 0, abs(height - smoothCarouselHeight) > 0.5 else { return }
+            smoothCarouselHeight = height
+        }
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: advance(by: 1)
+            case .decrement: advance(by: -1)
+            @unknown default: break
+            }
+        }
+    }
+
+    private var selectedTestimonial: Testimonial? {
+        displayedTestimonials.first { $0.id == selectedIndex } ?? displayedTestimonials.first
+    }
+
+    private var testimonialTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let insertionEdge: Edge = movementDirection >= 0 ? .trailing : .leading
+        let removalEdge: Edge = movementDirection >= 0 ? .leading : .trailing
+        return .asymmetric(
+            insertion: .move(edge: insertionEdge).combined(with: .opacity),
+            removal: .move(edge: removalEdge).combined(with: .opacity)
+        )
+    }
+
+    private func advance(by offset: Int) {
+        guard displayedTestimonials.count > 1,
+              let currentOffset = displayedTestimonials.firstIndex(where: { $0.id == selectedIndex }) else {
+            return
+        }
+
+        movementDirection = offset >= 0 ? 1 : -1
+        let count = displayedTestimonials.count
+        let nextOffset = (currentOffset + offset + count) % count
+        withAnimation(.easeInOut(duration: reduceMotion ? 0.25 : 0.45)) {
+            selectedIndex = displayedTestimonials[nextOffset].id
+        }
+    }
+}
+
+private struct TestimonialHeightPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
 private struct TestimonialCard: View {
     let testimonial: ConversionTestimonials.Testimonial
+    let reservesFlexibleSpace: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -520,7 +622,9 @@ private struct TestimonialCard: View {
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Spacer(minLength: 0)
+            if reservesFlexibleSpace {
+                Spacer(minLength: 0)
+            }
 
             Text(testimonial.name)
                 .conversionFont(13, weight: .medium, relativeTo: .footnote)

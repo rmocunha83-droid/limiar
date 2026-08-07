@@ -102,6 +102,7 @@ struct ContentView: View {
                     DashboardView()
                 } else if Self.forceSubscriptionGateForDebugging {
                     SubscriptionGateView()
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                 } else if Self.forceFreeTrialStartForDebugging {
                     FreeTrialStartView()
                 } else if Self.forcedConversionScreen == "D6" {
@@ -118,6 +119,7 @@ struct ContentView: View {
                     OnboardingView()
                 } else if subscription.requiresSubscriptionGate {
                     SubscriptionGateView()
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                 } else if notifications.shieldBridgeRouteID != nil {
                     // O toque na ponte do shield é uma intenção explícita de
                     // atravessar. Para usuários com acesso ele entra direto no

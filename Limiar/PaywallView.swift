@@ -99,10 +99,19 @@ struct PaywallView: View {
 }
 
 struct SubscriptionGateView: View {
+    @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
 
     private let termsURL = URL(string: "https://applimiar.com.br/terms")!
     private let privacyURL = URL(string: "https://applimiar.com.br/privacy")!
+
+    private var forcesTrialEligibilityForDebugging: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarGateTrialEligible")
+#else
+        false
+#endif
+    }
 
     var body: some View {
         @Bindable var subscription = subscription
@@ -113,26 +122,39 @@ struct SubscriptionGateView: View {
             VStack(spacing: 0) {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 16) {
-                        ConversionHeader(
-                            eyebrow: "LIMIAR PREMIUM",
-                            title: gateTitle,
-                            subtitle: gateSubtitle
+                        VStack(alignment: .leading, spacing: 12) {
+                            OnboardingTitle(eyebrow: "ÚLTIMO PASSO", title: gateTitle)
+
+                            Text(gateSubtitle)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.softText)
+                                .lineSpacing(5)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        SubscriptionGateBenefits(
+                            profile: model.faithProfile,
+                            turn: model.pauseCycleTurn
                         )
 
-                        SubscriptionGateBenefits()
+                        SubscriptionGatePlanPicker(
+                            selection: $subscription.selectedPlan,
+                            forcesTrialEligibilityForDebugging: forcesTrialEligibilityForDebugging
+                        )
 
-                        ConversionTestimonials(startingIndex: 0, maximumCount: 3)
-
-                        SubscriptionGatePlanPicker(selection: $subscription.selectedPlan)
+                        ConversionTestimonials(startingIndex: 0, usesSmoothTransition: true)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 28)
                     .padding(.bottom, 18)
                 }
 
+                SubscriptionGateProgress()
+
                 SubscriptionGateCompliance(
                     termsURL: termsURL,
-                    privacyURL: privacyURL
+                    privacyURL: privacyURL,
+                    forcesTrialEligibilityForDebugging: forcesTrialEligibilityForDebugging
                 )
             }
         }
@@ -146,30 +168,49 @@ struct SubscriptionGateView: View {
     }
 
     private var gateTitle: String {
-        subscription.hasEligibleFreeTrial(for: subscription.selectedPlan)
-            ? "Comece com 7 dias grátis"
-            : "Continue com o Limiar completo"
+        showsEligibleTrial
+            ? "Seu Limiar está pronto."
+            : "Tudo pronto para sua primeira travessia."
     }
 
     private var gateSubtitle: String {
-        if subscription.hasEligibleFreeTrial(for: subscription.selectedPlan) {
-            return "7 dias grátis com tudo incluído. Cancele antes do dia 8 e não pague nada."
+        if showsEligibleTrial {
+            return "Experimente tudo por 7 dias, grátis. Cancele antes do dia 8 e não pague nada."
         }
-        return "Escolha o plano que combina com sua rotina para entrar no Limiar."
+        return "Escolha seu plano e entre no Limiar."
+    }
+
+    private var showsEligibleTrial: Bool {
+        forcesTrialEligibilityForDebugging
+            || subscription.hasEligibleFreeTrial(for: subscription.selectedPlan)
     }
 }
 
 private struct SubscriptionGateBenefits: View {
-    private let benefits = [
-        "Reflexões completas na sua tradição",
-        "Narração com voz natural",
-        "Trechos salvos para revisitar",
-        "Uma experiência limpa, sem anúncios"
-    ]
+    let profile: UserFaithProfile
+    let turn: PauseCycleTurn
+
+    private var benefits: [String] {
+        [
+            "Seus apps bloqueados até a pausa da \(turn.title.lowercased())",
+            "Leituras na tradição \(profile.tradition.title.lowercased()), no seu ritmo: \(depthDescription)",
+            "Narração com voz natural",
+            "Trechos salvos para revisitar quando quiser",
+            "Sem anúncios"
+        ]
+    }
+
+    private var depthDescription: String {
+        switch profile.explanationDepth {
+        case .short: "reflexão curta"
+        case .medium: "reflexão média"
+        case .deep: "reflexão mais profunda"
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Tudo incluído no seu plano")
+            Text("O que você desbloqueia agora")
                 .conversionFont(14, weight: .semibold)
                 .foregroundStyle(Color.ivory)
 
@@ -187,9 +228,28 @@ private struct SubscriptionGateBenefits: View {
     }
 }
 
+private struct SubscriptionGateProgress: View {
+    private let stepCount = 7
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<stepCount, id: \.self) { index in
+                Capsule()
+                    .fill(Color.sageButton)
+                    .frame(width: index == stepCount - 1 ? 26 : 7, height: 7)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Onboarding concluído")
+    }
+}
+
 private struct SubscriptionGatePlanPicker: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Binding var selection: SubscriptionPlan
+    let forcesTrialEligibilityForDebugging: Bool
 
     var body: some View {
         VStack(spacing: 10) {
@@ -228,7 +288,7 @@ private struct SubscriptionGatePlanPicker: View {
                         Text(detailLine(for: plan))
                             .conversionFont(13, weight: .medium, relativeTo: .footnote)
                             .foregroundStyle(
-                                subscription.hasEligibleFreeTrial(for: plan)
+                                showsEligibleTrial(for: plan)
                                     ? Color.sageButton
                                     : Color.softText
                             )
@@ -261,6 +321,9 @@ private struct SubscriptionGatePlanPicker: View {
     }
 
     private func detailLine(for plan: SubscriptionPlan) -> String {
+        if forcesTrialEligibilityForDebugging {
+            return "7 dias grátis, depois \(priceLine(for: plan))"
+        }
         switch subscription.introductoryOfferEligibility(for: plan) {
         case .eligible where subscription.hasConfirmedFreeTrial(for: plan):
             return "7 dias grátis, depois \(priceLine(for: plan))"
@@ -269,6 +332,10 @@ private struct SubscriptionGatePlanPicker: View {
         case .eligible, .ineligible:
             return "Assinatura por \(priceLine(for: plan))"
         }
+    }
+
+    private func showsEligibleTrial(for plan: SubscriptionPlan) -> Bool {
+        forcesTrialEligibilityForDebugging || subscription.hasEligibleFreeTrial(for: plan)
     }
 
     private func period(for plan: SubscriptionPlan) -> String {
@@ -281,6 +348,7 @@ private struct SubscriptionGateCompliance: View {
     @Environment(\.openURL) private var openURL
     let termsURL: URL
     let privacyURL: URL
+    let forcesTrialEligibilityForDebugging: Bool
 
     var body: some View {
         VStack(spacing: 9) {
@@ -354,8 +422,12 @@ private struct SubscriptionGateCompliance: View {
 
     private var buttonTitle: String {
         let plan = subscription.selectedPlan
-        if subscription.hasEligibleFreeTrial(for: plan) {
+        if forcesTrialEligibilityForDebugging || subscription.hasEligibleFreeTrial(for: plan) {
             return "Começar 7 dias grátis"
+        }
+        if subscription.introductoryOfferEligibility(for: plan) == .unknown,
+           subscription.product(for: plan) != nil {
+            return "Verificando oferta..."
         }
         guard subscription.product(for: plan) != nil else {
             return subscription.products.isEmpty ? "Carregando planos" : "Plano indisponível"

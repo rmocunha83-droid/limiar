@@ -5,6 +5,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(LimiarAppModel.self) private var model
+    @Environment(SubscriptionManager.self) private var subscription
     @Environment(LimiarNotificationCoordinator.self) private var notifications
     @State private var step: Int
     @State private var status = ""
@@ -141,11 +142,11 @@ struct OnboardingView: View {
             Button("Ativar") {
                 Task {
                     await notifications.requestAuthorization()
-                    model.completeOnboarding()
+                    completeOnboarding()
                 }
             }
             Button("Agora não", role: .cancel) {
-                model.completeOnboarding()
+                completeOnboarding()
             }
         } message: {
             Text(LimiarNotificationCoordinator.prePromptMessage)
@@ -376,7 +377,7 @@ struct OnboardingView: View {
                 Button {
                     status = "Você poderá autorizar o Tempo de Uso depois em Configurações."
                     model.saveProfile()
-                    model.completeOnboarding()
+                    completeOnboarding()
                 } label: {
                     Text("Fazer isso depois")
                         .font(.system(size: 16, weight: .semibold))
@@ -467,7 +468,7 @@ struct OnboardingView: View {
         if let nextStep = nextStep(after: displayedStep) {
             withAnimation { step = nextStep }
         } else {
-            model.completeOnboarding()
+            completeOnboarding()
         }
     }
 
@@ -490,7 +491,7 @@ struct OnboardingView: View {
             } else {
                 // Não insistir depois que a pessoa já tomou uma decisão no
                 // prompt do sistema, positiva ou negativa.
-                model.completeOnboarding()
+                completeOnboarding()
             }
         }
     }
@@ -498,6 +499,16 @@ struct OnboardingView: View {
     private func moveToPreviousStep() {
         guard let previousStep = previousStep(before: displayedStep) else { return }
         withAnimation { step = previousStep }
+    }
+
+    private func completeOnboarding() {
+        if subscription.cohort == .new {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                model.completeOnboarding()
+            }
+        } else {
+            model.completeOnboarding()
+        }
     }
 
     private func nextStep(after currentStep: Int) -> Int? {
