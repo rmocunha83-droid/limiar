@@ -646,7 +646,7 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
       "- A meditationQuestion deve ser nova em relação ao histórico recente.",
       "- Na sessão de um único trecho, practicalApplication e meditationQuestion devem avançar a homily do item. Não repita nem parafraseie as mesmas ideias ou frases.",
       "- Na sessão de um único trecho, items[0].homily e reflection.homily devem ter exatamente 2 parágrafos separados por uma linha em branco (\\n\\n).",
-      "- Na sessão de um único trecho, reflection.practicalApplication também deve ter exatamente 2 ou 3 frases."
+      "- Na sessão de um único trecho, reflection.practicalApplication deve ter exatamente 3 frases em um único parágrafo, sem quebra de linha. A primeira apresenta uma decisão clara para hoje, a segunda orienta como executá-la e a terceira ajuda a responder a um obstáculo concreto."
     );
   }
 

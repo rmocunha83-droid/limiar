@@ -572,7 +572,7 @@ test("builds an explanation prompt that fixes the passages and order", () => {
   assert.match(prompt, /Trecho 1\nReferência: Salmo 23/);
   assert.match(prompt, /Regras para reflection/);
   assert.match(prompt, /items\[0\]\.homily e reflection\.homily devem ter exatamente 2 parágrafos/);
-  assert.match(prompt, /reflection\.practicalApplication também deve ter exatamente 2 ou 3 frases/);
+  assert.match(prompt, /reflection\.practicalApplication deve ter exatamente 3 frases em um único parágrafo/);
   assert.match(prompt, /Resumo anterior/);
   assert.doesNotMatch(prompt, /Selecione|escolha os 3/i);
 });
