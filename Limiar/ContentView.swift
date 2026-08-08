@@ -244,7 +244,7 @@ private struct DashboardView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.requestReview) private var requestReview
-    @StateObject private var narration = PassageNarrationService()
+    @ObservedObject private var narration = PassageNarrationService.shared
     @State private var showingPicker = false
     @State private var showingSettings = false
     @State private var showingPaywall = false
