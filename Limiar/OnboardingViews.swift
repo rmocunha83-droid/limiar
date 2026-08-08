@@ -48,6 +48,7 @@ struct OnboardingView: View {
     @State private var navigationDirection: OnboardingNavigationDirection = .forward
     @State private var status = ""
     @State private var readingPreferenceMessage = ""
+    @State private var themeSelectionMessage = ""
     @State private var showingPicker = false
     @State private var showingNotificationPrePrompt = false
     @State private var didApplyDebugTradition = false
@@ -258,6 +259,14 @@ struct OnboardingView: View {
                         .map(\.title)
                 ) { title in
                     toggleTheme(title)
+                    if !model.faithProfile.favoriteThemes.isEmpty {
+                        themeSelectionMessage = ""
+                    }
+                }
+                if !themeSelectionMessage.isEmpty {
+                    Label(themeSelectionMessage, systemImage: "info.circle")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.warmGold)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -503,6 +512,11 @@ struct OnboardingView: View {
     private func advance() {
         if step == 2, !model.faithProfile.hasSelectedReadingPreferences {
             readingPreferenceMessage = "Escolha ao menos \(model.faithProfile.tradition.readingConfig.minSelected) estilos de leitura para continuar."
+            return
+        }
+
+        if step == 3, model.faithProfile.favoriteThemes.isEmpty {
+            themeSelectionMessage = "Escolha ao menos 1 tema para continuar."
             return
         }
 

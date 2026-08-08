@@ -133,10 +133,37 @@ enum LimiarAnalytics {
     }
 
     static func trackTraversalStarted(turn: PauseCycleTurn, cycleKey: String) {
+        pruneStaleTraversalMarkers()
         let localKey = "\(Keys.traversalStartedPrefix).\(cycleKey).\(turn.rawValue)"
         logOnce("travessia_started", key: localKey, parameters: [
             "turno": turn.analyticsName
         ])
+    }
+
+    /// As chaves de dedupe de travessia crescem ~1 por ciclo para sempre no
+    /// plist do app group, que as extensões de Shield carregam inteiro.
+    /// Mantemos apenas os últimos 90 dias — o dedupe só precisa do ciclo atual.
+    static func pruneStaleTraversalMarkers(
+        now: Date = Date(),
+        maximumAgeInDays: Int = 90
+    ) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -maximumAgeInDays, to: now) else { return }
+
+        for key in defaults.dictionaryRepresentation().keys
+        where key.hasPrefix("\(Keys.traversalStartedPrefix).") {
+            let components = key.dropFirst(Keys.traversalStartedPrefix.count + 1)
+                .split(separator: ".", maxSplits: 1)
+            guard let dayComponent = components.first,
+                  let day = formatter.date(from: String(dayComponent)) else {
+                continue
+            }
+            if day < cutoff {
+                defaults.removeObject(forKey: key)
+            }
+        }
     }
 
     static func trackTraversalCompleted(
