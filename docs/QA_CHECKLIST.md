@@ -7,6 +7,11 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Conferir se a tela inicial abre com a imagem, fonte, cores e botão corretos.
 - Verificar se o botão `Continuar` não fica cortado em telas pequenas.
 - Avançar por todas as etapas do onboarding.
+- Confirmar que “QUEM USA O LIMIAR” aparece depois de “SUA PAUSA” e antes de “ATIVAÇÃO”.
+- Na prova social, conferir os três depoimentos completos, rolagem, gradiente inferior e botão `Continuar` acessível sem exigir rolagem.
+- Voltar e avançar pela prova social, confirmando transição direcional, oito bolinhas de progresso e pré-aquecimento somente ao entrar em `ATIVAÇÃO`.
+- Repetir com Dynamic Type grande e confirmar que o último cartão não fica escondido pela barra inferior.
+- No passo `REFLEXÕES`, confirmar que somente “Recomendada para começar” aparece em negrito ivory na opção Curta, inclusive em iPhone pequeno e com quebra em até duas linhas.
 - Confirmar que todos os textos estão com acentuação correta em português.
 - Selecionar tradições religiosas, incluindo católica, evangélica, judaica e espírita.
 - Configurar preferências bíblicas, temas favoritos e profundidade da explicação.
@@ -17,6 +22,10 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar preços localizados reais nos planos mensal e anual.
 - Em conta elegível, confirmar “7 dias grátis” nos dois planos; em conta não elegível, confirmar que a promessa não aparece.
 - Comprar no sandbox e confirmar acesso imediato ao dashboard, inclusive durante o teste.
+- Confirmar que o selo antigo “Acesso inicial: X dias restantes” não aparece no dashboard de nenhuma coorte.
+- Em coorte nova com assinatura ativa, cancelar a renovação em Ajustes e reabrir o app: o banner de reativação deve aparecer com a fase e a data corretas. Tocar `Reativar assinatura`, religar a renovação na folha da Apple e voltar ao app: após a atualização, o banner deve desaparecer.
+- Repetir o cenário anterior durante o teste grátis e num período pago, inclusive no último dia (“termina hoje”) e com Dynamic Type grande.
+- Confirmar que o banner nunca aparece para coorte legada, assinatura inativa ou renovação automática ligada.
 - Cancelar durante o teste e confirmar acesso até a expiração; depois, retorno ao portão sem anúncios e sem Modo Essencial.
 - Restaurar uma assinatura ativa e confirmar entrada no dashboard.
 - Simular coorte legada com `TrialStartStore` preenchido e confirmar trial local, funil D6/D7/D8 e Modo Essencial sem qualquer portão novo.

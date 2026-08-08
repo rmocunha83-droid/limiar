@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const {
   DEFAULT_MODEL,
@@ -788,4 +790,14 @@ test("uses output budgets sized for one rich short passage", () => {
     depthOutputTokenLimit("grande", "reading-session") > depthOutputTokenLimit("grande", "reflection"),
     true
   );
+});
+
+test("keeps Ana's canonical testimonial identical in the app and site", () => {
+  const quote = "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar.";
+  const repositoryRoot = path.resolve(__dirname, "..");
+  const appCatalog = fs.readFileSync(path.join(repositoryRoot, "Limiar", "SharedUI.swift"), "utf8");
+  const site = fs.readFileSync(path.join(repositoryRoot, "index.html"), "utf8");
+
+  assert.equal(appCatalog.split(quote).length - 1, 1);
+  assert.equal(site.split(quote).length - 1, 2);
 });

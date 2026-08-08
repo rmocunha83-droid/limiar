@@ -81,6 +81,46 @@ enum SubscriptionOfferPolicy {
     }
 }
 
+enum SubscriptionWinbackPhase: String, Equatable {
+    case trial
+    case paid
+}
+
+enum SubscriptionWinbackPolicy {
+    static func phase(
+        cohort: SubscriptionCohort,
+        hasActiveSubscription: Bool,
+        autoRenewIsOff: Bool,
+        isIntroductoryTrial: Bool
+    ) -> SubscriptionWinbackPhase? {
+        guard cohort == .new,
+              hasActiveSubscription,
+              autoRenewIsOff else {
+            return nil
+        }
+
+        return isIntroductoryTrial ? .trial : .paid
+    }
+
+    /// Texto que completa "termina ..." no banner. A comunicação acompanha
+    /// o dia civil, em vez de expor uma contagem regressiva por horas.
+    static func remainingPeriodText(
+        endsAt: Date?,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> String {
+        guard let endsAt else { return "hoje" }
+
+        let today = calendar.startOfDay(for: now)
+        let endDay = calendar.startOfDay(for: endsAt)
+        let days = calendar.dateComponents([.day], from: today, to: endDay).day ?? 0
+
+        if days <= 0 { return "hoje" }
+        if days == 1 { return "em 1 dia" }
+        return "em \(days) dias"
+    }
+}
+
 enum SubscriptionAccessState: Equatable {
     case trialNotStarted
     case trialActive
@@ -240,6 +280,8 @@ final class SubscriptionManager {
     private(set) var trialStartedAt: Date?
     private(set) var activeEntitlementStartedAt: Date?
     private(set) var activeEntitlementIsIntroductoryTrial = false
+    private(set) var autoRenewIsOff = false
+    private(set) var currentPeriodEndsAt: Date?
     private(set) var activeProductIDs: Set<String> = []
     private(set) var introductoryOfferEligibility: [String: IntroductoryOfferEligibility] = [:]
     private(set) var state = SubscriptionPurchaseState.idle
@@ -363,13 +405,6 @@ final class SubscriptionManager {
         let calendar = Calendar.current
         let trialEndDay = calendar.startOfDay(for: trialEndsAt)
         return calendar.date(byAdding: .day, value: 1, to: trialEndDay)
-    }
-
-    var trialDaysRemaining: Int? {
-        guard accessState == .trialActive, let trialEndsAt else { return nil }
-        let remaining = trialEndsAt.timeIntervalSince(Date())
-        guard remaining > 0 else { return 0 }
-        return max(1, Int(ceil(remaining / 86_400)))
     }
 
     var trialEndsTomorrow: Bool {
@@ -508,11 +543,6 @@ final class SubscriptionManager {
 
     var canResetTrialForTesting: Bool {
         Self.isTestEnvironment
-    }
-
-    var trialRemainingText: String {
-        guard let days = trialDaysRemaining else { return "" }
-        return days == 1 ? "1 dia restante" : "\(days) dias restantes"
     }
 
     private var appVersion: String {
@@ -922,6 +952,8 @@ final class SubscriptionManager {
     func refreshEntitlements() async {
         var activeIDs = Set<String>()
         var entitlementStartDates: [Date] = []
+        var entitlementExpirationDates: [Date] = []
+        var subscriptionGroupIDs = Set<String>()
         var hasIntroductoryTrialEntitlement = false
         var encounteredUnverified = false
 
@@ -938,6 +970,12 @@ final class SubscriptionManager {
             }
             activeIDs.insert(transaction.productID)
             entitlementStartDates.append(transaction.purchaseDate)
+            if let expirationDate = transaction.expirationDate {
+                entitlementExpirationDates.append(expirationDate)
+            }
+            if let subscriptionGroupID = transaction.subscriptionGroupID {
+                subscriptionGroupIDs.insert(subscriptionGroupID)
+            }
             if transactionStartsIntroductoryFreeTrial(transaction) {
                 hasIntroductoryTrialEntitlement = true
             }
@@ -957,6 +995,16 @@ final class SubscriptionManager {
             activeEntitlementIsIntroductoryTrial = hasIntroductoryTrialEntitlement
         }
         hasActiveSubscription = resolution.isActive
+        if hasActiveSubscription, !activeIDs.isEmpty {
+            currentPeriodEndsAt = entitlementExpirationDates.max()
+            await refreshRenewalState(
+                activeProductIDs: activeIDs,
+                subscriptionGroupIDs: subscriptionGroupIDs
+            )
+        } else if resolution.shouldPersist {
+            autoRenewIsOff = false
+            currentPeriodEndsAt = nil
+        }
         if resolution.shouldPersist {
             defaults.set(hasActiveSubscription, forKey: Constants.entitlementCacheKey)
         }
@@ -1017,6 +1065,72 @@ final class SubscriptionManager {
             throw SubscriptionVerificationError.unverifiedTransaction
         case .verified(let safe):
             return safe
+        }
+    }
+
+    /// Renewal info não faz parte de `Transaction.currentEntitlements`.
+    /// Consultamos o status do grupo e só aplicamos dados quando tanto a
+    /// transação quanto o renewal info vierem verificados pelo StoreKit.
+    private func refreshRenewalState(
+        activeProductIDs: Set<String>,
+        subscriptionGroupIDs: Set<String>
+    ) async {
+        var groupIDs = subscriptionGroupIDs
+        if groupIDs.isEmpty {
+            groupIDs.formUnion(
+                products.compactMap { product in
+                    guard activeProductIDs.contains(product.id) else { return nil }
+                    return product.subscription?.subscriptionGroupID
+                }
+            )
+        }
+
+        guard !groupIDs.isEmpty else { return }
+
+        var foundVerifiedActiveStatus = false
+        var encounteredUnverified = false
+        var latestExpirationDate: Date?
+        var willAutoRenew = true
+
+        do {
+            for groupID in groupIDs {
+                let statuses = try await Product.SubscriptionInfo.status(for: groupID)
+                for status in statuses {
+                    guard let transaction = try? checkVerified(status.transaction),
+                          let renewalInfo = try? checkVerified(status.renewalInfo) else {
+                        encounteredUnverified = true
+                        continue
+                    }
+                    guard activeProductIDs.contains(transaction.productID),
+                          transaction.revocationDate == nil,
+                          let expirationDate = transaction.expirationDate,
+                          expirationDate > Date() else {
+                        continue
+                    }
+
+                    if latestExpirationDate == nil || expirationDate > latestExpirationDate! {
+                        latestExpirationDate = expirationDate
+                        willAutoRenew = renewalInfo.willAutoRenew
+                    }
+                    foundVerifiedActiveStatus = true
+                }
+            }
+        } catch {
+            // Uma falha transitória não pode sobrescrever um estado de
+            // renovação que já havia sido verificado nesta instalação.
+            return
+        }
+
+        guard foundVerifiedActiveStatus else {
+            if !encounteredUnverified {
+                autoRenewIsOff = false
+            }
+            return
+        }
+
+        autoRenewIsOff = !willAutoRenew
+        if let latestExpirationDate {
+            currentPeriodEndsAt = latestExpirationDate
         }
     }
 

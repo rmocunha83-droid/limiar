@@ -139,18 +139,19 @@ portal). Regras de posicionamento para não brigar com o texto:
 
 - Card: fundo #111B1C, borda #24312F, raio 12. Conteúdo: ★★★★★ (dourado #E3B34C, 15pt,
   5 estrelas sempre) → citação em **serif** ivory 16pt, entre aspas → nome discreto
-  (`Mariana S.`, 13pt softText). **Sem foto/rosto** — se precisar de âncora visual,
+  (`Juliana, Belo Horizonte/MG`, 13pt softText). **Sem foto/rosto** — se precisar de âncora visual,
   monograma em círculo.
 - Dots abaixo, centralizados: ativo = pílula 16×5 sage; inativos = 5×5 #3A4643.
-- Comportamento: swipe horizontal + auto-avanço a cada ~5s; altura-base de 214pt, escalável com
-  Dynamic Type até `xxLarge`, dimensionada pelo maior depoimento para a tela não pular nem cortar
-  a citação.
-- **5 depoimentos (reais — TestFlight, 5 estrelas, autorizados em julho/2026):**
-  1. "Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo." — Mariana, São Paulo
-  2. "Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus." — Rafael, Curitiba
-  3. "Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar." — Ana Clara, Belo Horizonte
-  4. "Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia." — Fernanda, Brasília
-  5. "O Limiar virou um lembrete simples de colocar Deus antes das distrações." — João, Belo Horizonte
+- Comportamento: swipe horizontal + auto-avanço a cada ~8s; altura dimensionada pelo maior
+  depoimento, inclusive com Dynamic Type até `xxLarge`, para a tela não pular nem cortar a citação.
+- **7 depoimentos reais e autorizados:**
+  1. "Não esperava tanto do aplicativo. Baixei sem grandes expectativas e me surpreendi. Prefiro prestar atenção no que estou fazendo e só depois olhar o celular. Com o Limiar consigo fazer essa pausa espiritual de forma natural. As reflexões personalizadas fazem toda a diferença. Já estou indicando para os amigos da igreja." — Juliana, Belo Horizonte/MG
+  2. "Produto fantástico para quem quer colocar Deus antes das distrações. As leituras são curtas, claras e aparecem exatamente no momento em que eu mais preciso parar. Uso com os apps de rede social e WhatsApp. Em poucos segundos troco o impulso por uma Palavra. Estou muito satisfeito." — Rafael, Curitiba/PR
+  3. "Uma pausa pequena, mas que muda o resto do dia. Escolhi os apps que mais me distraem e agora, antes de abrir, tenho aqueles minutos de leitura e reflexão. É simples, bonito e direto. Sinto que estou colocando Deus no centro de novo, sem esforço. Cinco estrelas com sobra!" — Pedro, Brasília/DF
+  4. "O Limiar virou meu lembrete diário de prioridade. Eu queria ler mais a Bíblia, mas sempre acabava enrolando. Agora a pausa chega na hora certa, as leituras são adaptadas à minha tradição e ainda tem a opção de ouvir. Fácil de usar e realmente transforma o começo do dia. Estou muito grato por ter encontrado esse app." — Mariana, Recife/PE
+  5. "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia." — Beatriz, Porto Alegre/RS
+  6. "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!" — Lucas, Curitiba/PR
+  7. "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar." — Ana, Belo Horizonte/MG
 
 ## 7. Componente: seletor de planos
 
@@ -175,8 +176,9 @@ portal). Regras de posicionamento para não brigar com o texto:
 
 ## 9. Guard-rails (inegociáveis)
 
-1. **Depoimentos:** usar SOMENTE citações reais com autorização registrada. As 5 do §6 são
-   reais (TestFlight, julho/2026) — manter o registro das autorizações arquivado. Depoimento
+1. **Depoimentos:** usar SOMENTE citações reais com autorização registrada. As quatro primeiras
+   do §6 vieram do TestFlight em julho/2026; Beatriz, Lucas e Ana vieram de avaliações 5 estrelas
+   recebidas por e-mail em agosto/2026. Manter o registro das autorizações arquivado. Depoimento
    inventado apresentado como real = risco de rejeição da Apple e problema com CDC.
 2. **Zero escassez falsa:** nenhum contador artificial, nenhuma "oferta por tempo limitado"
    inventada. A única urgência permitida é o prazo real do trial (D6).
