@@ -141,7 +141,10 @@ struct SubscriptionGateView: View {
 
                         SubscriptionGateBenefits(
                             profile: model.faithProfile,
-                            turn: model.pauseCycleTurn
+                            turn: model.pauseCycleTurn,
+                            title: showsEligibleTrial
+                                ? "Tudo incluído nos seus 7 dias grátis"
+                                : "Tudo incluído na sua assinatura"
                         )
 
                         SubscriptionGatePlanPicker(
@@ -222,6 +225,7 @@ private struct SubscriptionGateVerifyingBanner: View {
 private struct SubscriptionGateBenefits: View {
     let profile: UserFaithProfile
     let turn: PauseCycleTurn
+    let title: String
 
     private var benefits: [String] {
         [
@@ -243,7 +247,7 @@ private struct SubscriptionGateBenefits: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("O que você desbloqueia agora")
+            Text(title)
                 .conversionFont(14, weight: .semibold)
                 .foregroundStyle(Color.ivory)
 
@@ -286,7 +290,7 @@ private struct SubscriptionGatePlanPicker: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            ForEach(SubscriptionPlan.allCases.sorted { $0.sortOrder < $1.sortOrder }) { plan in
+            ForEach([SubscriptionPlan.monthly, .yearly]) { plan in
                 Button {
                     guard selection != plan else { return }
                     selection = plan
@@ -355,17 +359,23 @@ private struct SubscriptionGatePlanPicker: View {
     }
 
     private func detailLine(for plan: SubscriptionPlan) -> String {
+        let base: String
         if forcesTrialEligibilityForDebugging {
-            return "7 dias grátis, depois \(priceLine(for: plan))"
+            base = "7 dias grátis, depois \(priceLine(for: plan))"
+        } else {
+            switch subscription.introductoryOfferEligibility(for: plan) {
+            case .eligible where subscription.hasConfirmedFreeTrial(for: plan):
+                base = "7 dias grátis, depois \(priceLine(for: plan))"
+            case .unknown:
+                return "Verificando oferta com a App Store"
+            case .eligible, .ineligible:
+                base = "Assinatura por \(priceLine(for: plan))"
+            }
         }
-        switch subscription.introductoryOfferEligibility(for: plan) {
-        case .eligible where subscription.hasConfirmedFreeTrial(for: plan):
-            return "7 dias grátis, depois \(priceLine(for: plan))"
-        case .unknown:
-            return "Verificando oferta com a App Store"
-        case .eligible, .ineligible:
-            return "Assinatura por \(priceLine(for: plan))"
+        if plan == .yearly, let equivalent = subscription.monthlyEquivalentDisplayPrice(for: .yearly) {
+            return base + " · sai por \(equivalent)/mês"
         }
+        return base
     }
 
     private func showsEligibleTrial(for plan: SubscriptionPlan) -> Bool {
@@ -406,6 +416,13 @@ private struct SubscriptionGateCompliance: View {
             }
             .disabled(!canSubscribe)
             .opacity(canSubscribe ? 1 : 0.62)
+
+            if forcesTrialEligibilityForDebugging || subscription.hasEligibleFreeTrial(for: subscription.selectedPlan) {
+                Text("Hoje você não paga nada.")
+                    .conversionFont(13, weight: .semibold, relativeTo: .footnote)
+                    .foregroundStyle(Color.sageButton)
+                    .frame(maxWidth: .infinity)
+            }
 
             Text("A assinatura renova automaticamente. Cancele a qualquer momento em Ajustes > Assinaturas. Para não ser cobrado, cancele até 24h antes do fim do período vigente.")
                 .conversionFont(11, relativeTo: .caption)
