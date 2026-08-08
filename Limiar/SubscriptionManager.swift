@@ -52,7 +52,7 @@ enum SubscriptionPurchaseOrigin {
     case legacyPaywall
 }
 
-enum SubscriptionCohort: Equatable {
+enum SubscriptionCohort: String, Equatable {
     case legacy
     case new
 }
@@ -101,6 +101,46 @@ enum SubscriptionAccessState: Equatable {
 enum SubscriptionCohortPolicy {
     static func cohort(hasLegacyTrialStart: Bool) -> SubscriptionCohort {
         hasLegacyTrialStart ? .legacy : .new
+    }
+
+    /// Decide a coorte na primeira execução desta versão e o que persistir.
+    /// Um usuário pré-1.13 que completou o onboarding mas nunca tocou em
+    /// "Começar minha travessia" não tem o marcador de trial no Keychain;
+    /// sem esta migração ele seria tratado como novo e cairia no portão,
+    /// quebrando a promessa "sem cartão" da tela antiga.
+    static func initialCohort(
+        hasLegacyTrialStart: Bool,
+        persistedDecision: SubscriptionCohort?,
+        hadCompletedOnboardingBeforeGate: Bool
+    ) -> (cohort: SubscriptionCohort, decisionToPersist: SubscriptionCohort?) {
+        if hasLegacyTrialStart {
+            return (.legacy, persistedDecision == .legacy ? nil : .legacy)
+        }
+        if let persistedDecision {
+            return (persistedDecision, nil)
+        }
+        if hadCompletedOnboardingBeforeGate {
+            return (.legacy, .legacy)
+        }
+        return (.new, .new)
+    }
+
+    /// Aplica o resultado de uma enumeração de entitlements sem deixar uma
+    /// falha transitória derrubar um assinante: só rebaixamos (e persistimos
+    /// `false` no cache) quando a enumeração foi conclusiva — nenhuma
+    /// transação chegou sem verificação.
+    static func resolvedSubscriptionActive(
+        activeProductCount: Int,
+        encounteredUnverified: Bool,
+        previousValue: Bool
+    ) -> (isActive: Bool, shouldPersist: Bool) {
+        if activeProductCount > 0 {
+            return (true, true)
+        }
+        if encounteredUnverified && previousValue {
+            return (previousValue, false)
+        }
+        return (false, true)
     }
 
     static func canStartLocalTrial(cohort: SubscriptionCohort) -> Bool {
@@ -182,7 +222,7 @@ final class SubscriptionManager {
     private enum Constants {
         static let entitlementCacheKey = "limiar.subscription.hasActiveSubscription"
         static let firebaseLifecycleMonitoringStartedAtKey = "limiar.analytics.subscriptionLifecycleStartedAt"
-        static let trialStartDefaultsKey = "limiar.subscription.trialStartedAt"
+        static let cohortDecisionKey = "limiar.subscription.cohortDecision"
         static let reviewRequestDefaultsKeyPrefix = "limiar.review.requested"
         static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
         static let reviewRequestMinimumTrialDuration: TimeInterval = 3 * 24 * 60 * 60
@@ -206,6 +246,15 @@ final class SubscriptionManager {
     private(set) var message = ""
     var selectedPlan = SubscriptionPlan.yearly
 
+    /// Marcador do Keychain de que este aparelho já teve assinatura ativa.
+    /// Sobrevive à reinstalação e permite verificar antes de vender.
+    private(set) var hadSubscriptionBefore = false
+    /// True enquanto a primeira verificação de entitlements da sessão não
+    /// terminou — o portão usa isso para não abrir direto como venda para
+    /// quem pode ser assinante reinstalando o app.
+    private(set) var isVerifyingInitialEntitlements = true
+
+    @ObservationIgnored private var userDidSelectPlan = false
     @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
     @ObservationIgnored private var hasStarted = false
     @ObservationIgnored private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
@@ -218,11 +267,30 @@ final class SubscriptionManager {
         // Mantém o último entitlement verificado durante a restauração
         // assíncrona do StoreKit. A verificação atualizada continua sendo a
         // fonte de verdade e corrige este cache logo no start().
-        // O marcador do Keychain é a fronteira definitiva entre coortes.
-        // Usuários novos nunca recebem esse marcador pelo novo fluxo.
+        // O marcador de trial do Keychain segue sendo a fronteira principal
+        // entre coortes; usuários novos nunca recebem esse marcador. A
+        // decisão de coorte é persistida na primeira execução para que um
+        // legado que atualizou sem ter iniciado o trial não caia no portão.
         let legacyTrialStartedAt = TrialStartStore.load()
-        cohort = SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: legacyTrialStartedAt != nil)
+        let persistedDecision = SubscriptionCohort(
+            rawValue: defaults.string(forKey: Constants.cohortDecisionKey)
+                ?? SubscriptionKeychainFlags.legacyCohort.rawStoredValue
+                ?? ""
+        )
+        let resolution = SubscriptionCohortPolicy.initialCohort(
+            hasLegacyTrialStart: legacyTrialStartedAt != nil,
+            persistedDecision: persistedDecision,
+            hadCompletedOnboardingBeforeGate: ScreenTimePolicyStore().loadOnboardingState()
+        )
+        cohort = resolution.cohort
+        if let decision = resolution.decisionToPersist {
+            defaults.set(decision.rawValue, forKey: Constants.cohortDecisionKey)
+            if decision == .legacy {
+                SubscriptionKeychainFlags.legacyCohort.store(decision.rawValue)
+            }
+        }
         hasActiveSubscription = defaults.bool(forKey: Constants.entitlementCacheKey)
+        hadSubscriptionBefore = SubscriptionKeychainFlags.wasSubscriber.rawStoredValue != nil
         trialStartedAt = legacyTrialStartedAt
         if defaults.object(forKey: Constants.firebaseLifecycleMonitoringStartedAtKey) == nil {
             defaults.set(Date(), forKey: Constants.firebaseLifecycleMonitoringStartedAtKey)
@@ -539,7 +607,6 @@ final class SubscriptionManager {
             ConversionFunnelPersistence.resetDismissals(in: defaults)
             trialStartedAt = now
             TrialStartStore.save(now)
-            defaults.set(now, forKey: Constants.trialStartDefaultsKey)
             message = "Seu acesso inicial de 7 dias começou."
             MetaAppEvents.trackStartedTrial()
         }
@@ -557,7 +624,6 @@ final class SubscriptionManager {
         ConversionFunnelPersistence.resetDismissals(in: defaults)
         trialStartedAt = now
         TrialStartStore.save(now)
-        defaults.set(now, forKey: Constants.trialStartDefaultsKey)
         message = "Acesso inicial reiniciado para 7 dias neste aparelho."
         refreshAccessState(now: now)
     }
@@ -814,10 +880,15 @@ final class SubscriptionManager {
                 let rhsIndex = Constants.productIDs.firstIndex(of: rhs.id) ?? 0
                 return lhsIndex < rhsIndex
             }
-            if product(for: .yearly) != nil {
+            if product(for: selectedPlan) == nil {
+                // O plano escolhido não existe na loja: cair para o que houver.
+                if product(for: .yearly) != nil {
+                    selectedPlan = .yearly
+                } else if product(for: .monthly) != nil {
+                    selectedPlan = .monthly
+                }
+            } else if !userDidSelectPlan, product(for: .yearly) != nil {
                 selectedPlan = .yearly
-            } else if product(for: selectedPlan) == nil, product(for: .monthly) != nil {
-                selectedPlan = .monthly
             }
             state = products.isEmpty ? .productsUnavailable : .idle
             if products.isEmpty {
@@ -835,9 +906,13 @@ final class SubscriptionManager {
         var activeIDs = Set<String>()
         var entitlementStartDates: [Date] = []
         var hasIntroductoryTrialEntitlement = false
+        var encounteredUnverified = false
 
         for await result in Transaction.currentEntitlements {
-            guard let transaction = try? checkVerified(result) else { continue }
+            guard let transaction = try? checkVerified(result) else {
+                encounteredUnverified = true
+                continue
+            }
             guard Constants.productIDs.contains(transaction.productID) else { continue }
             guard transaction.productType == .autoRenewable else { continue }
             guard transaction.revocationDate == nil else { continue }
@@ -853,16 +928,50 @@ final class SubscriptionManager {
             trackFirebasePurchaseLifecycleIfObservable(for: transaction)
         }
 
-        activeProductIDs = activeIDs
-        activeEntitlementStartedAt = entitlementStartDates.min()
-        activeEntitlementIsIntroductoryTrial = hasIntroductoryTrialEntitlement
-        hasActiveSubscription = !activeIDs.isEmpty
-        defaults.set(hasActiveSubscription, forKey: Constants.entitlementCacheKey)
+        let resolution = SubscriptionCohortPolicy.resolvedSubscriptionActive(
+            activeProductCount: activeIDs.count,
+            encounteredUnverified: encounteredUnverified,
+            previousValue: hasActiveSubscription
+        )
+
+        if resolution.isActive || resolution.shouldPersist {
+            activeProductIDs = activeIDs
+            activeEntitlementStartedAt = entitlementStartDates.min()
+            activeEntitlementIsIntroductoryTrial = hasIntroductoryTrialEntitlement
+        }
+        hasActiveSubscription = resolution.isActive
+        if resolution.shouldPersist {
+            defaults.set(hasActiveSubscription, forKey: Constants.entitlementCacheKey)
+        }
+        if hasActiveSubscription, !hadSubscriptionBefore {
+            hadSubscriptionBefore = true
+            SubscriptionKeychainFlags.wasSubscriber.store("true")
+        }
+        isVerifyingInitialEntitlements = false
         refreshAccessState()
 
-        if state != .purchasing && state != .loadingProducts {
+        // .pending (Ask to Buy) permanece visível até o listener de
+        // transações resolver a compra; um refresh de rotina não pode
+        // esconder esse aviso.
+        if state != .purchasing && state != .loadingProducts && state != .pending {
             state = hasActiveSubscription ? .active : .expired
         }
+    }
+
+    /// Recuperação ao voltar ao primeiro plano: recarrega produtos se a
+    /// primeira carga falhou (sem rede no fim do onboarding, por exemplo)
+    /// e revalida entitlements. Sem isso o portão ficava inerte na sessão.
+    func recoverIfNeeded() async {
+        if products.isEmpty || introductoryOfferEligibility.isEmpty {
+            await loadProducts()
+        }
+        await refreshEntitlements()
+    }
+
+    /// Registra que o plano atual foi uma escolha explícita da pessoa, para
+    /// que o carregamento de produtos não a sobrescreva com o padrão anual.
+    func noteUserSelectedPlan() {
+        userDidSelectPlan = true
     }
 
     private func listenForTransactions() -> Task<Void, Never> {
@@ -888,7 +997,7 @@ final class SubscriptionManager {
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified:
-            throw StoreKitError.notAvailableInStorefront
+            throw SubscriptionVerificationError.unverifiedTransaction
         case .verified(let safe):
             return safe
         }
@@ -984,6 +1093,60 @@ final class SubscriptionManager {
         #else
         return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
         #endif
+    }
+}
+
+enum SubscriptionVerificationError: LocalizedError {
+    case unverifiedTransaction
+
+    var errorDescription: String? {
+        "A Apple não conseguiu verificar esta transação. Tente novamente em instantes."
+    }
+}
+
+/// Marcadores simples no Keychain que sobrevivem à reinstalação. Nenhum deles
+/// concede acesso por si só — apenas orientam classificação de coorte e a
+/// ordem de verificação no portão. O guard-rail continua valendo: usuários
+/// novos jamais recebem o marcador de trial local.
+enum SubscriptionKeychainFlags: String {
+    case legacyCohort = "cohortDecision"
+    case wasSubscriber = "wasSubscriber"
+
+    private static let service = "com.romeucunha.Limiar.subscription"
+
+    var rawStoredValue: String? {
+        var query = baseQuery
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let value = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return value
+    }
+
+    func store(_ value: String) {
+        let data = value.data(using: .utf8) ?? Data()
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        let updateStatus = SecItemUpdate(baseQuery as CFDictionary, attributes as CFDictionary)
+
+        guard updateStatus == errSecItemNotFound else { return }
+
+        var item = baseQuery
+        item[kSecValueData as String] = data
+        SecItemAdd(item as CFDictionary, nil)
+    }
+
+    private var baseQuery: [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.service,
+            kSecAttrAccount as String: rawValue
+        ]
     }
 }
 

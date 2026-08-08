@@ -174,7 +174,7 @@ struct ContentView: View {
             if phase == .active {
                 notifications.handleAppDidBecomeActive()
                 subscription.refreshAccessState()
-                Task { await subscription.refreshEntitlements() }
+                Task { await subscription.recoverIfNeeded() }
                 model.updateAccess(
                     hasPremiumAccess: effectiveHasPremiumAccess,
                     isEssentialMode: effectiveIsEssentialMode

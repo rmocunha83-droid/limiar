@@ -44,6 +44,7 @@
 		LIMI0000000000000000000D /* LimiarShieldActionExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI0000000000000000000E /* LimiarDeviceActivityMonitorExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000401 /* LocalReadingSessionTests.swift */; };
+		LIMI00000000000000000410 /* SubscriptionGateHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -134,6 +135,7 @@
 		LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LIMI00000000000000000401 /* LocalReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalReadingSessionTests.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionGateHardeningTests.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000402 /* LimiarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LimiarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -162,6 +164,7 @@
 			isa = PBXGroup;
 			children = (
 				LIMI00000000000000000401 /* LocalReadingSessionTests.swift */,
+				LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */,
 			);
 			path = LimiarTests;
 			sourceTree = "<group>";
@@ -423,7 +426,7 @@
 		LIMI00000000000000000054 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000055 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000056 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */, LIMI00000000000000000302 /* LimiarEventLog.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		LIMI00000000000000000405 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000405 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */, LIMI00000000000000000410 /* SubscriptionGateHardeningTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */

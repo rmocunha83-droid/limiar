@@ -132,6 +132,10 @@ struct SubscriptionGateView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
+                        if showsRestoreFirstBanner {
+                            SubscriptionGateVerifyingBanner()
+                        }
+
                         SubscriptionGateBenefits(
                             profile: model.faithProfile,
                             turn: model.pauseCycleTurn
@@ -183,6 +187,32 @@ struct SubscriptionGateView: View {
     private var showsEligibleTrial: Bool {
         forcesTrialEligibilityForDebugging
             || subscription.hasEligibleFreeTrial(for: subscription.selectedPlan)
+    }
+
+    /// Quem já teve assinatura neste aparelho (marcador do Keychain) não deve
+    /// abrir o portão direto como venda: primeiro verificamos a assinatura.
+    private var showsRestoreFirstBanner: Bool {
+        subscription.hadSubscriptionBefore
+            && !subscription.hasActiveSubscription
+            && subscription.isVerifyingInitialEntitlements
+    }
+}
+
+private struct SubscriptionGateVerifyingBanner: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+                .tint(Color.sageButton)
+            Text("Verificando sua assinatura anterior... Se você já assinou, use \"Restaurar compras\" abaixo.")
+                .conversionFont(13, weight: .medium, relativeTo: .footnote)
+                .foregroundStyle(Color.ivory.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sageButton.opacity(0.4), lineWidth: 1))
     }
 }
 
@@ -257,6 +287,7 @@ private struct SubscriptionGatePlanPicker: View {
                 Button {
                     guard selection != plan else { return }
                     selection = plan
+                    subscription.noteUserSelectedPlan()
                     LimiarAnalytics.trackGatePlanSelected(plan)
                 } label: {
                     VStack(alignment: .leading, spacing: 7) {
@@ -373,7 +404,7 @@ private struct SubscriptionGateCompliance: View {
             .disabled(!canSubscribe)
             .opacity(canSubscribe ? 1 : 0.62)
 
-            Text("A assinatura renova automaticamente. Cancele a qualquer momento em Ajustes > Assinaturas, até 24h antes do fim do período.")
+            Text("A assinatura renova automaticamente. Cancele a qualquer momento em Ajustes > Assinaturas. Para não ser cobrado, cancele até 24h antes do fim do período vigente.")
                 .conversionFont(11, relativeTo: .caption)
                 .foregroundStyle(Color.softText)
                 .multilineTextAlignment(.center)
@@ -386,6 +417,24 @@ private struct SubscriptionGateCompliance: View {
                     .foregroundStyle(Color.softText)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
+            }
+
+            if showsRetryButton {
+                Button {
+                    Task { await subscription.recoverIfNeeded() }
+                } label: {
+                    Label("Tentar novamente", systemImage: "arrow.clockwise")
+                        .conversionFont(14, weight: .semibold, relativeTo: .footnote)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.sageButton.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.sageButton.opacity(0.5), lineWidth: 1)
+                        )
+                        .foregroundStyle(Color.sageButton)
+                }
+                .accessibilityLabel("Tentar carregar os planos novamente")
             }
 
             Button {
@@ -418,6 +467,16 @@ private struct SubscriptionGateCompliance: View {
     private var canSubscribe: Bool {
         subscription.canPurchase(subscription.selectedPlan)
             && subscription.introductoryOfferEligibility(for: subscription.selectedPlan) != .unknown
+    }
+
+    /// A primeira carga de produtos pode falhar (sem rede no fim do
+    /// onboarding). O portão não tem bypass, então precisa oferecer uma
+    /// saída explícita em vez de ficar com o CTA desabilitado para sempre.
+    private var showsRetryButton: Bool {
+        guard !subscription.isBusy else { return false }
+        if subscription.products.isEmpty { return true }
+        if case .failed = subscription.state { return true }
+        return false
     }
 
     private var buttonTitle: String {
