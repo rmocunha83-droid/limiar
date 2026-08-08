@@ -176,13 +176,16 @@ enum LimiarAnalytics {
         ])
     }
 
-    static func trackNarrationStarted() {
-        log("narration_started")
+    static func trackNarrationStarted(context: String = "travessia") {
+        log("narration_started", parameters: [
+            "context": context
+        ])
     }
 
-    static func trackNarrationFailed(reason: String) {
+    static func trackNarrationFailed(reason: String, context: String = "travessia") {
         log("narration_failed", parameters: [
-            "reason": reason
+            "reason": reason,
+            "context": context
         ])
     }
 

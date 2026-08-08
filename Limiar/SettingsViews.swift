@@ -506,7 +506,7 @@ private struct FavoritePassageDetailView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var narration = PassageNarrationService()
+    @ObservedObject private var narration = PassageNarrationService.shared
     @State private var showingPaywall = false
 
     let favorite: FavoritePassageItem
@@ -580,7 +580,7 @@ private struct FavoritePassageDetailView: View {
         if model.isEssentialMode {
             showingPaywall = true
         } else {
-            narration.toggle(segments: narrationSegments)
+            narration.toggle(segments: narrationSegments, context: "revisita")
         }
     }
 }
