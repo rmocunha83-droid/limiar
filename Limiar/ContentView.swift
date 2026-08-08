@@ -3,6 +3,26 @@ import FamilyControls
 import ManagedSettings
 import SwiftUI
 
+/// Dispara a ação quando o marcador do topo sai de vista (a pessoa rolou até
+/// a leitura). No iOS 17, sem onScrollVisibilityChange, mantém a semântica
+/// antiga de disparar na aparição — impreciso, mas restrito a uma fatia
+/// pequena e decrescente de aparelhos.
+private struct TraversalScrollTrigger: ViewModifier {
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollVisibilityChange(threshold: 0.1) { isVisible in
+                if !isVisible {
+                    action()
+                }
+            }
+        } else {
+            content.onAppear(perform: action)
+        }
+    }
+}
+
 func narrationExplanationSegments(_ parts: [String]) -> [String] {
     parts.flatMap { part in
         part
@@ -124,7 +144,7 @@ struct ContentView: View {
                 } else if Self.forcedConversionScreen == "D8" {
                     PaywallView(analyticsOrigin: .d8)
                 } else if Self.forcePaywallForReviewScreenshot {
-                    PaywallView()
+                    PaywallView(analyticsOrigin: .settings)
                 } else if Self.forceEssentialModeForDebugging {
                     DashboardView()
                 } else if !model.hasCompletedOnboarding {
@@ -286,6 +306,9 @@ private struct DashboardView: View {
                         Color.clear
                             .frame(height: 1)
                             .id("readingTop")
+                            .modifier(TraversalScrollTrigger {
+                                markTraversalStartedByInteraction()
+                            })
 
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 8) {
@@ -377,7 +400,7 @@ private struct DashboardView: View {
             SettingsView()
         }
         .navigationDestination(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(analyticsOrigin: .dashboard)
         }
         .familyActivityPicker(
             headerText: "Escolha apps, categorias ou sites que vão ativar o Limiar.",
@@ -391,16 +414,23 @@ private struct DashboardView: View {
         }
         .task {
             model.reapplyBlockIfNeeded()
-            LimiarAnalytics.trackTraversalStarted(
-                turn: model.pauseCycleTurn,
-                cycleKey: ScreenTimePolicyStore.cycleDayKey(
-                    hour: model.pauseCycleTurn.rawValue
-                )
-            )
         }
         .onDisappear {
             narration.stop()
         }
+    }
+
+    /// A travessia "começa" quando a pessoa interage com a leitura (rolagem
+    /// no conteúdo ou narração), não na simples aparição do dashboard — senão
+    /// abrir e fechar o app conta como travessia iniciada e infla o funil
+    /// started→completed. O dedupe por ciclo continua no LimiarAnalytics.
+    private func markTraversalStartedByInteraction() {
+        LimiarAnalytics.trackTraversalStarted(
+            turn: model.pauseCycleTurn,
+            cycleKey: ScreenTimePolicyStore.cycleDayKey(
+                hour: model.pauseCycleTurn.rawValue
+            )
+        )
     }
 
     private var trialStatusBadge: some View {
@@ -533,6 +563,7 @@ private struct DashboardView: View {
                             if model.isEssentialMode {
                                 showingPaywall = true
                             } else {
+                                markTraversalStartedByInteraction()
                                 narration.toggle(segments: narrationSegments)
                             }
                         },
@@ -620,7 +651,7 @@ private struct DashboardView: View {
 
                     if model.isEssentialMode {
                         NavigationLink {
-                            PaywallView()
+                            PaywallView(analyticsOrigin: .dashboard)
                         } label: {
                             Text("Ver planos")
                                 .font(.system(size: 13, weight: .bold))

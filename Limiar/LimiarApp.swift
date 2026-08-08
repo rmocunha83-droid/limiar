@@ -207,6 +207,10 @@ enum MetaAppEvents {
 
     static func requestTrackingPermissionIfNeeded() {
         guard isTrackingPromptPending else { return }
+        // O iOS só exibe o alerta com o app ativo. Registrar o evento com o
+        // app em background inflaria att_prompt_shown sem alerta real
+        // (razão shown/result ficava acima de 1).
+        guard UIApplication.shared.applicationState == .active else { return }
 
         LimiarAnalytics.trackATTPromptShown()
         ATTrackingManager.requestTrackingAuthorization { status in

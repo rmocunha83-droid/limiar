@@ -56,7 +56,10 @@ struct EssentialModeIntroView: View {
         }
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .task {
-            LimiarAnalytics.trackPaywallViewed(origin: .d7)
+            // A intro do Essencial não é um paywall: o paywall_viewed(.d7)
+            // fica a cargo do PaywallView aberto por ela — logar aqui contava
+            // a visualização em dobro e subestimava a conversão do D7.
+            LimiarAnalytics.trackEssentialIntroViewed()
         }
     }
 }

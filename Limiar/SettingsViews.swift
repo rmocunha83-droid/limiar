@@ -276,7 +276,7 @@ struct SettingsView: View {
             model.applyBlocking()
         }
         .sheet(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(analyticsOrigin: .settings)
                 .environment(subscription)
         }
         .navigationDestination(isPresented: $showingHistory) { HistoryView() }
@@ -488,7 +488,7 @@ struct FavoritePassagesView: View {
         .scrollContentBackground(.hidden)
         .background(LimiarBackground())
         .sheet(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(analyticsOrigin: .settings)
                 .environment(subscription)
         }
     }
@@ -562,7 +562,7 @@ private struct FavoritePassageDetailView: View {
             narration.stop()
         }
         .sheet(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(analyticsOrigin: .settings)
                 .environment(subscription)
         }
     }

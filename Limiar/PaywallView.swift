@@ -40,7 +40,10 @@ struct PaywallView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
-    var analyticsOrigin: LimiarAnalytics.PaywallOrigin = .settings
+    // Sem valor padrão de propósito: cada tela de oferta declara sua origem,
+    // senão o funil mistura origens silenciosamente (foi assim que o D7
+    // passou a contar em dobro).
+    let analyticsOrigin: LimiarAnalytics.PaywallOrigin
     var continueEssential: (() -> Void)? = nil
 
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
@@ -783,7 +786,7 @@ extension Color {
 }
 
 #Preview {
-    PaywallView()
+    PaywallView(analyticsOrigin: .settings)
         .environment(LimiarAppModel())
         .environment(SubscriptionManager())
 }
