@@ -12,6 +12,63 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(OnboardingPageMotion.duration, 0.32, accuracy: 0.001)
     }
 
+    func testOnboardingFlowPlacesSocialProofBetweenPauseAndActivation() {
+        XCTAssertEqual(
+            OnboardingFlowStep.allCases,
+            [.welcome, .tradition, .readings, .themes, .depth, .pauseTurn, .socialProof, .activation]
+        )
+        XCTAssertEqual(OnboardingFlowStep.socialProof.rawValue, 6)
+        XCTAssertEqual(OnboardingFlowStep.activation.rawValue, 7)
+        XCTAssertEqual(OnboardingFlowStep.final, .activation)
+    }
+
+    @MainActor
+    func testTestimonialCatalogHasUniquePeopleAndExactOnboardingQuotes() {
+        let testimonials = ConversionTestimonials.testimonials
+        let people = testimonials.map { String($0.name.split(separator: ",", maxSplits: 1)[0]) }
+
+        XCTAssertEqual(testimonials.count, 7)
+        XCTAssertEqual(Set(people).count, people.count)
+        XCTAssertEqual(
+            testimonials.map(\.name),
+            [
+                "Juliana, Belo Horizonte/MG",
+                "Rafael, Curitiba/PR",
+                "Pedro, Brasília/DF",
+                "Mariana, Recife/PE",
+                "Beatriz, Porto Alegre/RS",
+                "Lucas, Curitiba/PR",
+                "Ana, Belo Horizonte/MG"
+            ]
+        )
+        XCTAssertEqual(
+            testimonials.map(\.quote),
+            [
+                "Não esperava tanto do aplicativo. Baixei sem grandes expectativas e me surpreendi. Prefiro prestar atenção no que estou fazendo e só depois olhar o celular. Com o Limiar consigo fazer essa pausa espiritual de forma natural. As reflexões personalizadas fazem toda a diferença. Já estou indicando para os amigos da igreja.",
+                "Produto fantástico para quem quer colocar Deus antes das distrações. As leituras são curtas, claras e aparecem exatamente no momento em que eu mais preciso parar. Uso com os apps de rede social e WhatsApp. Em poucos segundos troco o impulso por uma Palavra. Estou muito satisfeito.",
+                "Uma pausa pequena, mas que muda o resto do dia. Escolhi os apps que mais me distraem e agora, antes de abrir, tenho aqueles minutos de leitura e reflexão. É simples, bonito e direto. Sinto que estou colocando Deus no centro de novo, sem esforço. Cinco estrelas com sobra!",
+                "O Limiar virou meu lembrete diário de prioridade. Eu queria ler mais a Bíblia, mas sempre acabava enrolando. Agora a pausa chega na hora certa, as leituras são adaptadas à minha tradição e ainda tem a opção de ouvir. Fácil de usar e realmente transforma o começo do dia. Estou muito grato por ter encontrado esse app.",
+                "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia.",
+                "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!",
+                "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar."
+            ]
+        )
+        XCTAssertEqual(
+            ConversionTestimonials.onboardingTestimonials.map(\.name),
+            ["Beatriz, Porto Alegre/RS", "Lucas, Curitiba/PR", "Ana, Belo Horizonte/MG"]
+        )
+        XCTAssertEqual(
+            ConversionTestimonials.onboardingTestimonials.map(\.quote),
+            [
+                "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia.",
+                "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!",
+                "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar."
+            ]
+        )
+        XCTAssertEqual(ConversionTestimonials.onboardingTestimonials.last?.id, testimonials.last?.id)
+        XCTAssertEqual(ConversionTestimonials.onboardingTestimonials.last?.quote, testimonials.last?.quote)
+    }
+
     func testStarterProfileUsesShortExplanationDepth() {
         XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
     }

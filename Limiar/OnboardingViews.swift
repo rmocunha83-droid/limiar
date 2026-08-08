@@ -22,6 +22,32 @@ enum OnboardingNavigationDirection {
     }
 }
 
+enum OnboardingFlowStep: Int, CaseIterable {
+    case welcome
+    case tradition
+    case readings
+    case themes
+    case depth
+    case pauseTurn
+    case socialProof
+    case activation
+
+    static let final: Self = .activation
+
+    var analyticsStep: LimiarAnalytics.OnboardingStep {
+        switch self {
+        case .welcome: .welcome
+        case .tradition: .tradition
+        case .readings: .readings
+        case .themes: .themes
+        case .depth: .depth
+        case .pauseTurn: .screenTime
+        case .socialProof: .socialProof
+        case .activation: .activation
+        }
+    }
+}
+
 enum OnboardingPageMotion {
     static let duration = 0.32
     static let animation = Animation.easeInOut(duration: duration)
@@ -44,7 +70,7 @@ struct OnboardingView: View {
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(LimiarNotificationCoordinator.self) private var notifications
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var step: Int
+    @State private var step: OnboardingFlowStep
     @State private var navigationDirection: OnboardingNavigationDirection = .forward
     @State private var status = ""
     @State private var readingPreferenceMessage = ""
@@ -58,27 +84,30 @@ struct OnboardingView: View {
         static let verticalInset: CGFloat = 22
     }
 
+    private static let shortDepthRecommendation = "Recomendada para começar"
+
     init() {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if let stepFlagIndex = arguments.firstIndex(of: "-LimiarOnboardingStep"),
            arguments.indices.contains(stepFlagIndex + 1),
            let debugStep = Int(arguments[stepFlagIndex + 1]) {
-            _step = State(initialValue: min(max(debugStep, 0), 6))
+            let clampedStep = min(max(debugStep, 0), OnboardingFlowStep.final.rawValue)
+            _step = State(initialValue: OnboardingFlowStep(rawValue: clampedStep) ?? .welcome)
             return
         }
         #endif
 
-        _step = State(initialValue: 0)
+        _step = State(initialValue: .welcome)
     }
 
     var body: some View {
         @Bindable var model = model
 
         ZStack {
-            if step == 0 {
+            if step == .welcome {
                 WelcomeHeroScreen {
-                    move(to: 1, direction: .forward)
+                    move(to: .tradition, direction: .forward)
                 }
                 .id("welcome")
                 .transition(pageTransition)
@@ -90,19 +119,21 @@ struct OnboardingView: View {
 
                     Group {
                         switch displayedStep {
-                        case 1:
+                        case .tradition:
                             tradition
-                        case 2:
+                        case .readings:
                             readingStyles
-                        case 3:
+                        case .themes:
                             spiritualThemes
-                        case 4:
+                        case .depth:
                             reflectionDepth
-                        case 5:
+                        case .pauseTurn:
                             pauseTurn
-                        case 6:
+                        case .socialProof:
+                            socialProof
+                        case .activation:
                             screenTime
-                        default:
+                        case .welcome:
                             screenTime
                         }
                     }
@@ -121,11 +152,11 @@ struct OnboardingView: View {
                         }
                         .accessibilityLabel("Voltar")
 
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5) {
                             ForEach(Array(visibleSteps.enumerated()), id: \.offset) { index, _ in
                                 Capsule()
                                     .fill(index == progressIndex ? Color.sageButton : Color.white.opacity(0.18))
-                                    .frame(width: index == progressIndex ? 26 : 7, height: 7)
+                                    .frame(width: index == progressIndex ? 26 : 6, height: 7)
                             }
                         }
                         .frame(width: 106, alignment: .leading)
@@ -195,13 +226,13 @@ struct OnboardingView: View {
         }
     }
 
-    private var finalOnboardingStep: Int { 6 }
+    private var finalOnboardingStep: OnboardingFlowStep { .final }
 
-    private var visibleSteps: [Int] {
-        [0, 1, 2, 3, 4, 5, 6]
+    private var visibleSteps: [OnboardingFlowStep] {
+        OnboardingFlowStep.allCases
     }
 
-    private var displayedStep: Int { step }
+    private var displayedStep: OnboardingFlowStep { step }
 
     private var pageTransition: AnyTransition {
         OnboardingPageMotion.transition(
@@ -340,6 +371,7 @@ struct OnboardingView: View {
                     SelectableRow(
                         title: depth.title,
                         subtitle: reflectionDepthSubtitle(for: depth),
+                        emphasizedSubtitleText: depth == .short ? Self.shortDepthRecommendation : nil,
                         isSelected: model.faithProfile.explanationDepth == depth
                     ) {
                         model.selectExplanationDepth(depth)
@@ -391,6 +423,50 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Layout.horizontalInset)
             .padding(.vertical, Layout.verticalInset)
+        }
+    }
+
+    private var socialProof: some View {
+        ZStack(alignment: .bottom) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    OnboardingTitle(
+                        eyebrow: "QUEM USA O LIMIAR",
+                        title: "Pausas que já mudaram dias."
+                    )
+
+                    Text("Avaliações de quem usa o Limiar todos os dias.")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("★★★★★")
+                        .font(.system(size: 17, weight: .semibold))
+                        .tracking(2)
+                        .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
+                        .accessibilityLabel("Cinco estrelas")
+
+                    VStack(spacing: 14) {
+                        ForEach(ConversionTestimonials.onboardingTestimonials) { testimonial in
+                            TestimonialCard(testimonial: testimonial, showsRating: false)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Layout.horizontalInset)
+                .padding(.top, Layout.verticalInset)
+                .padding(.bottom, 72)
+            }
+
+            LinearGradient(
+                colors: [Color.deepInk.opacity(0), Color.deepInk.opacity(0.96)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 52)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
     }
 
@@ -455,18 +531,8 @@ struct OnboardingView: View {
         readingPreferenceMessage = ""
     }
 
-    private func trackOnboardingStep(_ step: Int) {
-        let analyticsStep: LimiarAnalytics.OnboardingStep
-        switch step {
-        case 0: analyticsStep = .welcome
-        case 1: analyticsStep = .tradition
-        case 2: analyticsStep = .readings
-        case 3: analyticsStep = .themes
-        case 4: analyticsStep = .depth
-        case 5: analyticsStep = .screenTime
-        default: analyticsStep = .activation
-        }
-        LimiarAnalytics.trackOnboardingStepViewed(analyticsStep, index: step)
+    private func trackOnboardingStep(_ step: OnboardingFlowStep) {
+        LimiarAnalytics.trackOnboardingStepViewed(step.analyticsStep, index: step.rawValue)
     }
 
     private func applyDebugTraditionIfNeeded() {
@@ -501,7 +567,7 @@ struct OnboardingView: View {
 
         switch depth {
         case .short:
-            return "\(passageDescription). Recomendada para começar — breve, direta e fácil de concluir."
+            return "\(passageDescription). \(Self.shortDepthRecommendation) — breve, direta e fácil de concluir."
         case .medium:
             return "\(passageDescription). Para quem quer um passo além no dia a dia."
         case .deep:
@@ -510,17 +576,17 @@ struct OnboardingView: View {
     }
 
     private func advance() {
-        if step == 2, !model.faithProfile.hasSelectedReadingPreferences {
+        if step == .readings, !model.faithProfile.hasSelectedReadingPreferences {
             readingPreferenceMessage = "Escolha ao menos \(model.faithProfile.tradition.readingConfig.minSelected) estilos de leitura para continuar."
             return
         }
 
-        if step == 3, model.faithProfile.favoriteThemes.isEmpty {
+        if step == .themes, model.faithProfile.favoriteThemes.isEmpty {
             themeSelectionMessage = "Escolha ao menos 1 tema para continuar."
             return
         }
 
-        if step == 6 {
+        if step == .activation {
             model.saveProfile()
             advanceFromScreenTime()
             return
@@ -563,7 +629,7 @@ struct OnboardingView: View {
         move(to: previousStep, direction: .backward)
     }
 
-    private func move(to newStep: Int, direction: OnboardingNavigationDirection) {
+    private func move(to newStep: OnboardingFlowStep, direction: OnboardingNavigationDirection) {
         navigationDirection = direction
 
         // A view atual precisa recomputar sua transição com a nova direção
@@ -589,14 +655,14 @@ struct OnboardingView: View {
         }
     }
 
-    private func nextStep(after currentStep: Int) -> Int? {
+    private func nextStep(after currentStep: OnboardingFlowStep) -> OnboardingFlowStep? {
         guard let currentIndex = visibleSteps.firstIndex(of: currentStep) else { return nil }
         let nextIndex = currentIndex + 1
         guard visibleSteps.indices.contains(nextIndex) else { return nil }
         return visibleSteps[nextIndex]
     }
 
-    private func previousStep(before currentStep: Int) -> Int? {
+    private func previousStep(before currentStep: OnboardingFlowStep) -> OnboardingFlowStep? {
         guard let currentIndex = visibleSteps.firstIndex(of: currentStep), currentIndex > 0 else { return nil }
         return visibleSteps[currentIndex - 1]
     }
@@ -608,8 +674,8 @@ struct OnboardingView: View {
     /// No passo de ativação todas as preferências já estão definidas e o
     /// usuário passa ~30-60s autorizando o Tempo de Uso: geramos a primeira
     /// sessão em background para o dashboard abrir pronto, sem espera.
-    private func prewarmIfEnteringActivation(_ currentStep: Int) {
-        guard currentStep == finalOnboardingStep else { return }
+    private func prewarmIfEnteringActivation(_ currentStep: OnboardingFlowStep) {
+        guard currentStep == .activation else { return }
         model.saveProfile()
         model.prewarmSessionIfNeeded()
     }

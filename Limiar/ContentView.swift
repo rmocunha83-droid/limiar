@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import FamilyControls
 import ManagedSettings
+import StoreKit
 import SwiftUI
 
 /// Dispara a ação quando o marcador do topo sai de vista (a pessoa rolou até
@@ -30,6 +31,15 @@ func narrationExplanationSegments(_ parts: [String]) -> [String] {
             .components(separatedBy: "\n\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+    }
+}
+
+private extension SubscriptionWinbackPhase {
+    var analyticsPhase: LimiarAnalytics.WinbackPhase {
+        switch self {
+        case .trial: .trial
+        case .paid: .paid
+        }
     }
 }
 
@@ -268,6 +278,7 @@ private struct DashboardView: View {
     @State private var showingPicker = false
     @State private var showingSettings = false
     @State private var showingPaywall = false
+    @State private var showingManageSubscriptions = false
     @State private var showingCompletionScreen = false
 
     private static var forceCompletionScreenForDebugging: Bool {
@@ -292,6 +303,18 @@ private struct DashboardView: View {
         #else
         false
         #endif
+    }
+
+    private static var forcedWinbackPhase: SubscriptionWinbackPhase? {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceWinbackTrial") {
+            return .trial
+        }
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceWinbackPaid") {
+            return .paid
+        }
+        #endif
+        return nil
     }
 
     var body: some View {
@@ -336,7 +359,7 @@ private struct DashboardView: View {
                         }
 
                         blockedAppsStrip
-                        trialStatusBadge
+                        winbackBanner
                         readingRequirementHeader
                         essentialModeNotice
                         readingItemsList
@@ -402,6 +425,7 @@ private struct DashboardView: View {
         .navigationDestination(isPresented: $showingPaywall) {
             PaywallView(analyticsOrigin: .dashboard)
         }
+        .manageSubscriptionsSheet(isPresented: $showingManageSubscriptions)
         .familyActivityPicker(
             headerText: "Escolha apps, categorias ou sites que vão ativar o Limiar.",
             footerText: "Você pode alterar isso depois em Preferências.",
@@ -411,6 +435,12 @@ private struct DashboardView: View {
         .onChange(of: model.selection) { _, _ in
             model.saveProfile()
             model.applyBlocking()
+        }
+        .onChange(of: showingManageSubscriptions) { wasPresented, isPresented in
+            guard wasPresented, !isPresented else { return }
+            Task {
+                await subscription.recoverIfNeeded()
+            }
         }
         .task {
             model.reapplyBlockIfNeeded()
@@ -433,24 +463,65 @@ private struct DashboardView: View {
         )
     }
 
-    private var trialStatusBadge: some View {
-        Group {
-            if subscription.accessState == .trialActive {
-                HStack(spacing: 10) {
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.warmGold)
+    private var winbackPhase: SubscriptionWinbackPhase? {
+        if let forcedPhase = Self.forcedWinbackPhase {
+            return forcedPhase
+        }
+        return SubscriptionWinbackPolicy.phase(
+            cohort: subscription.cohort,
+            hasActiveSubscription: subscription.hasActiveSubscription,
+            autoRenewIsOff: subscription.autoRenewIsOff,
+            isIntroductoryTrial: subscription.activeEntitlementIsIntroductoryTrial
+        )
+    }
 
-                    Text("Acesso inicial: \(subscription.trialRemainingText)")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.ivory)
+    @ViewBuilder
+    private var winbackBanner: some View {
+        if let phase = winbackPhase {
+            let remainingText = SubscriptionWinbackPolicy.remainingPeriodText(
+                endsAt: Self.forcedWinbackPhase == nil
+                    ? subscription.currentPeriodEndsAt
+                    : Calendar.current.date(byAdding: .day, value: 3, to: Date())
+            )
 
-                    Spacer()
+            VStack(alignment: .leading, spacing: 14) {
+                Label("ACESSO COMPLETO", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.3)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(
+                    phase == .trial
+                        ? "Seu acesso completo termina \(remainingText)"
+                        : "Sua assinatura termina \(remainingText)"
+                )
+                .font(.system(size: 23, weight: .regular, design: .serif))
+                .foregroundStyle(Color.ivory)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Text("Reative para não perder suas pausas, narrações e trechos salvos.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    LimiarAnalytics.trackWinbackBannerTapped(phase: phase.analyticsPhase)
+                    showingManageSubscriptions = true
+                } label: {
+                    Text("Reativar assinatura")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.deepInk)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 12))
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.10), lineWidth: 1))
+                .buttonStyle(.plain)
+            }
+            .padding(18)
+            .limiarPanel()
+            .onAppear {
+                LimiarAnalytics.trackWinbackBannerShown(phase: phase.analyticsPhase)
             }
         }
     }

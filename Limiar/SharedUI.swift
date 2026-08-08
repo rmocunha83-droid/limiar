@@ -375,8 +375,39 @@ struct LimiarBackground: View {
 struct SelectableRow: View {
     let title: String
     let subtitle: String
+    let emphasizedSubtitleText: String?
     let isSelected: Bool
     let action: () -> Void
+
+    init(
+        title: String,
+        subtitle: String,
+        emphasizedSubtitleText: String? = nil,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.emphasizedSubtitleText = emphasizedSubtitleText
+        self.isSelected = isSelected
+        self.action = action
+    }
+
+    private var styledSubtitle: AttributedString {
+        var attributedSubtitle = AttributedString(subtitle)
+        attributedSubtitle.font = .system(size: 14)
+        attributedSubtitle.foregroundColor = Color.softText
+
+        guard let emphasizedSubtitleText,
+              let emphasizedRange = attributedSubtitle.range(of: emphasizedSubtitleText)
+        else {
+            return attributedSubtitle
+        }
+
+        attributedSubtitle[emphasizedRange].font = .system(size: 14, weight: .bold)
+        attributedSubtitle[emphasizedRange].foregroundColor = Color.ivory
+        return attributedSubtitle
+    }
 
     var body: some View {
         Button(action: action) {
@@ -389,9 +420,7 @@ struct SelectableRow: View {
                         .foregroundStyle(Color.ivory)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
-                    Text(subtitle)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.softText)
+                    Text(styledSubtitle)
                         .lineLimit(2)
                         .minimumScaleFactor(0.78)
                         .multilineTextAlignment(.leading)
@@ -500,7 +529,6 @@ struct LimiarHeroButtonStyle: ButtonStyle {
 struct ConversionTestimonials: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ScaledMetric(relativeTo: .body) private var carouselHeight: CGFloat = 214
 
     struct Testimonial: Identifiable {
         let id: Int
@@ -508,19 +536,23 @@ struct ConversionTestimonials: View {
         let name: String
     }
 
-    // Depoimentos reais de usuários do TestFlight (avaliações 5 estrelas),
-    // fornecidos com autorização em julho/2026. Ao editar ou adicionar,
-    // manter somente citações reais com autorização registrada.
-    private static let testimonials = [
-        Testimonial(id: 0, quote: "Eu queria ler mais a Bíblia, mas sempre me distraía. O Limiar me ajuda a fazer essa pausa no momento certo.", name: "Mariana, São Paulo"),
-        Testimonial(id: 1, quote: "Simples, bonito e direto. Em poucos segundos, o Limiar me ajuda a trocar a distração por uma Palavra de Deus.", name: "Rafael, Curitiba"),
-        Testimonial(id: 2, quote: "Gostei porque as leituras são curtas, claras e aparecem bem quando eu mais preciso parar.", name: "Ana Clara, Belo Horizonte"),
-        Testimonial(id: 3, quote: "Gostei porque é rápido e profundo ao mesmo tempo. Uma pausa pequena, mas que muda o começo do dia.", name: "Fernanda, Brasília"),
-        Testimonial(id: 4, quote: "O Limiar virou um lembrete simples de colocar Deus antes das distrações.", name: "João, Belo Horizonte")
+    // Depoimentos reais de usuários, publicados somente com autorização.
+    // Todos vieram de avaliações reais 5 estrelas recebidas por e-mail em
+    // agosto/2026, com autorização registrada pelo Romeu. Ao editar, preserve
+    // as citações palavra por palavra.
+    static let testimonials = [
+        Testimonial(id: 0, quote: "Não esperava tanto do aplicativo. Baixei sem grandes expectativas e me surpreendi. Prefiro prestar atenção no que estou fazendo e só depois olhar o celular. Com o Limiar consigo fazer essa pausa espiritual de forma natural. As reflexões personalizadas fazem toda a diferença. Já estou indicando para os amigos da igreja.", name: "Juliana, Belo Horizonte/MG"),
+        Testimonial(id: 1, quote: "Produto fantástico para quem quer colocar Deus antes das distrações. As leituras são curtas, claras e aparecem exatamente no momento em que eu mais preciso parar. Uso com os apps de rede social e WhatsApp. Em poucos segundos troco o impulso por uma Palavra. Estou muito satisfeito.", name: "Rafael, Curitiba/PR"),
+        Testimonial(id: 2, quote: "Uma pausa pequena, mas que muda o resto do dia. Escolhi os apps que mais me distraem e agora, antes de abrir, tenho aqueles minutos de leitura e reflexão. É simples, bonito e direto. Sinto que estou colocando Deus no centro de novo, sem esforço. Cinco estrelas com sobra!", name: "Pedro, Brasília/DF"),
+        Testimonial(id: 3, quote: "O Limiar virou meu lembrete diário de prioridade. Eu queria ler mais a Bíblia, mas sempre acabava enrolando. Agora a pausa chega na hora certa, as leituras são adaptadas à minha tradição e ainda tem a opção de ouvir. Fácil de usar e realmente transforma o começo do dia. Estou muito grato por ter encontrado esse app.", name: "Mariana, Recife/PE"),
+        Testimonial(id: 4, quote: "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia.", name: "Beatriz, Porto Alegre/RS"),
+        Testimonial(id: 5, quote: "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!", name: "Lucas, Curitiba/PR"),
+        Testimonial(id: 6, quote: "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar.", name: "Ana, Belo Horizonte/MG")
     ]
 
+    static let onboardingTestimonials = Array(testimonials.suffix(3))
+
     @State private var selectedIndex: Int
-    @State private var smoothCarouselHeight: CGFloat = 0
     @State private var movementDirection = 1
     private let maximumCount: Int?
     private let usesSmoothTransition: Bool
@@ -559,52 +591,34 @@ struct ConversionTestimonials: View {
         }
         .task(id: selectedIndex) {
             guard !voiceOverEnabled else { return }
-            try? await Task.sleep(for: .seconds(5))
+            try? await Task.sleep(for: .seconds(8))
             guard !Task.isCancelled else { return }
             advance(by: 1)
         }
     }
 
     private var pagedCarousel: some View {
-        TabView(selection: $selectedIndex) {
-            ForEach(displayedTestimonials) { testimonial in
-                TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: true)
-                    .tag(testimonial.id)
+        testimonialHeightProbe
+            .overlay {
+                TabView(selection: $selectedIndex) {
+                    ForEach(displayedTestimonials) { testimonial in
+                        TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: true)
+                            .tag(testimonial.id)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .frame(height: carouselHeight)
     }
 
     private var smoothCarousel: some View {
-        ZStack(alignment: .top) {
-            if let testimonial = selectedTestimonial {
-                TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
-                    .id(testimonial.id)
-                    .transition(testimonialTransition)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: smoothCarouselHeight > 0 ? smoothCarouselHeight : nil, alignment: .top)
-        .background {
-            ZStack {
-                ForEach(displayedTestimonials) { testimonial in
+        testimonialHeightProbe
+            .overlay(alignment: .top) {
+                if let testimonial = selectedTestimonial {
                     TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .background {
-                            GeometryReader { proxy in
-                                Color.clear.preference(
-                                    key: TestimonialHeightPreferenceKey.self,
-                                    value: proxy.size.height
-                                )
-                            }
-                        }
+                        .id(testimonial.id)
+                        .transition(testimonialTransition)
                 }
             }
-            .hidden()
-            .accessibilityHidden(true)
-            .allowsHitTesting(false)
-        }
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 18)
@@ -613,10 +627,6 @@ struct ConversionTestimonials: View {
                     advance(by: value.translation.width < 0 ? 1 : -1)
                 }
         )
-        .onPreferenceChange(TestimonialHeightPreferenceKey.self) { height in
-            guard height > 0, abs(height - smoothCarouselHeight) > 0.5 else { return }
-            smoothCarouselHeight = height
-        }
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: advance(by: 1)
@@ -624,6 +634,18 @@ struct ConversionTestimonials: View {
             @unknown default: break
             }
         }
+    }
+
+    private var testimonialHeightProbe: some View {
+        ZStack(alignment: .top) {
+            ForEach(displayedTestimonials) { testimonial in
+                TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .hidden()
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 
     private var selectedTestimonial: Testimonial? {
@@ -655,24 +677,20 @@ struct ConversionTestimonials: View {
     }
 }
 
-private struct TestimonialHeightPreferenceKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private struct TestimonialCard: View {
+struct TestimonialCard: View {
     let testimonial: ConversionTestimonials.Testimonial
-    let reservesFlexibleSpace: Bool
+    var reservesFlexibleSpace = false
+    var showsRating = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("★★★★★")
-                .conversionFont(15, weight: .semibold)
-                .tracking(2)
-                .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
+            if showsRating {
+                Text("★★★★★")
+                    .conversionFont(15, weight: .semibold)
+                    .tracking(2)
+                    .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
+                    .accessibilityLabel("Cinco estrelas")
+            }
 
             Text("“\(testimonial.quote)”")
                 .conversionFont(16, design: .serif)

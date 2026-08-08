@@ -17,6 +17,7 @@ enum LimiarAnalytics {
         case themes
         case depth
         case screenTime = "screen_time"
+        case socialProof = "social_proof"
         case activation
     }
 
@@ -39,6 +40,11 @@ enum LimiarAnalytics {
         case error
     }
 
+    enum WinbackPhase: String {
+        case trial
+        case paid
+    }
+
     private enum Keys {
         static let lastAccess = "limiar.analytics.lastAccess"
         static let traversalStartedPrefix = "limiar.analytics.traversalStarted"
@@ -49,6 +55,7 @@ enum LimiarAnalytics {
     private static let defaults = UserDefaults(
         suiteName: ScreenTimePolicyStore.appGroupIdentifier
     ) ?? .standard
+    private static var didTrackWinbackBannerThisSession = false
 
     private static var isConfigured: Bool {
         FirebaseApp.app() != nil
@@ -210,6 +217,20 @@ enum LimiarAnalytics {
 
     static func trackReviewPromptRequested() {
         log("review_prompt_requested")
+    }
+
+    static func trackWinbackBannerShown(phase: WinbackPhase) {
+        guard !didTrackWinbackBannerThisSession else { return }
+        guard log("winback_banner_shown", parameters: [
+            "phase": phase.rawValue
+        ]) else { return }
+        didTrackWinbackBannerThisSession = true
+    }
+
+    static func trackWinbackBannerTapped(phase: WinbackPhase) {
+        log("winback_banner_tapped", parameters: [
+            "phase": phase.rawValue
+        ])
     }
 
     static func trackPaywallViewed(origin: PaywallOrigin) {
