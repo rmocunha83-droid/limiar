@@ -40,16 +40,74 @@ struct BlockedApplicationIcon: View {
     let token: ApplicationToken
 
     var body: some View {
-        Label(token)
-            .labelStyle(.iconOnly)
-            .scaleEffect(1.22)
-            .frame(width: 58, height: 58)
+        BlockedSelectionTile {
+            Label(token)
+                .labelStyle(.iconOnly)
+                .scaleEffect(1.22)
+        }
+        .accessibilityLabel("App selecionado")
+    }
+}
+
+struct BlockedCategoryIcon: View {
+    let token: ActivityCategoryToken
+
+    var body: some View {
+        BlockedSelectionTile(width: 150) {
+            Label(token)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 12)
+        }
+        .accessibilityLabel("Categoria selecionada")
+    }
+}
+
+struct BlockedWebDomainIcon: View {
+    let token: WebDomainToken
+
+    var body: some View {
+        BlockedSelectionTile(width: 150) {
+            Label(token)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.ivory)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 12)
+        }
+        .accessibilityLabel("Site selecionado")
+    }
+}
+
+struct BlockedAppsPlaceholderIcon: View {
+    var body: some View {
+        BlockedSelectionTile {
+            InstagramIcon()
+                .frame(width: 42, height: 42)
+        }
+        .accessibilityLabel("Instagram")
+    }
+}
+
+private struct BlockedSelectionTile<Content: View>: View {
+    let width: CGFloat
+    @ViewBuilder let content: Content
+
+    init(width: CGFloat = 58, @ViewBuilder content: () -> Content) {
+        self.width = width
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .frame(width: width, height: 58)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.sageButton.opacity(0.20), lineWidth: 1)
             )
-            .accessibilityLabel("App selecionado")
     }
 }
 
@@ -317,8 +375,39 @@ struct LimiarBackground: View {
 struct SelectableRow: View {
     let title: String
     let subtitle: String
+    let emphasizedSubtitleText: String?
     let isSelected: Bool
     let action: () -> Void
+
+    init(
+        title: String,
+        subtitle: String,
+        emphasizedSubtitleText: String? = nil,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.emphasizedSubtitleText = emphasizedSubtitleText
+        self.isSelected = isSelected
+        self.action = action
+    }
+
+    private var styledSubtitle: AttributedString {
+        var attributedSubtitle = AttributedString(subtitle)
+        attributedSubtitle.font = .system(size: 14)
+        attributedSubtitle.foregroundColor = Color.softText
+
+        guard let emphasizedSubtitleText,
+              let emphasizedRange = attributedSubtitle.range(of: emphasizedSubtitleText)
+        else {
+            return attributedSubtitle
+        }
+
+        attributedSubtitle[emphasizedRange].font = .system(size: 14, weight: .bold)
+        attributedSubtitle[emphasizedRange].foregroundColor = Color.ivory
+        return attributedSubtitle
+    }
 
     var body: some View {
         Button(action: action) {
@@ -331,9 +420,7 @@ struct SelectableRow: View {
                         .foregroundStyle(Color.ivory)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
-                    Text(subtitle)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.softText)
+                    Text(styledSubtitle)
                         .lineLimit(2)
                         .minimumScaleFactor(0.78)
                         .multilineTextAlignment(.leading)
@@ -439,6 +526,194 @@ struct LimiarHeroButtonStyle: ButtonStyle {
     }
 }
 
+struct ConversionTestimonials: View {
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    struct Testimonial: Identifiable {
+        let id: Int
+        let quote: String
+        let name: String
+    }
+
+    // Depoimentos reais de usuários, publicados somente com autorização.
+    // Todos vieram de avaliações reais 5 estrelas recebidas por e-mail em
+    // agosto/2026, com autorização registrada pelo Romeu. Ao editar, preserve
+    // as citações palavra por palavra.
+    static let testimonials = [
+        Testimonial(id: 0, quote: "Não esperava tanto do aplicativo. Baixei sem grandes expectativas e me surpreendi. Prefiro prestar atenção no que estou fazendo e só depois olhar o celular. Com o Limiar consigo fazer essa pausa espiritual de forma natural. As reflexões personalizadas fazem toda a diferença. Já estou indicando para os amigos da igreja.", name: "Juliana, Belo Horizonte/MG"),
+        Testimonial(id: 1, quote: "Produto fantástico para quem quer colocar Deus antes das distrações. As leituras são curtas, claras e aparecem exatamente no momento em que eu mais preciso parar. Uso com os apps de rede social e WhatsApp. Em poucos segundos troco o impulso por uma Palavra. Estou muito satisfeito.", name: "Rafael, Curitiba/PR"),
+        Testimonial(id: 2, quote: "Uma pausa pequena, mas que muda o resto do dia. Escolhi os apps que mais me distraem e agora, antes de abrir, tenho aqueles minutos de leitura e reflexão. É simples, bonito e direto. Sinto que estou colocando Deus no centro de novo, sem esforço. Cinco estrelas com sobra!", name: "Pedro, Brasília/DF"),
+        Testimonial(id: 3, quote: "O Limiar virou meu lembrete diário de prioridade. Eu queria ler mais a Bíblia, mas sempre acabava enrolando. Agora a pausa chega na hora certa, as leituras são adaptadas à minha tradição e ainda tem a opção de ouvir. Fácil de usar e realmente transforma o começo do dia. Estou muito grato por ter encontrado esse app.", name: "Mariana, Recife/PE"),
+        Testimonial(id: 4, quote: "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia.", name: "Beatriz, Porto Alegre/RS"),
+        Testimonial(id: 5, quote: "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!", name: "Lucas, Curitiba/PR"),
+        Testimonial(id: 6, quote: "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar.", name: "Ana, Belo Horizonte/MG")
+    ]
+
+    static let onboardingTestimonials = Array(testimonials.suffix(3))
+
+    @State private var selectedIndex: Int
+    @State private var movementDirection = 1
+    private let maximumCount: Int?
+    private let usesSmoothTransition: Bool
+
+    init(
+        startingIndex: Int = 0,
+        maximumCount: Int? = nil,
+        usesSmoothTransition: Bool = false
+    ) {
+        self.maximumCount = maximumCount
+        self.usesSmoothTransition = usesSmoothTransition
+        let availableCount = min(maximumCount ?? Self.testimonials.count, Self.testimonials.count)
+        _selectedIndex = State(initialValue: min(startingIndex, max(0, availableCount - 1)))
+    }
+
+    private var displayedTestimonials: [Testimonial] {
+        Array(Self.testimonials.prefix(maximumCount ?? Self.testimonials.count))
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if usesSmoothTransition {
+                smoothCarousel
+            } else {
+                pagedCarousel
+            }
+
+            HStack(spacing: 7) {
+                ForEach(displayedTestimonials) { testimonial in
+                    Capsule()
+                        .fill(testimonial.id == selectedIndex ? Color.sageButton : Color(red: 0.23, green: 0.28, blue: 0.26))
+                        .frame(width: testimonial.id == selectedIndex ? 16 : 5, height: 5)
+                        .animation(.easeInOut(duration: 0.2), value: selectedIndex)
+                }
+            }
+        }
+        .task(id: selectedIndex) {
+            guard !voiceOverEnabled else { return }
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            advance(by: 1)
+        }
+    }
+
+    private var pagedCarousel: some View {
+        testimonialHeightProbe
+            .overlay {
+                TabView(selection: $selectedIndex) {
+                    ForEach(displayedTestimonials) { testimonial in
+                        TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: true)
+                            .tag(testimonial.id)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
+    }
+
+    private var smoothCarousel: some View {
+        testimonialHeightProbe
+            .overlay(alignment: .top) {
+                if let testimonial = selectedTestimonial {
+                    TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
+                        .id(testimonial.id)
+                        .transition(testimonialTransition)
+                }
+            }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 18)
+                .onEnded { value in
+                    guard abs(value.translation.width) > 44 else { return }
+                    advance(by: value.translation.width < 0 ? 1 : -1)
+                }
+        )
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: advance(by: 1)
+            case .decrement: advance(by: -1)
+            @unknown default: break
+            }
+        }
+    }
+
+    private var testimonialHeightProbe: some View {
+        ZStack(alignment: .top) {
+            ForEach(displayedTestimonials) { testimonial in
+                TestimonialCard(testimonial: testimonial, reservesFlexibleSpace: false)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .hidden()
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+
+    private var selectedTestimonial: Testimonial? {
+        displayedTestimonials.first { $0.id == selectedIndex } ?? displayedTestimonials.first
+    }
+
+    private var testimonialTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let insertionEdge: Edge = movementDirection >= 0 ? .trailing : .leading
+        let removalEdge: Edge = movementDirection >= 0 ? .leading : .trailing
+        return .asymmetric(
+            insertion: .move(edge: insertionEdge).combined(with: .opacity),
+            removal: .move(edge: removalEdge).combined(with: .opacity)
+        )
+    }
+
+    private func advance(by offset: Int) {
+        guard displayedTestimonials.count > 1,
+              let currentOffset = displayedTestimonials.firstIndex(where: { $0.id == selectedIndex }) else {
+            return
+        }
+
+        movementDirection = offset >= 0 ? 1 : -1
+        let count = displayedTestimonials.count
+        let nextOffset = (currentOffset + offset + count) % count
+        withAnimation(.easeInOut(duration: reduceMotion ? 0.25 : 0.45)) {
+            selectedIndex = displayedTestimonials[nextOffset].id
+        }
+    }
+}
+
+struct TestimonialCard: View {
+    let testimonial: ConversionTestimonials.Testimonial
+    var reservesFlexibleSpace = false
+    var showsRating = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if showsRating {
+                Text("★★★★★")
+                    .conversionFont(15, weight: .semibold)
+                    .tracking(2)
+                    .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
+                    .accessibilityLabel("Cinco estrelas")
+            }
+
+            Text("“\(testimonial.quote)”")
+                .conversionFont(16, design: .serif)
+                .foregroundStyle(Color.ivory)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if reservesFlexibleSpace {
+                Spacer(minLength: 0)
+            }
+
+            Text(testimonial.name)
+                .conversionFont(13, weight: .medium, relativeTo: .footnote)
+                .foregroundStyle(Color.softText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(19)
+        .background(Color.conversionPanel, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.conversionBorder, lineWidth: 1))
+        .padding(.horizontal, 1)
+    }
+}
+
 extension View {
     func glassCircle() -> some View {
         self
@@ -473,4 +748,34 @@ extension Color {
 #Preview {
     ContentView()
         .environment(LimiarAppModel())
+}
+
+#Preview("Tiles da seleção") {
+    ZStack {
+        Color.deepInk.ignoresSafeArea()
+
+        HStack(spacing: 14) {
+            BlockedSelectionTile(width: 150) {
+                Label("Redes Sociais", systemImage: "square.stack.3d.up.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 12)
+            }
+
+            BlockedAppsPlaceholderIcon()
+
+            BlockedSelectionTile(width: 150) {
+                Label("youtube.com", systemImage: "globe")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ivory)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 12)
+            }
+        }
+        .padding(18)
+    }
+    .preferredColorScheme(.dark)
 }

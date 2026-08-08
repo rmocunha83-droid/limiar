@@ -7,8 +7,8 @@ Objetivo: publicar o Limiar na App Store somente no Brasil, com assinatura mensa
 ## Ordem recomendada
 
 1. Contratos, banco e impostos.
-2. Verificar build `1.0 (23)`.
-3. Criar/confirmar assinatura mensal.
+2. Verificar a build da versão 1.13 gerada pelo Xcode Cloud.
+3. Confirmar as assinaturas mensal e anual e suas ofertas introdutórias.
 4. Configurar disponibilidade Brasil.
 5. Preencher página da versão.
 6. Preencher privacidade/compliance.
@@ -39,7 +39,7 @@ Onde ir:
 
 O que procurar:
 
-- Build `1.0 (23)`.
+- Build da versão `1.13` gerada pelo Xcode Cloud.
 
 Estados esperados:
 
@@ -50,7 +50,7 @@ Se quiser testar internamente:
 
 - Adicione a build a um grupo de teste interno.
 - Instale pelo TestFlight.
-- Abra o app e confira onboarding, teste grátis e paywall mensal.
+- Abra o app e confira onboarding, portão obrigatório, os dois planos, compra e restauração.
 
 ## 3. Apps > Limiar > Subscriptions / In-App Purchases
 
@@ -78,8 +78,8 @@ Acesso completo ao Limiar Premium com cobrança mensal.
 
 Criar produto anual no mesmo grupo:
 
-- Product ID: `limiar_premium_yearly`
-- Reference Name: `Limiar Premium Yearly`
+- Product ID: `limiar_premium_annual_2026`
+- Reference Name: `Limiar Premium Anual`
 - Display Name: `Limiar Premium Anual`
 - Type: auto-renewable subscription
 - Duration: `1 Year`
@@ -92,6 +92,14 @@ Descrição do produto:
 ```text
 Acesso completo ao Limiar Premium com cobrança anual e economia em relação ao plano mensal.
 ```
+
+Nos dois produtos, confirmar a oferta introdutória já configurada:
+
+- Território: Brasil.
+- Tipo: grátis.
+- Duração: 1 semana.
+- Início: 06/08/2026.
+- Término: sem data final.
 
 ## 4. Apps > Limiar > Pricing and Availability
 
@@ -111,7 +119,7 @@ Conferência:
 
 Selecionar build:
 
-- Build: `1.0 (23)`
+- Build: a compilação `1.13` gerada pelo Xcode Cloud após autorização de release
 
 Metadados:
 
@@ -133,9 +141,9 @@ foco,tempo de uso,pausa,espiritualidade,bíblia,devocional,atenção,disciplina,
 
 URLs:
 
-- Marketing URL: `https://limiar-five.vercel.app/`
-- Privacy Policy URL: `https://limiar-five.vercel.app/privacy.html`
-- Support URL: `https://limiar-five.vercel.app/support.html`
+- Marketing URL: `https://applimiar.com.br`
+- Privacy Policy URL: `https://applimiar.com.br/privacy`
+- Support URL: `https://applimiar.com.br/support`
 
 Categorias:
 
@@ -208,7 +216,7 @@ Antes de enviar:
 
 Antes do botão final:
 
-- Build `1.0 (23)` selecionada.
+- Build `1.13` do Xcode Cloud selecionada.
 - Produto mensal incluído.
 - Brasil como único país.
 - Screenshots enviados.

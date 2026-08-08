@@ -41,7 +41,7 @@ O Limiar **não tem contas de usuário, login, banco de dados nem sincronizaçã
 3. **Distribuição segue a skill do Xcode Cloud.** Use a compilação que o Xcode Cloud gera a partir do `main` e valide Build/Archive e processamento no App Store Connect conforme a skill `xcodecloud-romeu`. Não gere um binário local para distribuição salvo se um procedimento futuro da própria skill autorizar explicitamente esse caminho. Ver também `docs/META_TRACKING_2026-07-24.md`, seção 6.
 4. **Texto de narração é contrato.** O formato `"{referência}.\n{texto}"` precisa ser idêntico entre app, backend e pré-aquecimento, senão o cache de áudio quebra.
 5. **Modo Essencial não chama o backend.** Ele mostra trechos e explicações do catálogo local e exibe anúncios do AdMob. Não introduza chamadas de rede nesse caminho.
-6. **Privacidade é posicionamento.** Conteúdo espiritual, tradição, temas e a seleção de apps bloqueados **nunca** vão para publicidade ou medição. Ao mexer em rastreamento, atualize `privacy.html` e a ficha da App Store Connect junto.
+6. **Privacidade é posicionamento.** O Firebase Analytics pode receber somente a **preferência de tradição de leitura** (`reading_tradition`) para análise agregada de produto. Ela nunca pode formar públicos, remarketing, segmentação ou personalização de anúncios. Temas, referências ou textos de trechos, explicações geradas, seleção de apps bloqueados e dados pessoais **nunca** vão para publicidade ou medição. A Meta não recebe a tradição de leitura. Ao mexer em rastreamento, atualize `privacy.html` e a ficha da App Store Connect junto.
 7. **pt-BR em tudo que o usuário lê.** Inclusive nas mensagens de permissão do sistema.
 8. **Sempre há caminho de saída.** Falha de rede, de IA ou de assinatura precisa degradar para a sessão local, nunca travar a travessia.
 
@@ -60,10 +60,13 @@ Leia conforme a tarefa:
 
 ## Monetização
 
-Acesso inicial completo por tempo limitado → depois **Modo Essencial** (funcional, com anúncios) ou **Premium** (mensal/anual, via StoreKit). O Essencial não é uma versão quebrada: ele entrega a travessia inteira, só sem as explicações personalizadas e a narração.
+- **Coorte nova:** sem marcador do trial antigo no Keychain. Depois do onboarding, só entra no dashboard com entitlement StoreKit ativo. Os planos mensal e anual têm teste introdutório de 7 dias; não existe Modo Essencial nem anúncio para essa coorte.
+- **Coorte legada:** tem marcador do `TrialStartStore` no Keychain e preserva integralmente o fluxo anterior: trial local, funil D6/D7/D8, Modo Essencial com anúncios ou Premium.
+- Nunca grave `TrialStartStore` para a coorte nova nem remova o código legado do Essencial, AdMob ou funil.
+- Fonte de verdade da coorte nova: `Transaction.currentEntitlements`. Cancelamento durante o teste mantém acesso até a expiração; depois, volta ao portão.
 
-## Estado atual (24/07/2026)
+## Estado atual (06/08/2026)
 
-- Versão na loja: **1.10**; **1.11 (build 157)** aguardando revisão, com o rastreamento da Meta em modo completo
+- O App Store Connect contém a versão **1.12 (build 165)**. A próxima versão local é a **1.13** e não deve ser enviada ou publicada até autorização explícita do Romeu.
 - Domínio `applimiar.com.br` no ar, verificado no Meta Business Manager
 - E-mail de contato oficial: `contato@applimiar.com.br`

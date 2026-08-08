@@ -181,6 +181,13 @@ enum SpiritualTheme: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Pré-seleção do passo de temas: os oito primeiros DO CONJUNTO DA
+    /// TRADIÇÃO. Derivar do conjunto global deixava a tradição espírita com
+    /// apenas dois temas marcados após a normalização.
+    static func defaultOnboardingThemes(for tradition: FaithTradition) -> [SpiritualTheme] {
+        Array(standaloneOptions(for: tradition).prefix(8))
+    }
+
     static func standaloneOptions(for tradition: FaithTradition) -> [SpiritualTheme] {
         guard tradition == .spiritist else { return standaloneOptions }
         return [
@@ -440,8 +447,10 @@ struct UserFaithProfile: Codable, Equatable {
         tradition: .catholic,
         favoriteBibleSections: [.psalms, .gospels],
         favoriteBooks: [.psalms, .john],
-        favoriteThemes: [.presence, .discipline],
-        explanationDepth: .medium,
+        // O onboarding começa com os oito primeiros temas exibidos na grade.
+        // Preferências já salvas não passam por essa configuração inicial.
+        favoriteThemes: SpiritualTheme.defaultOnboardingThemes(for: .catholic),
+        explanationDepth: .short,
         selectedReadingCategoryIDs: ["evangelhos", "salmos", "sabedoria"]
     )
 
@@ -618,7 +627,29 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
     let passageTitle: String
     let reference: String
     let text: String?
+    let homily: String?
+    let practicalConclusion: String?
     let savedAt: Date
+
+    init(
+        id: UUID,
+        passageID: String,
+        passageTitle: String,
+        reference: String,
+        text: String?,
+        homily: String? = nil,
+        practicalConclusion: String? = nil,
+        savedAt: Date
+    ) {
+        self.id = id
+        self.passageID = passageID
+        self.passageTitle = passageTitle
+        self.reference = reference
+        self.text = text
+        self.homily = homily
+        self.practicalConclusion = practicalConclusion
+        self.savedAt = savedAt
+    }
 }
 
 enum LockState: Equatable {
@@ -933,6 +964,9 @@ final class LimiarAppModel {
 
         if !wasCompleted {
             MetaAppEvents.trackCompletedRegistration()
+            LimiarAnalytics.trackOnboardingCompleted()
+            LimiarAnalytics.setReadingTradition(faithProfile.tradition)
+            LimiarAnalytics.setDepthPreference(faithProfile.explanationDepth)
         }
     }
 
@@ -987,11 +1021,13 @@ final class LimiarAppModel {
             // Nova tradição, novo ponto de partida: defaults dela, sem afinação.
             faithProfile.selectedReadingCategoryIDs = tradition.readingConfig.defaultCategoryIDs
             faithProfile.refinedBooks = nil
+            faithProfile.favoriteThemes = SpiritualTheme.defaultOnboardingThemes(for: tradition)
         }
         faithProfile.normalizeReadingPreferencesForTradition()
         faithProfile.normalizeStandaloneThemesForCurrentTradition()
         saveProfile()
         if didChangeTradition {
+            LimiarAnalytics.setReadingTradition(tradition)
             beginNewReading(avoidingCurrent: true)
         }
     }
@@ -1021,6 +1057,7 @@ final class LimiarAppModel {
     func selectExplanationDepth(_ depth: ExplanationDepth) {
         faithProfile.explanationDepth = depth
         saveProfile()
+        LimiarAnalytics.setDepthPreference(depth)
     }
 
     func selectPauseCycleTurn(_ turn: PauseCycleTurn) {
@@ -1317,6 +1354,12 @@ final class LimiarAppModel {
         )?.text ?? ""
     }
 
+    /// Teto de trechos salvos persistidos no app group. Os favoritos agora
+    /// carregam a explicação completa (KBs por item) e o plist do grupo é
+    /// carregado inteiro também pelas extensões de Shield, que têm teto de
+    /// memória apertado — sem cap, anos de uso degradariam o bloqueio.
+    static let maximumFavoritePassages = 200
+
     func toggleFavorite(_ item: SpiritualReadingItem) {
         if isFavorite(item) {
             favoritePassages.removeAll { $0.passageID == item.id }
@@ -1328,11 +1371,31 @@ final class LimiarAppModel {
                     passageTitle: item.reference,
                     reference: item.reference,
                     text: item.text,
+                    homily: item.homily,
+                    practicalConclusion: item.practicalConclusion,
                     savedAt: Date()
                 ),
                 at: 0
             )
+            if favoritePassages.count > Self.maximumFavoritePassages {
+                // A lista é mantida do mais recente para o mais antigo; o
+                // excedente descartado é sempre o salvo há mais tempo.
+                favoritePassages.removeLast(favoritePassages.count - Self.maximumFavoritePassages)
+            }
+            LimiarAnalytics.trackPassageSaved()
         }
+        policyStore.saveFavorites(favoritePassages)
+    }
+
+    func removeFavorites(at offsets: IndexSet) {
+        let idsToRemove = Set(
+            offsets.compactMap { index in
+                favoritePassages.indices.contains(index) ? favoritePassages[index].id : nil
+            }
+        )
+        guard !idsToRemove.isEmpty else { return }
+
+        favoritePassages.removeAll { idsToRemove.contains($0.id) }
         policyStore.saveFavorites(favoritePassages)
     }
 
@@ -1376,6 +1439,10 @@ final class LimiarAppModel {
         prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
         LimiarPrewarmCoordinator.shared.schedule(now: completedAt)
         MetaAppEvents.trackReadingCompleted()
+        LimiarAnalytics.trackTraversalCompleted(
+            turn: pauseCycleTurn,
+            depth: faithProfile.explanationDepth
+        )
     }
 
     func applyBlocking() {
@@ -1533,8 +1600,15 @@ final class LimiarAppModel {
         )
     }
 
+    /// Versão do formato editorial das explicações. Incrementar sempre que o
+    /// prompt do backend mudar o tamanho ou a estrutura dos textos: invalida
+    /// sessões e prewarms gerados pela versão anterior, para que a pessoa não
+    /// passe dias vendo o formato antigo depois de atualizar o app.
+    static let editorialFormatVersion = "editorial:v2"
+
     private func sessionProfileKey(for profile: UserFaithProfile) -> String {
         [
+            Self.editorialFormatVersion,
             profile.tradition.rawValue,
             profile.explanationDepth.rawValue,
             "item-count:\(profile.explanationDepth.readingItemCount)",
@@ -1781,7 +1855,9 @@ final class LimiarAppModel {
     }
 
     nonisolated private func scripturePassages(from items: [SpiritualReadingItem], profile: UserFaithProfile) -> [ScripturePassage] {
-        let fallbackTheme = profile.favoriteThemes.first ?? .faith
+        let fallbackTheme = profile.favoriteThemes.first
+            ?? SpiritualTheme.standaloneOptions(for: profile.tradition).first
+            ?? .faith
         let fallbackSection = profile.favoriteBibleSections.first ?? .gospels
         let fallbackBook = profile.favoriteBooks.first ?? .psalms
 

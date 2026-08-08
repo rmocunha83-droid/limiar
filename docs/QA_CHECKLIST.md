@@ -7,9 +7,29 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Conferir se a tela inicial abre com a imagem, fonte, cores e botão corretos.
 - Verificar se o botão `Continuar` não fica cortado em telas pequenas.
 - Avançar por todas as etapas do onboarding.
+- Confirmar que “QUEM USA O LIMIAR” aparece depois de “SUA PAUSA” e antes de “ATIVAÇÃO”.
+- Na prova social, conferir os três depoimentos completos, rolagem, gradiente inferior e botão `Continuar` acessível sem exigir rolagem.
+- Voltar e avançar pela prova social, confirmando transição direcional, oito bolinhas de progresso e pré-aquecimento somente ao entrar em `ATIVAÇÃO`.
+- Repetir com Dynamic Type grande e confirmar que o último cartão não fica escondido pela barra inferior.
+- No passo `REFLEXÕES`, confirmar que somente “Recomendada para começar” aparece em negrito ivory na opção Curta, inclusive em iPhone pequeno e com quebra em até duas linhas.
 - Confirmar que todos os textos estão com acentuação correta em português.
 - Selecionar tradições religiosas, incluindo católica, evangélica, judaica e espírita.
 - Configurar preferências bíblicas, temas favoritos e profundidade da explicação.
+
+## Assinatura e coortes
+
+- Em instalação limpa, concluir o onboarding e confirmar que o portão não pode ser fechado ou contornado.
+- Confirmar preços localizados reais nos planos mensal e anual.
+- Em conta elegível, confirmar “7 dias grátis” nos dois planos; em conta não elegível, confirmar que a promessa não aparece.
+- Comprar no sandbox e confirmar acesso imediato ao dashboard, inclusive durante o teste.
+- Confirmar que o selo antigo “Acesso inicial: X dias restantes” não aparece no dashboard de nenhuma coorte.
+- Em coorte nova com assinatura ativa, cancelar a renovação em Ajustes e reabrir o app: o banner de reativação deve aparecer com a fase e a data corretas. Tocar `Reativar assinatura`, religar a renovação na folha da Apple e voltar ao app: após a atualização, o banner deve desaparecer.
+- Repetir o cenário anterior durante o teste grátis e num período pago, inclusive no último dia (“termina hoje”) e com Dynamic Type grande.
+- Confirmar que o banner nunca aparece para coorte legada, assinatura inativa ou renovação automática ligada.
+- Cancelar durante o teste e confirmar acesso até a expiração; depois, retorno ao portão sem anúncios e sem Modo Essencial.
+- Restaurar uma assinatura ativa e confirmar entrada no dashboard.
+- Simular coorte legada com `TrialStartStore` preenchido e confirmar trial local, funil D6/D7/D8 e Modo Essencial sem qualquer portão novo.
+- Validar os eventos Meta de início do teste e ativação paga no Gerenciador de Eventos, sem duplicatas.
 
 ## Apps que ativam o Limiar
 
@@ -36,7 +56,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Concluir a leitura local e confirmar histórico, recentes e liberação dos apps selecionados.
 - Repetir sem concluir, restabelecer a conexão e tocar em `Tentar novamente`; confirmar que uma resposta remota válida substitui a sessão uma única vez.
 - Repetir concluindo antes da reconexão; confirmar que o conteúdo concluído não é substituído.
-- Repetir no Modo Essencial e confirmar anúncios, bloqueios Premium e conclusão normal.
+- Repetir na coorte legada em Modo Essencial e confirmar anúncios, bloqueios Premium e conclusão normal.
 
 ## Rotação de trechos
 
@@ -54,8 +74,8 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar que a resposta contém resumo, significado espiritual, aplicação prática, conclusão e pergunta de meditação.
 - Verificar se o texto não inventa conteúdo bíblico.
 - Reabrir o mesmo trecho com o mesmo perfil e profundidade.
-- Confirmar que usuários em teste gratuito ativo e assinantes recebem a experiência completa com IA.
-- Confirmar que o Modo Essencial mostra os trechos principais com explicações essenciais, anúncios e sem narração.
+- Confirmar que usuários novos com entitlement ativo, inclusive no teste, e assinantes legados recebem a experiência completa com IA.
+- Confirmar que o Modo Essencial aparece somente para legados e mostra os trechos principais com explicações essenciais, anúncios e sem narração.
 
 ## Favoritos e histórico
 
@@ -72,7 +92,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Confirmar que a narração usa voz local do iOS em português do Brasil quando disponível.
 - Pausar ou interromper a narração.
 - Sair da tela durante a narração e confirmar que o áudio não fica preso indevidamente.
-- Confirmar que tocar em “Ouvir este trecho” no Modo Essencial abre o paywall e não chama a narração.
+- Confirmar que tocar em “Ouvir este trecho” no Modo Essencial legado abre o paywall e não chama a narração.
 
 ## Configurações
 
@@ -88,6 +108,26 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Testar com fonte do iOS aumentada.
 - Testar em iPhone pequeno e iPhone grande.
 - Verificar se não há botões cortados, textos sobrepostos ou elementos fora da tela.
+
+## Portão de assinatura (1.13)
+
+- Abrir o app novo em modo avião ao fim do onboarding: o portão deve mostrar "Tentar novamente" (nunca botão morto); religar a rede e confirmar que os planos carregam pelo botão ou ao voltar ao app.
+- Reinstalar com assinatura ativa e sem rede: banner "Verificando sua assinatura" com Restaurar em destaque; com rede, acesso liberado sem passar pela venda.
+- Usuário pré-1.13 com onboarding completo que nunca iniciou o trial: após atualizar, deve cair na tela antiga "Começar minha travessia" (coorte legado), não no portão.
+- Selecionar plano Mensal enquanto os preços carregam: a seleção não pode voltar sozinha para o Anual.
+
+## Narração (estabilidade)
+
+- Receber ligação durante a narração: pausa; tocar "Continuar narração" com a ligação ativa mantém a pausa (não apaga a fila); ao desligar, retomar do mesmo ponto.
+- Desconectar o fone durante a narração: pausa recuperável.
+- Modo avião no meio da narração: botão muda para "Não foi possível continuar — tentar de novo"; religar e tocar retoma do segmento falho.
+- Tela bloqueada por 2+ minutos numa narração longa: controles de play/pause aparecem na tela bloqueada e a narração segue entre os parágrafos.
+- Tocar narração no dashboard e em um trecho salvo em sequência: nunca dois áudios ao mesmo tempo.
+
+## Onboarding (temas por tradição)
+
+- Escolher tradição Espírita no passo 1: o passo de temas deve abrir com 8 temas pré-selecionados do conjunto espírita.
+- Desmarcar todos os temas: "Continuar" não avança e mostra a mensagem de mínimo.
 
 ## Critério de aprovação
 

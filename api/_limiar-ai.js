@@ -227,7 +227,8 @@ function normalizeDepth(value) {
 
 // Mantém compatibilidade binária com builds publicados: sem `itemCount`, a
 // sessão continua com três itens e respeita a profundidade antiga. Builds
-// novos enviam a contagem e passam a usar a explicação média como régua fixa.
+// novos enviam a contagem; o card único usa a diretriz curta enriquecida e os
+// demais mantêm a explicação média como régua fixa.
 function resolveReadingSessionOptions(body = {}, profileDepth = "média", passageCount = SESSION_ITEM_COUNT) {
   const hasItemCount = Object.prototype.hasOwnProperty.call(body, "itemCount")
     && body.itemCount !== null
@@ -238,16 +239,16 @@ function resolveReadingSessionOptions(body = {}, profileDepth = "média", passag
     : SESSION_ITEM_COUNT;
   const availableCount = Math.max(0, Math.trunc(Number(passageCount) || 0));
   const itemCount = Math.min(requestedItemCount, availableCount);
-  const generationDepth = hasItemCount ? "média" : normalizeDepth(profileDepth);
+  const generationDepth = hasItemCount
+    ? (itemCount === 1 ? "curta" : "média")
+    : normalizeDepth(profileDepth);
 
   return {
     hasItemCount,
     requestedItemCount,
     itemCount,
     generationDepth,
-    // O card único ganha mais espaço de resposta, sem trocar a instrução
-    // editorial média pela antiga instrução "grande".
-    outputBudgetDepth: hasItemCount && itemCount === 1 ? "grande" : generationDepth
+    outputBudgetDepth: generationDepth
   };
 }
 
@@ -255,10 +256,13 @@ function depthGuidance(depth) {
   if (depth === "curta") {
     return [
       "Profundidade curta:",
-      "- homily: 1 parágrafo breve com 2 frases no máximo;",
-      "- spiritualMeaning: 1 parágrafo objetivo, direto ao sentido espiritual central;",
-      "- practicalApplication e conclusion: 1 frase cada, concreta e sem rodeio;",
-      "- meditationQuestion: pergunta curta."
+      "- A profundidade curta significa um único trecho, não uma explicação rasa. Explore esse trecho por inteiro com a mesma riqueza editorial da profundidade mais profunda;",
+      "- homily: exatamente 2 parágrafos desenvolvidos, separados por uma linha em branco (\\n\\n). Nunca entregue um único parágrafo. No primeiro, contextualize quem fala, para quem e em que situação. No segundo, explique o trecho por inteiro e conecte-o à tradição informada e à vida concreta;",
+      "- spiritualMeaning: denso, conectando o trecho, um tema preferido e a vida concreta;",
+      "- practicalApplication: exatamente 2 ou 3 frases com uma decisão clara e aplicável hoje, sem moralismo;",
+      "- conclusion: 1 a 2 frases, pastorais e específicas;",
+      "- meditationQuestion: pergunta capaz de sustentar um minuto de meditação;",
+      "- Não redundância: practicalApplication e meditationQuestion não podem repetir ideias nem frases da homily. Devem avançar a reflexão, nunca resumi-la."
     ].join("\n");
   }
   if (depth === "grande") {
@@ -285,12 +289,12 @@ function depthGuidance(depth) {
 // por isso têm folga sobre o tamanho esperado do JSON final.
 function depthOutputTokenLimit(depth, endpoint) {
   if (endpoint === "reading-session") {
-    if (depth === "curta") return 1800;
+    if (depth === "curta") return 2800;
     if (depth === "grande") return 4200;
     return 2800;
   }
   const isReading = endpoint === "spiritual-reading";
-  if (depth === "curta") return isReading ? 1500 : 900;
+  if (depth === "curta") return isReading ? 2400 : 1400;
   if (depth === "grande") return isReading ? 3600 : 2000;
   return isReading ? 2400 : 1300;
 }
@@ -625,7 +629,7 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
     `- Gere explicações para exatamente ${selectedPassages.length} trechos, na mesma ordem em que foram enviados: items[0] corresponde ao Trecho 1, items[1] ao Trecho 2, e assim por diante.`,
     "- Em cada item, homily, spiritualMeaning, practicalApplication, conclusion e meditationQuestion devem ser específicos daquele trecho.",
     "- Integre pelo menos um tema preferido quando houver temas informados, de forma natural e coerente.",
-    "- A profundidade escolhida deve mudar visivelmente o tamanho, a densidade e a aplicação prática.",
+    "- A profundidade escolhida define quantos trechos compõem a travessia. Preserve a mesma riqueza editorial em cada trecho, inclusive quando houver apenas um.",
     "- Varie aberturas, imagens e perguntas entre os itens e em relação ao histórico recente: nada de fórmulas fixas.",
     "- Evite respostas genéricas que funcionariam igualmente para qualquer tradição, tema ou profundidade."
   ];
@@ -639,7 +643,10 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
       "- O spiritualMeaning deve ser o bloco principal e respeitar claramente a profundidade escolhida.",
       "- A practicalApplication deve nascer dos trechos e dos temas preferidos, com uma ação concreta para o restante do dia.",
       "- A conclusion deve ser específica, não uma frase fixa reaproveitada.",
-      "- A meditationQuestion deve ser nova em relação ao histórico recente."
+      "- A meditationQuestion deve ser nova em relação ao histórico recente.",
+      "- Na sessão de um único trecho, practicalApplication e meditationQuestion devem avançar a homily do item. Não repita nem parafraseie as mesmas ideias ou frases.",
+      "- Na sessão de um único trecho, items[0].homily e reflection.homily devem ter exatamente 2 parágrafos separados por uma linha em branco (\\n\\n).",
+      "- Na sessão de um único trecho, reflection.practicalApplication deve ter exatamente 3 frases em um único parágrafo, sem quebra de linha. A primeira apresenta uma decisão clara para hoje, a segunda orienta como executá-la e a terceira ajuda a responder a um obstáculo concreto."
     );
   }
 

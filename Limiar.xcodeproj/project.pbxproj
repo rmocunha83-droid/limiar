@@ -26,10 +26,15 @@
 		LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000121 /* AdMobBannerView.swift */; };
 		LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000320 /* ProfileImageStore.swift */; };
 		LIMI00000000000000000323 /* LimiarPrewarmCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */; };
+		LIMI00000000000000000324 /* LimiarAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000325 /* LimiarAnalytics.swift */; };
 		LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000202 /* GoogleMobileAds */; };
 		LIMI00000000000000000203 /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000205 /* FacebookCore */; };
+		LIMI00000000000000000209 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000207 /* FirebaseAnalytics */; };
+		LIMI0000000000000000020A /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI00000000000000000208 /* FirebaseCrashlytics */; };
+		LIMI0000000000000000020B /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = LIMI0000000000000000020C /* FirebaseAnalyticsIdentitySupport */; };
 		LIMI00000000000000000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000017 /* Assets.xcassets */; };
 		LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */; };
+		LIMI00000000000000000326 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000327 /* GoogleService-Info.plist */; };
 		LIMI00000000000000000306 /* passages.json in Resources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000305 /* passages.json */; };
 		LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000031 /* ShieldConfigurationExtension.swift */; };
 		LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000041 /* ShieldActionExtension.swift */; };
@@ -39,6 +44,8 @@
 		LIMI0000000000000000000D /* LimiarShieldActionExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI0000000000000000000E /* LimiarDeviceActivityMonitorExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000401 /* LocalReadingSessionTests.swift */; };
+		LIMI00000000000000000410 /* SubscriptionGateHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */; };
+		LIMI00000000000000000412 /* OnboardingContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIMI00000000000000000413 /* OnboardingContentTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,6 +117,8 @@
 		LIMI00000000000000000121 /* AdMobBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobBannerView.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000320 /* ProfileImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageStore.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimiarPrewarmCoordinator.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000325 /* LimiarAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimiarAnalytics.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000327 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		LIMI00000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		LIMI00000000000000000018 /* Limiar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Limiar.entitlements; sourceTree = "<group>"; };
 		LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -127,11 +136,13 @@
 		LIMI00000000000000000062 /* LimiarShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LIMI00000000000000000063 /* LimiarDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LimiarDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LIMI00000000000000000401 /* LocalReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalReadingSessionTests.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionGateHardeningTests.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000413 /* OnboardingContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContentTests.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000402 /* LimiarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LimiarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		LIMI00000000000000000020 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */, LIMI00000000000000000203 /* FacebookCore in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000020 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000200 /* GoogleMobileAds in Frameworks */, LIMI00000000000000000203 /* FacebookCore in Frameworks */, LIMI00000000000000000209 /* FirebaseAnalytics in Frameworks */, LIMI0000000000000000020B /* FirebaseAnalyticsIdentitySupport in Frameworks */, LIMI0000000000000000020A /* FirebaseCrashlytics in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000021 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000022 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000023 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
@@ -155,6 +166,8 @@
 			isa = PBXGroup;
 			children = (
 				LIMI00000000000000000401 /* LocalReadingSessionTests.swift */,
+				LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */,
+				LIMI00000000000000000413 /* OnboardingContentTests.swift */,
 			);
 			path = LimiarTests;
 			sourceTree = "<group>";
@@ -182,6 +195,8 @@
 				LIMI00000000000000000121 /* AdMobBannerView.swift */,
 				LIMI00000000000000000320 /* ProfileImageStore.swift */,
 				LIMI00000000000000000322 /* LimiarPrewarmCoordinator.swift */,
+				LIMI00000000000000000325 /* LimiarAnalytics.swift */,
+				LIMI00000000000000000327 /* GoogleService-Info.plist */,
 				LIMI00000000000000000018 /* Limiar.entitlements */,
 				LIMI00000000000000000019 /* PrivacyInfo.xcprivacy */,
 				LIMI00000000000000000017 /* Assets.xcassets */,
@@ -254,6 +269,9 @@
 			packageProductDependencies = (
 				LIMI00000000000000000202 /* GoogleMobileAds */,
 				LIMI00000000000000000205 /* FacebookCore */,
+				LIMI00000000000000000207 /* FirebaseAnalytics */,
+				LIMI0000000000000000020C /* FirebaseAnalyticsIdentitySupport */,
+				LIMI00000000000000000208 /* FirebaseCrashlytics */,
 			);
 			productName = Limiar;
 			productReference = LIMI00000000000000000010 /* Limiar.app */;
@@ -343,6 +361,7 @@
 			packageReferences = (
 				LIMI00000000000000000201 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				LIMI00000000000000000204 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
+				LIMI00000000000000000206 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = LIMI00000000000000000038 /* Products */;
 			projectDirPath = "";
@@ -365,6 +384,7 @@
 				LIMI00000000000000000007 /* Assets.xcassets in Resources */,
 				LIMI00000000000000000306 /* passages.json in Resources */,
 				LIMI00000000000000000008 /* PrivacyInfo.xcprivacy in Resources */,
+				LIMI00000000000000000326 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -402,13 +422,14 @@
 				LIMI00000000000000000120 /* AdMobBannerView.swift in Sources */,
 				LIMI00000000000000000321 /* ProfileImageStore.swift in Sources */,
 				LIMI00000000000000000323 /* LimiarPrewarmCoordinator.swift in Sources */,
+				LIMI00000000000000000324 /* LimiarAnalytics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		LIMI00000000000000000054 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000009 /* ShieldConfigurationExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000055 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000A /* ShieldActionExtension.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		LIMI00000000000000000056 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI0000000000000000000B /* DeviceActivityMonitorExtension.swift in Sources */, LIMI00000000000000000302 /* LimiarEventLog.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		LIMI00000000000000000405 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		LIMI00000000000000000405 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (LIMI00000000000000000400 /* LocalReadingSessionTests.swift in Sources */, LIMI00000000000000000410 /* SubscriptionGateHardeningTests.swift in Sources */, LIMI00000000000000000412 /* OnboardingContentTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -435,6 +456,14 @@
 				minimumVersion = 18.1.0;
 			};
 		};
+		LIMI00000000000000000206 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.17.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -447,6 +476,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = LIMI00000000000000000204 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
 			productName = FacebookCore;
+		};
+		LIMI00000000000000000207 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = LIMI00000000000000000206 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		LIMI00000000000000000208 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = LIMI00000000000000000206 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		LIMI0000000000000000020C /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = LIMI00000000000000000206 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
 		};
 /* End XCSwiftPackageProductDependency section */
 
@@ -540,7 +584,8 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -569,7 +614,8 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -590,7 +636,7 @@
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar.ShieldConfigurationExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -611,7 +657,7 @@
 				INFOPLIST_FILE = Limiar/Extensions/ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar.ShieldConfigurationExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -632,7 +678,7 @@
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar.ShieldActionExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -653,7 +699,7 @@
 				INFOPLIST_FILE = Limiar/Extensions/ShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar.ShieldActionExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -674,7 +720,7 @@
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar.DeviceActivityMonitorExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -695,7 +741,7 @@
 				INFOPLIST_FILE = Limiar/Extensions/DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
-				MARKETING_VERSION = 1.12;
+				MARKETING_VERSION = 1.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.romeucunha.Limiar.DeviceActivityMonitorExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

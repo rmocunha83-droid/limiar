@@ -1,13 +1,54 @@
 @preconcurrency import AVFoundation
 import FamilyControls
 import ManagedSettings
+import StoreKit
 import SwiftUI
+
+/// Dispara a ação quando o marcador do topo sai de vista (a pessoa rolou até
+/// a leitura). No iOS 17, sem onScrollVisibilityChange, mantém a semântica
+/// antiga de disparar na aparição — impreciso, mas restrito a uma fatia
+/// pequena e decrescente de aparelhos.
+private struct TraversalScrollTrigger: ViewModifier {
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollVisibilityChange(threshold: 0.1) { isVisible in
+                if !isVisible {
+                    action()
+                }
+            }
+        } else {
+            content.onAppear(perform: action)
+        }
+    }
+}
+
+func narrationExplanationSegments(_ parts: [String]) -> [String] {
+    parts.flatMap { part in
+        part
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+}
+
+private extension SubscriptionWinbackPhase {
+    var analyticsPhase: LimiarAnalytics.WinbackPhase {
+        switch self {
+        case .trial: .trial
+        case .paid: .paid
+        }
+    }
+}
 
 struct ContentView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(LimiarNotificationCoordinator.self) private var notifications
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(
         ConversionFunnelPersistence.d6DismissedKey,
         store: UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
@@ -47,6 +88,14 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceSubscriptionGateForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceSubscriptionGate")
+        #else
+        false
+        #endif
+    }
+
     private static var forceCompletionScreenForDebugging: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-LimiarForceCompletionScreen")
@@ -55,8 +104,17 @@ struct ContentView: View {
         #endif
     }
 
+    private static var forceLocalSessionForDebugging: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceLocalSession")
+        #else
+        false
+        #endif
+    }
+
     private var effectiveHasPremiumAccess: Bool {
-        Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
+        if Self.forceLocalSessionForDebugging { return true }
+        return Self.forceEssentialModeForDebugging ? false : subscription.hasPremiumAccess
     }
 
     private var effectiveIsEssentialMode: Bool {
@@ -82,6 +140,11 @@ struct ContentView: View {
             Group {
                 if Self.forceCompletionScreenForDebugging {
                     DashboardView()
+                } else if Self.forceLocalSessionForDebugging {
+                    DashboardView()
+                } else if Self.forceSubscriptionGateForDebugging {
+                    SubscriptionGateView()
+                        .transition(onboardingForwardTransition)
                 } else if Self.forceFreeTrialStartForDebugging {
                     FreeTrialStartView()
                 } else if Self.forcedConversionScreen == "D6" {
@@ -89,20 +152,24 @@ struct ContentView: View {
                 } else if Self.forcedConversionScreen == "D7" {
                     EssentialModeIntroView {}
                 } else if Self.forcedConversionScreen == "D8" {
-                    PaywallView()
+                    PaywallView(analyticsOrigin: .d8)
                 } else if Self.forcePaywallForReviewScreenshot {
-                    PaywallView()
+                    PaywallView(analyticsOrigin: .settings)
                 } else if Self.forceEssentialModeForDebugging {
-                    DashboardView()
-                } else if notifications.shieldBridgeRouteID != nil,
-                          model.hasCompletedOnboarding {
-                    // O toque na ponte do shield é uma intenção explícita de
-                    // atravessar. Ele entra direto no dashboard e não pode ser
-                    // interceptado por uma tela automática do funil.
                     DashboardView()
                 } else if !model.hasCompletedOnboarding {
                     OnboardingView()
-                } else if subscription.accessState == .trialNotStarted {
+                        .transition(onboardingForwardTransition)
+                } else if subscription.requiresSubscriptionGate {
+                    SubscriptionGateView()
+                        .transition(onboardingForwardTransition)
+                } else if notifications.shieldBridgeRouteID != nil {
+                    // O toque na ponte do shield é uma intenção explícita de
+                    // atravessar. Para usuários com acesso ele entra direto no
+                    // dashboard e não é interceptado pelo funil legado.
+                    DashboardView()
+                } else if subscription.cohort == .legacy,
+                          subscription.accessState == .trialNotStarted {
                     FreeTrialStartView()
                 } else if !presentedFunnelInterstitialThisSession,
                           subscription.shouldShowTrialConversion,
@@ -114,7 +181,7 @@ struct ContentView: View {
                 } else if !presentedFunnelInterstitialThisSession,
                           subscription.shouldShowPostTrialPaywall,
                           !dismissedPostTrialPaywall {
-                    PaywallView {
+                    PaywallView(analyticsOrigin: .d8) {
                         dismissedPostTrialPaywall = true
                         presentedFunnelInterstitialThisSession = true
                     }
@@ -137,6 +204,7 @@ struct ContentView: View {
             if phase == .active {
                 notifications.handleAppDidBecomeActive()
                 subscription.refreshAccessState()
+                Task { await subscription.recoverIfNeeded() }
                 model.updateAccess(
                     hasPremiumAccess: effectiveHasPremiumAccess,
                     isEssentialMode: effectiveIsEssentialMode
@@ -161,6 +229,7 @@ struct ContentView: View {
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode
             )
+            syncAnalyticsUserProperties()
             if scenePhase == .active {
                 attemptNextCyclePrewarmForForeground()
             }
@@ -172,7 +241,18 @@ struct ContentView: View {
                 hasPremiumAccess: effectiveHasPremiumAccess,
                 isEssentialMode: effectiveIsEssentialMode
             )
+            syncAnalyticsUserProperties()
         }
+        .onChange(of: model.faithProfile) { _, _ in
+            syncAnalyticsUserProperties()
+        }
+    }
+
+    private var onboardingForwardTransition: AnyTransition {
+        OnboardingPageMotion.transition(
+            direction: .forward,
+            reduceMotion: reduceMotion
+        )
     }
 
     private func attemptNextCyclePrewarmForForeground() {
@@ -180,16 +260,25 @@ struct ContentView: View {
         attemptedNextCyclePrewarmThisForeground = true
         model.prewarmNextCycleFromForeground()
     }
+
+    private func syncAnalyticsUserProperties() {
+        LimiarAnalytics.syncUserProperties(
+            profile: model.faithProfile,
+            cohort: subscription.cohort,
+            access: subscription.analyticsAccess
+        )
+    }
 }
 
 private struct DashboardView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.requestReview) private var requestReview
-    @StateObject private var narration = PassageNarrationService()
+    @ObservedObject private var narration = PassageNarrationService.shared
     @State private var showingPicker = false
     @State private var showingSettings = false
     @State private var showingPaywall = false
+    @State private var showingManageSubscriptions = false
     @State private var showingCompletionScreen = false
 
     private static var forceCompletionScreenForDebugging: Bool {
@@ -216,6 +305,18 @@ private struct DashboardView: View {
         #endif
     }
 
+    private static var forcedWinbackPhase: SubscriptionWinbackPhase? {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceWinbackTrial") {
+            return .trial
+        }
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceWinbackPaid") {
+            return .paid
+        }
+        #endif
+        return nil
+    }
+
     var body: some View {
         @Bindable var model = model
 
@@ -228,6 +329,9 @@ private struct DashboardView: View {
                         Color.clear
                             .frame(height: 1)
                             .id("readingTop")
+                            .modifier(TraversalScrollTrigger {
+                                markTraversalStartedByInteraction()
+                            })
 
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 8) {
@@ -255,7 +359,7 @@ private struct DashboardView: View {
                         }
 
                         blockedAppsStrip
-                        trialStatusBadge
+                        winbackBanner
                         readingRequirementHeader
                         essentialModeNotice
                         readingItemsList
@@ -319,8 +423,9 @@ private struct DashboardView: View {
             SettingsView()
         }
         .navigationDestination(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(analyticsOrigin: .dashboard)
         }
+        .manageSubscriptionsSheet(isPresented: $showingManageSubscriptions)
         .familyActivityPicker(
             headerText: "Escolha apps, categorias ou sites que vão ativar o Limiar.",
             footerText: "Você pode alterar isso depois em Preferências.",
@@ -331,6 +436,12 @@ private struct DashboardView: View {
             model.saveProfile()
             model.applyBlocking()
         }
+        .onChange(of: showingManageSubscriptions) { wasPresented, isPresented in
+            guard wasPresented, !isPresented else { return }
+            Task {
+                await subscription.recoverIfNeeded()
+            }
+        }
         .task {
             model.reapplyBlockIfNeeded()
         }
@@ -339,24 +450,78 @@ private struct DashboardView: View {
         }
     }
 
-    private var trialStatusBadge: some View {
-        Group {
-            if subscription.accessState == .trialActive {
-                HStack(spacing: 10) {
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.warmGold)
+    /// A travessia "começa" quando a pessoa interage com a leitura (rolagem
+    /// no conteúdo ou narração), não na simples aparição do dashboard — senão
+    /// abrir e fechar o app conta como travessia iniciada e infla o funil
+    /// started→completed. O dedupe por ciclo continua no LimiarAnalytics.
+    private func markTraversalStartedByInteraction() {
+        LimiarAnalytics.trackTraversalStarted(
+            turn: model.pauseCycleTurn,
+            cycleKey: ScreenTimePolicyStore.cycleDayKey(
+                hour: model.pauseCycleTurn.rawValue
+            )
+        )
+    }
 
-                    Text("Acesso inicial: \(subscription.trialRemainingText)")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.ivory)
+    private var winbackPhase: SubscriptionWinbackPhase? {
+        if let forcedPhase = Self.forcedWinbackPhase {
+            return forcedPhase
+        }
+        return SubscriptionWinbackPolicy.phase(
+            cohort: subscription.cohort,
+            hasActiveSubscription: subscription.hasActiveSubscription,
+            autoRenewIsOff: subscription.autoRenewIsOff,
+            isIntroductoryTrial: subscription.activeEntitlementIsIntroductoryTrial
+        )
+    }
 
-                    Spacer()
+    @ViewBuilder
+    private var winbackBanner: some View {
+        if let phase = winbackPhase {
+            let remainingText = SubscriptionWinbackPolicy.remainingPeriodText(
+                endsAt: Self.forcedWinbackPhase == nil
+                    ? subscription.currentPeriodEndsAt
+                    : Calendar.current.date(byAdding: .day, value: 3, to: Date())
+            )
+
+            VStack(alignment: .leading, spacing: 14) {
+                Label("ACESSO COMPLETO", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.3)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(
+                    phase == .trial
+                        ? "Seu acesso completo termina \(remainingText)"
+                        : "Sua assinatura termina \(remainingText)"
+                )
+                .font(.system(size: 23, weight: .regular, design: .serif))
+                .foregroundStyle(Color.ivory)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Text("Reative para não perder suas pausas, narrações e trechos salvos.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    LimiarAnalytics.trackWinbackBannerTapped(phase: phase.analyticsPhase)
+                    showingManageSubscriptions = true
+                } label: {
+                    Text("Reativar assinatura")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.deepInk)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.sageButton, in: RoundedRectangle(cornerRadius: 12))
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.10), lineWidth: 1))
+                .buttonStyle(.plain)
+            }
+            .padding(18)
+            .limiarPanel()
+            .onAppear {
+                LimiarAnalytics.trackWinbackBannerShown(phase: phase.analyticsPhase)
             }
         }
     }
@@ -370,15 +535,28 @@ private struct DashboardView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    let tokens = Array(model.selection.applicationTokens)
-                    if tokens.isEmpty {
-                        InstagramIcon()
-                            .frame(width: 58, height: 58)
-                            .scaleEffect(1.12)
-                            .accessibilityLabel("Instagram")
+                    let categoryTokens = Array(model.selection.categoryTokens)
+                        .sorted { "\($0)" < "\($1)" }
+                    let applicationTokens = Array(model.selection.applicationTokens)
+                        .sorted { "\($0)" < "\($1)" }
+                    let webDomainTokens = Array(model.selection.webDomainTokens)
+                        .sorted { "\($0)" < "\($1)" }
+
+                    if categoryTokens.isEmpty,
+                       applicationTokens.isEmpty,
+                       webDomainTokens.isEmpty {
+                        BlockedAppsPlaceholderIcon()
                     } else {
-                        ForEach(tokens, id: \.self) { token in
+                        ForEach(categoryTokens, id: \.self) { token in
+                            BlockedCategoryIcon(token: token)
+                        }
+
+                        ForEach(applicationTokens, id: \.self) { token in
                             BlockedApplicationIcon(token: token)
+                        }
+
+                        ForEach(webDomainTokens, id: \.self) { token in
+                            BlockedWebDomainIcon(token: token)
                         }
                     }
                 }
@@ -435,15 +613,9 @@ private struct DashboardView: View {
                 }
 
                 ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
-                    let explanationSegment = [item.homily, item.practicalConclusion]
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        .filter { !$0.isEmpty }
-                        .joined(separator: "\n\n")
                     let narrationSegments = [
-                        canonicalPassageNarrationText(reference: item.reference, text: item.text),
-                        explanationSegment
-                    ]
-                    .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                        canonicalPassageNarrationText(reference: item.reference, text: item.text)
+                    ] + narrationExplanationSegments([item.homily, item.practicalConclusion])
 
                     SpiritualReadingCard(
                         item: item,
@@ -462,6 +634,7 @@ private struct DashboardView: View {
                             if model.isEssentialMode {
                                 showingPaywall = true
                             } else {
+                                markTraversalStartedByInteraction()
                                 narration.toggle(segments: narrationSegments)
                             }
                         },
@@ -487,13 +660,16 @@ private struct DashboardView: View {
 
     private var reflectionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Reflexão breve", systemImage: "sparkle")
-                .font(.system(size: 13, weight: .bold))
-                .tracking(1.2)
-                .foregroundStyle(Color.warmGold)
-                .padding(.top, 4)
-            ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
+            if model.currentSpiritualReadingItems.count > 1 {
+                Label("Reflexão breve", systemImage: "sparkle")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.warmGold)
+                    .padding(.top, 4)
+                ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
+            }
             ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
+                .padding(.top, model.currentSpiritualReadingItems.count == 1 ? 4 : 0)
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
             ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
         }
@@ -546,7 +722,7 @@ private struct DashboardView: View {
 
                     if model.isEssentialMode {
                         NavigationLink {
-                            PaywallView()
+                            PaywallView(analyticsOrigin: .dashboard)
                         } label: {
                             Text("Ver planos")
                                 .font(.system(size: 13, weight: .bold))

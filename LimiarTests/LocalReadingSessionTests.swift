@@ -1,7 +1,85 @@
 import XCTest
+import StoreKit
+import SwiftUI
 @testable import Limiar
 
 final class LocalReadingSessionTests: XCTestCase {
+    func testOnboardingNavigationDirectionMirrorsPageEdges() {
+        XCTAssertEqual(OnboardingNavigationDirection.forward.insertionEdge, .trailing)
+        XCTAssertEqual(OnboardingNavigationDirection.forward.removalEdge, .leading)
+        XCTAssertEqual(OnboardingNavigationDirection.backward.insertionEdge, .leading)
+        XCTAssertEqual(OnboardingNavigationDirection.backward.removalEdge, .trailing)
+        XCTAssertEqual(OnboardingPageMotion.duration, 0.32, accuracy: 0.001)
+    }
+
+    func testOnboardingFlowPlacesSocialProofBetweenPauseAndActivation() {
+        XCTAssertEqual(
+            OnboardingFlowStep.allCases,
+            [.welcome, .tradition, .readings, .themes, .depth, .pauseTurn, .socialProof, .activation]
+        )
+        XCTAssertEqual(OnboardingFlowStep.socialProof.rawValue, 6)
+        XCTAssertEqual(OnboardingFlowStep.activation.rawValue, 7)
+        XCTAssertEqual(OnboardingFlowStep.final, .activation)
+    }
+
+    @MainActor
+    func testTestimonialCatalogHasUniquePeopleAndExactOnboardingQuotes() {
+        let testimonials = ConversionTestimonials.testimonials
+        let people = testimonials.map { String($0.name.split(separator: ",", maxSplits: 1)[0]) }
+
+        XCTAssertEqual(testimonials.count, 7)
+        XCTAssertEqual(Set(people).count, people.count)
+        XCTAssertEqual(
+            testimonials.map(\.name),
+            [
+                "Juliana, Belo Horizonte/MG",
+                "Rafael, Curitiba/PR",
+                "Pedro, Brasília/DF",
+                "Mariana, Recife/PE",
+                "Beatriz, Porto Alegre/RS",
+                "Lucas, Curitiba/PR",
+                "Ana, Belo Horizonte/MG"
+            ]
+        )
+        XCTAssertEqual(
+            testimonials.map(\.quote),
+            [
+                "Não esperava tanto do aplicativo. Baixei sem grandes expectativas e me surpreendi. Prefiro prestar atenção no que estou fazendo e só depois olhar o celular. Com o Limiar consigo fazer essa pausa espiritual de forma natural. As reflexões personalizadas fazem toda a diferença. Já estou indicando para os amigos da igreja.",
+                "Produto fantástico para quem quer colocar Deus antes das distrações. As leituras são curtas, claras e aparecem exatamente no momento em que eu mais preciso parar. Uso com os apps de rede social e WhatsApp. Em poucos segundos troco o impulso por uma Palavra. Estou muito satisfeito.",
+                "Uma pausa pequena, mas que muda o resto do dia. Escolhi os apps que mais me distraem e agora, antes de abrir, tenho aqueles minutos de leitura e reflexão. É simples, bonito e direto. Sinto que estou colocando Deus no centro de novo, sem esforço. Cinco estrelas com sobra!",
+                "O Limiar virou meu lembrete diário de prioridade. Eu queria ler mais a Bíblia, mas sempre acabava enrolando. Agora a pausa chega na hora certa, as leituras são adaptadas à minha tradição e ainda tem a opção de ouvir. Fácil de usar e realmente transforma o começo do dia. Estou muito grato por ter encontrado esse app.",
+                "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia.",
+                "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!",
+                "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar."
+            ]
+        )
+        XCTAssertEqual(
+            ConversionTestimonials.onboardingTestimonials.map(\.name),
+            ["Beatriz, Porto Alegre/RS", "Lucas, Curitiba/PR", "Ana, Belo Horizonte/MG"]
+        )
+        XCTAssertEqual(
+            ConversionTestimonials.onboardingTestimonials.map(\.quote),
+            [
+                "Honestamente eu não esperava tanto do aplicativo. Ele cria aquele segundo de consciência que a gente perde na rotina. A funcionalidade de áudio e a linguagem adaptada fazem toda a diferença. Fico com a mente bem mais leve durante o dia.",
+                "Baixei pensando que seria só mais um bloqueador de apps, mas a proposta é incrível. Em vez de só bloquear, ele te convida a ler um texto curto com uma reflexão profunda. A narração em áudio é excelente para ouvir na correria da manhã. Recomendo demais!",
+                "Simplesmente perfeito! Eu sempre abria o Instagram ou TikTok sem pensar e perdia horas. Com o Limiar, antes de qualquer distração aparece uma leitura rápida e uma reflexão. Mudou completamente minha rotina. Consigo começar o dia mais centrado e ainda consigo ler a Bíblia sem forçar."
+            ]
+        )
+        XCTAssertEqual(ConversionTestimonials.onboardingTestimonials.last?.id, testimonials.last?.id)
+        XCTAssertEqual(ConversionTestimonials.onboardingTestimonials.last?.quote, testimonials.last?.quote)
+    }
+
+    func testStarterProfileUsesShortExplanationDepth() {
+        XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
+    }
+
+    func testStarterProfileSelectsTheFirstEightStandaloneThemes() {
+        XCTAssertEqual(
+            UserFaithProfile.starter.favoriteThemes,
+            Array(SpiritualTheme.standaloneOptions.prefix(8))
+        )
+    }
+
     func testCompletionScreenUsesTurnSpecificIcons() {
         XCTAssertEqual(completionPresentation(turn: .morning).iconName, "sunrise.fill")
         XCTAssertEqual(completionPresentation(turn: .afternoon).iconName, "sun.max.fill")
@@ -144,6 +222,220 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(profile.selectedCategories.count, 2)
         XCTAssertFalse(profile.favoriteBooks.isEmpty)
         XCTAssertFalse(profile.favoriteBibleSections.isEmpty)
+    }
+
+    func testNarrationExplanationIsSplitIntoTrimmedParagraphs() {
+        XCTAssertEqual(
+            narrationExplanationSegments([
+                "Primeiro parágrafo.\n\nSegundo parágrafo.",
+                "  Aplicação final.  "
+            ]),
+            ["Primeiro parágrafo.", "Segundo parágrafo.", "Aplicação final."]
+        )
+    }
+
+    func testNarrationExplanationIgnoresEmptyParagraphsAndNormalizesWindowsNewlines() {
+        XCTAssertEqual(
+            narrationExplanationSegments(["\r\n\r\nPrimeiro.\r\n\r\nSegundo.\r\n\r\n"]),
+            ["Primeiro.", "Segundo."]
+        )
+    }
+
+    func testFavoritePassagePreservesExplanationThroughCodableRoundTrip() throws {
+        let favorite = FavoritePassageItem(
+            id: UUID(),
+            passageID: "salmo-23",
+            passageTitle: "Salmo 23",
+            reference: "Salmo 23, 1",
+            text: "O Senhor é meu pastor.",
+            homily: "A presença de Deus oferece direção.",
+            practicalConclusion: "Confie o próximo passo a Ele.",
+            savedAt: Date(timeIntervalSinceReferenceDate: 123)
+        )
+
+        let decoded = try JSONDecoder().decode(
+            FavoritePassageItem.self,
+            from: JSONEncoder().encode(favorite)
+        )
+
+        XCTAssertEqual(decoded, favorite)
+        XCTAssertEqual(decoded.homily, favorite.homily)
+        XCTAssertEqual(decoded.practicalConclusion, favorite.practicalConclusion)
+    }
+
+    func testLegacyFavoritePassageDecodesWithoutExplanation() throws {
+        let favorite = FavoritePassageItem(
+            id: UUID(),
+            passageID: "salmo-23",
+            passageTitle: "Salmo 23",
+            reference: "Salmo 23, 1",
+            text: "O Senhor é meu pastor.",
+            savedAt: Date(timeIntervalSinceReferenceDate: 123)
+        )
+        var legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(favorite)) as? [String: Any]
+        )
+        legacyObject.removeValue(forKey: "homily")
+        legacyObject.removeValue(forKey: "practicalConclusion")
+
+        let decoded = try JSONDecoder().decode(
+            FavoritePassageItem.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+
+        XCTAssertNil(decoded.homily)
+        XCTAssertNil(decoded.practicalConclusion)
+        XCTAssertEqual(decoded.text, favorite.text)
+    }
+
+    func testSubscriptionCohortComesOnlyFromLegacyKeychainMarker() {
+        XCTAssertEqual(SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: true), .legacy)
+        XCTAssertEqual(SubscriptionCohortPolicy.cohort(hasLegacyTrialStart: false), .new)
+        XCTAssertTrue(SubscriptionCohortPolicy.canStartLocalTrial(cohort: .legacy))
+        XCTAssertFalse(SubscriptionCohortPolicy.canStartLocalTrial(cohort: .new))
+    }
+
+    func testIntroductoryOfferPolicyAcceptsExactlySevenDays() {
+        XCTAssertTrue(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .week, value: 1))
+        XCTAssertTrue(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .day, value: 7))
+        XCTAssertFalse(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .day, value: 3))
+        XCTAssertFalse(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .week, value: 2))
+        XCTAssertFalse(SubscriptionOfferPolicy.isSevenDayPeriod(unit: .month, value: 1))
+    }
+
+    func testNewCohortRequiresSubscriptionAndNeverEntersEssentialMode() {
+        let state = SubscriptionCohortPolicy.accessState(
+            cohort: .new,
+            hasActiveSubscription: false,
+            trialStartedAt: nil,
+            now: Date(),
+            trialDuration: 7 * 24 * 60 * 60
+        )
+
+        XCTAssertEqual(state, .subscriptionRequired)
+        XCTAssertFalse(
+            SubscriptionCohortPolicy.hasPremiumAccess(
+                cohort: .new,
+                hasActiveSubscription: false,
+                accessState: state
+            )
+        )
+        XCTAssertFalse(
+            SubscriptionCohortPolicy.isEssentialMode(
+                cohort: .new,
+                hasActiveSubscription: false,
+                accessState: state
+            )
+        )
+    }
+
+    func testNewCohortGetsPremiumOnlyFromActiveStoreKitEntitlement() {
+        let state = SubscriptionCohortPolicy.accessState(
+            cohort: .new,
+            hasActiveSubscription: true,
+            trialStartedAt: nil,
+            now: Date(),
+            trialDuration: 7 * 24 * 60 * 60
+        )
+
+        XCTAssertEqual(state, .subscribed)
+        XCTAssertTrue(
+            SubscriptionCohortPolicy.hasPremiumAccess(
+                cohort: .new,
+                hasActiveSubscription: true,
+                accessState: state
+            )
+        )
+        XCTAssertFalse(
+            SubscriptionCohortPolicy.isEssentialMode(
+                cohort: .new,
+                hasActiveSubscription: true,
+                accessState: state
+            )
+        )
+    }
+
+    func testLegacyCohortKeepsTrialAndEssentialBehavior() {
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let activeTrial = SubscriptionCohortPolicy.accessState(
+            cohort: .legacy,
+            hasActiveSubscription: false,
+            trialStartedAt: now.addingTimeInterval(-24 * 60 * 60),
+            now: now,
+            trialDuration: 7 * 24 * 60 * 60
+        )
+        let expiredTrial = SubscriptionCohortPolicy.accessState(
+            cohort: .legacy,
+            hasActiveSubscription: false,
+            trialStartedAt: now.addingTimeInterval(-8 * 24 * 60 * 60),
+            now: now,
+            trialDuration: 7 * 24 * 60 * 60
+        )
+
+        XCTAssertEqual(activeTrial, .trialActive)
+        XCTAssertTrue(
+            SubscriptionCohortPolicy.hasPremiumAccess(
+                cohort: .legacy,
+                hasActiveSubscription: false,
+                accessState: activeTrial
+            )
+        )
+        XCTAssertEqual(expiredTrial, .trialExpired)
+        XCTAssertTrue(
+            SubscriptionCohortPolicy.isEssentialMode(
+                cohort: .legacy,
+                hasActiveSubscription: false,
+                accessState: expiredTrial
+            )
+        )
+    }
+
+    func testReviewEligibilityUsesStoreKitTransactionDateForNewCohort() {
+        let transactionDate = Date(timeIntervalSinceReferenceDate: 500)
+
+        XCTAssertEqual(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .new,
+                accessState: .subscribed,
+                hasActiveSubscription: true,
+                trialStartedAt: nil,
+                activeEntitlementStartedAt: transactionDate
+            ),
+            transactionDate
+        )
+        XCTAssertNil(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .new,
+                accessState: .subscriptionRequired,
+                hasActiveSubscription: false,
+                trialStartedAt: nil,
+                activeEntitlementStartedAt: transactionDate
+            )
+        )
+    }
+
+    func testReviewEligibilityKeepsLegacyTrialRule() {
+        let trialDate = Date(timeIntervalSinceReferenceDate: 500)
+
+        XCTAssertEqual(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .legacy,
+                accessState: .trialActive,
+                hasActiveSubscription: false,
+                trialStartedAt: trialDate,
+                activeEntitlementStartedAt: nil
+            ),
+            trialDate
+        )
+        XCTAssertNil(
+            SubscriptionCohortPolicy.reviewAccessStartedAt(
+                cohort: .legacy,
+                accessState: .subscribed,
+                hasActiveSubscription: true,
+                trialStartedAt: trialDate,
+                activeEntitlementStartedAt: Date()
+            )
+        )
     }
 
     private var emptyReflection: AIReflection {

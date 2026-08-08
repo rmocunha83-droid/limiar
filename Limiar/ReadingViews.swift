@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import FamilyControls
 import ManagedSettings
+import MediaPlayer
 import SwiftUI
 
 struct AIReadingPreparationView: View {
@@ -218,7 +219,7 @@ struct SpiritualReadingCard: View {
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if showsReflection {
+            if showsReflection && item.hasExplanationContent {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Explicação espiritual \(item.reference)")
                         .font(.system(size: 13, weight: .bold))
@@ -327,6 +328,7 @@ enum PassageNarrationButtonState: Equatable {
     case generating
     case playing
     case paused
+    case failed
 
     var title: String {
         switch self {
@@ -338,6 +340,8 @@ enum PassageNarrationButtonState: Equatable {
             "Pausar narração"
         case .paused:
             "Continuar narração"
+        case .failed:
+            "Não foi possível continuar — tentar de novo"
         }
     }
 
@@ -351,6 +355,8 @@ enum PassageNarrationButtonState: Equatable {
             "pause.circle.fill"
         case .paused:
             "play.circle.fill"
+        case .failed:
+            "arrow.clockwise.circle.fill"
         }
     }
 
@@ -361,36 +367,75 @@ enum PassageNarrationButtonState: Equatable {
 
 @MainActor
 final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDelegate {
+    /// Instância única: dashboard e revisitas de trechos salvos compartilham
+    /// o mesmo player. Duas instâncias tocavam áudios sobrepostos e
+    /// registravam observers duplicados.
+    static let shared = PassageNarrationService()
+
     @Published var isSpeaking = false
     @Published var isGenerating = false
     @Published var isPaused = false
+    @Published var isFailed = false
 
     private let speechService = RemoteAISpeechService()
+    private let eventLog = LimiarEventLog(source: "narration")
     private var player: AVAudioPlayer?
     private var playbackTask: Task<Void, Never>?
     private var prefetchTask: Task<Void, Never>?
     private var activeSpeechText = ""
+    private var activeContext = "travessia"
     private var queue: [String] = []
     private var currentSegmentIndex = 0
     private var pendingSegmentIndex: Int?
     private var prefetchedAudio: Data?
     private var prefetchedSegmentIndex: Int?
+    private var wasPausedByInterruption = false
+
+    private static let segmentRetryAttempts = 2
+    private static let segmentRetryBaseDelayMilliseconds = 800
+
+    override init() {
+        super.init()
+        let notificationCenter = NotificationCenter.default
+        let audioSession = AVAudioSession.sharedInstance()
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(audioSessionInterruptionNotification(_:)),
+            name: AVAudioSession.interruptionNotification,
+            object: audioSession
+        )
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(audioSessionRouteChangeNotification(_:)),
+            name: AVAudioSession.routeChangeNotification,
+            object: audioSession
+        )
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(mediaServicesResetNotification(_:)),
+            name: AVAudioSession.mediaServicesWereResetNotification,
+            object: audioSession
+        )
+        configureRemoteCommands()
+    }
 
     func toggle(text: String) {
         toggle(segments: [text])
     }
 
-    func toggle(segments: [String]) {
+    func toggle(segments: [String], context: String = "travessia") {
         let preparedSegments = preparedSegments(from: segments)
         let identifier = queueIdentifier(for: preparedSegments)
-        if activeSpeechText == identifier, isSpeaking {
+        if activeSpeechText == identifier, isFailed {
+            retryFromFailure()
+        } else if activeSpeechText == identifier, isSpeaking {
             pause()
         } else if activeSpeechText == identifier, isPaused {
             resume()
         } else if activeSpeechText == identifier, isGenerating {
             stop()
         } else {
-            speak(preparedSegments)
+            speak(preparedSegments, context: context)
         }
     }
 
@@ -400,6 +445,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
 
     func state(for segments: [String]) -> PassageNarrationButtonState {
         guard activeSpeechText == queueIdentifier(for: preparedSegments(from: segments)) else { return .idle }
+        if isFailed { return .failed }
         if isGenerating { return .generating }
         if isSpeaking { return .playing }
         if isPaused { return .paused }
@@ -418,6 +464,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         }
         isSpeaking = false
         isPaused = true
+        updateNowPlaying(isPlaying: false)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -431,23 +478,39 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         }
 
         guard let player else {
+            logSegmentFailure(index: currentSegmentIndex, reason: "queue_state_failure")
             finishQueue()
             return
         }
 
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true)
-            guard player.play() else {
-                finishQueue()
-                return
-            }
-            isPaused = false
-            isSpeaking = true
+            try activateAudioSession()
         } catch {
-            finishQueue()
+            // A sessão pode estar indisponível (ligação ainda ativa). A fila
+            // permanece pausada e intacta; a pessoa tenta de novo depois.
+            eventLog.log("narration_resume_deferred", ["reason": "audio_session_unavailable"])
+            return
         }
+
+        guard player.play() else {
+            // Mesmo princípio: manter a pausa recuperável em vez de descartar
+            // a fila inteira por uma falha momentânea do player.
+            eventLog.log("narration_resume_deferred", ["reason": "audio_player_declined"])
+            return
+        }
+        isPaused = false
+        isSpeaking = true
+        updateNowPlaying(isPlaying: true)
+    }
+
+    /// Retoma do segmento que falhou depois de esgotar as retentativas.
+    private func retryFromFailure() {
+        guard isFailed else { return }
+        isFailed = false
+        isGenerating = true
+        let index = pendingSegmentIndex ?? currentSegmentIndex
+        eventLog.log("narration_retry_requested", ["index": String(index)])
+        loadAndPlaySegment(at: index)
     }
 
     func stop() {
@@ -466,24 +529,33 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isSpeaking = false
         isGenerating = false
         isPaused = false
+        isFailed = false
+        wasPausedByInterruption = false
+        updateNowPlaying(isPlaying: false)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    private func speak(_ segments: [String]) {
+    private func speak(_ segments: [String], context: String) {
         stop()
 
         guard !segments.isEmpty else { return }
         queue = segments
         activeSpeechText = queueIdentifier(for: segments)
+        activeContext = context
         currentSegmentIndex = 0
         isGenerating = true
         isSpeaking = false
         isPaused = false
+        isFailed = false
+        wasPausedByInterruption = false
+        eventLog.log("narration_started", ["segments": String(segments.count), "context": context])
+        LimiarAnalytics.trackNarrationStarted(context: context)
         loadAndPlaySegment(at: 0)
     }
 
     private func loadAndPlaySegment(at index: Int) {
         guard queue.indices.contains(index) else {
+            logSegmentFailure(index: index, reason: "queue_state_failure")
             finishQueue()
             return
         }
@@ -491,46 +563,100 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         playbackTask?.cancel()
         let expectedIdentifier = activeSpeechText
         let segment = queue[index]
+        pendingSegmentIndex = index
         isGenerating = true
         isSpeaking = false
         isPaused = false
+        isFailed = false
         let service = speechService
 
         playbackTask = Task { [weak self] in
-            do {
-                let audio = try await service.audioData(for: segment)
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    guard self?.activeSpeechText == expectedIdentifier else { return }
-                    self?.play(audio, at: index)
+            var lastError: Error?
+            for attempt in 0...Self.segmentRetryAttempts {
+                if attempt > 0 {
+                    // Backoff curto: rede móvel oscila por segundos, não ms.
+                    try? await Task.sleep(for: .milliseconds(Self.segmentRetryBaseDelayMilliseconds * attempt))
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run { [weak self] in
+                        self?.eventLog.log("narration_segment_retry", [
+                            "index": String(index),
+                            "attempt": String(attempt)
+                        ])
+                    }
                 }
-            } catch {
-                await MainActor.run {
-                    guard self?.activeSpeechText == expectedIdentifier else { return }
-                    self?.finishQueue()
+                do {
+                    let audio = try await service.audioData(for: segment)
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        guard self?.activeSpeechText == expectedIdentifier else { return }
+                        self?.play(audio, at: index)
+                    }
+                    return
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    lastError = error
                 }
+            }
+            let failure = lastError
+            await MainActor.run {
+                guard let self, self.activeSpeechText == expectedIdentifier else { return }
+                self.logSegmentFailure(
+                    index: index,
+                    reason: failure.map(Self.networkFailureReason(for:)) ?? "network_error"
+                )
+                self.enterFailedState(at: index)
             }
         }
     }
 
+    /// Falha definitiva de um segmento: preserva fila e posição para a pessoa
+    /// tentar de novo com um toque, em vez do encerramento silencioso que
+    /// devolvia o botão a "Ouvir este trecho" sem nenhum aviso.
+    private func enterFailedState(at index: Int) {
+        playbackTask = nil
+        player?.stop()
+        player = nil
+        pendingSegmentIndex = index
+        isGenerating = false
+        isSpeaking = false
+        isPaused = false
+        isFailed = true
+        updateNowPlaying(isPlaying: false)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
     private func play(_ data: Data, at index: Int) {
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true)
+            try activateAudioSession()
+        } catch {
+            logSegmentFailure(index: index, reason: "audio_session_activation_failure")
+            finishQueue()
+            return
+        }
 
+        do {
             let audioPlayer = try AVAudioPlayer(data: data)
             audioPlayer.delegate = self
-            audioPlayer.prepareToPlay()
+            guard audioPlayer.prepareToPlay() else {
+                logSegmentFailure(index: index, reason: "audio_player_failure")
+                finishQueue()
+                return
+            }
             player = audioPlayer
             currentSegmentIndex = index
             pendingSegmentIndex = nil
             isGenerating = false
-            isSpeaking = true
             isPaused = false
-            audioPlayer.play()
+            guard audioPlayer.play() else {
+                logSegmentFailure(index: index, reason: "audio_player_failure")
+                finishQueue()
+                return
+            }
+            isSpeaking = true
+            updateNowPlaying(isPlaying: true)
             prefetchSegment(after: index)
         } catch {
+            logSegmentFailure(index: index, reason: "audio_player_failure")
             finishQueue()
         }
     }
@@ -561,7 +687,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     private func continueQueue() {
         let nextIndex = currentSegmentIndex + 1
         guard queue.indices.contains(nextIndex) else {
-            finishQueue()
+            finishQueue(completedNaturally: true)
             return
         }
 
@@ -587,6 +713,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
 
     private func playPendingSegment(at index: Int) {
         guard queue.indices.contains(index) else {
+            logSegmentFailure(index: index, reason: "queue_state_failure")
             finishQueue()
             return
         }
@@ -611,7 +738,163 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         segments.joined(separator: "\u{001F}")
     }
 
-    private func finishQueue() {
+    private func activateAudioSession() throws {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+        try session.setActive(true)
+    }
+
+    // MARK: - Tela bloqueada
+
+    /// Controles na tela bloqueada e na Central de Controle: além da
+    /// conveniência, manter o Now Playing ativo ajuda o sistema a preservar o
+    /// app durante os intervalos entre segmentos em background.
+    private func configureRemoteCommands() {
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.addTarget { [weak self] _ in
+            guard let self, self.isPaused else { return .commandFailed }
+            self.resume()
+            return .success
+        }
+        center.pauseCommand.addTarget { [weak self] _ in
+            guard let self, self.isSpeaking else { return .commandFailed }
+            self.pause()
+            return .success
+        }
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self else { return .commandFailed }
+            if self.isSpeaking {
+                self.pause()
+            } else if self.isPaused {
+                self.resume()
+            } else {
+                return .commandFailed
+            }
+            return .success
+        }
+    }
+
+    private func updateNowPlaying(isPlaying: Bool) {
+        let center = MPNowPlayingInfoCenter.default()
+        guard !activeSpeechText.isEmpty else {
+            center.nowPlayingInfo = nil
+            return
+        }
+        center.nowPlayingInfo = [
+            MPMediaItemPropertyTitle: "Leitura de hoje",
+            MPMediaItemPropertyArtist: "Limiar",
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: player?.currentTime ?? 0,
+            MPMediaItemPropertyPlaybackDuration: player?.duration ?? 0
+        ]
+    }
+
+    private func logSegmentFailure(index: Int, reason: String) {
+        eventLog.log("narration_segment_failed", [
+            "index": String(index),
+            "reason": reason,
+            "context": activeContext
+        ])
+        LimiarAnalytics.trackNarrationFailed(reason: reason, context: activeContext)
+    }
+
+    private static func networkFailureReason(for error: Error) -> String {
+        if let urlError = error as? URLError, urlError.code == .timedOut {
+            return "network_timeout"
+        }
+        return "network_error"
+    }
+
+    private func pauseForSystemEvent(deactivateSession: Bool) {
+        guard !activeSpeechText.isEmpty, !isPaused else { return }
+
+        player?.pause()
+        playbackTask?.cancel()
+        playbackTask = nil
+        if player == nil, pendingSegmentIndex == nil {
+            pendingSegmentIndex = currentSegmentIndex
+        }
+        isGenerating = false
+        isSpeaking = false
+        isPaused = true
+        if deactivateSession {
+            try? AVAudioSession.sharedInstance().setActive(
+                false,
+                options: .notifyOthersOnDeactivation
+            )
+        }
+    }
+
+    @objc nonisolated private func audioSessionInterruptionNotification(_ notification: Notification) {
+        let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+        let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt
+        Task { @MainActor [weak self] in
+            self?.handleInterruption(typeValue: typeValue, optionsValue: optionsValue)
+        }
+    }
+
+    private func handleInterruption(typeValue: UInt?, optionsValue: UInt?) {
+        guard let typeValue,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        switch type {
+        case .began:
+            guard !activeSpeechText.isEmpty, !isPaused else { return }
+            wasPausedByInterruption = true
+            eventLog.log("narration_interrupted", ["type": "began"])
+            pauseForSystemEvent(deactivateSession: false)
+        case .ended:
+            guard wasPausedByInterruption else { return }
+            wasPausedByInterruption = false
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
+            if options.contains(.shouldResume) {
+                eventLog.log("narration_interrupted", ["type": "ended_should_resume"])
+                resume()
+            } else {
+                eventLog.log("narration_interrupted", ["type": "ended_paused"])
+            }
+        @unknown default:
+            break
+        }
+    }
+
+    @objc nonisolated private func audioSessionRouteChangeNotification(_ notification: Notification) {
+        let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+        Task { @MainActor [weak self] in
+            self?.handleRouteChange(reasonValue: reasonValue)
+        }
+    }
+
+    @objc nonisolated private func mediaServicesResetNotification(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            guard let self, !self.activeSpeechText.isEmpty else { return }
+            // O mediaserverd reiniciou: qualquer player retido é inválido.
+            // Encerrar de forma limpa evita telemetria enganosa de "falha do
+            // player" numa fila que já não existe.
+            self.eventLog.log("narration_interrupted", ["type": "media_services_reset"])
+            self.stop()
+        }
+    }
+
+    private func handleRouteChange(reasonValue: UInt?) {
+        guard let reasonValue,
+              AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable,
+              !activeSpeechText.isEmpty,
+              !isPaused else {
+            return
+        }
+
+        wasPausedByInterruption = false
+        eventLog.log("narration_interrupted", ["type": "old_device_unavailable"])
+        pauseForSystemEvent(deactivateSession: true)
+    }
+
+    private func finishQueue(completedNaturally: Bool = false) {
+        if completedNaturally {
+            eventLog.log("narration_completed")
+        }
         player?.stop()
         player = nil
         playbackTask?.cancel()
@@ -626,23 +909,42 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isGenerating = false
         isSpeaking = false
         isPaused = false
+        isFailed = false
+        wasPausedByInterruption = false
+        updateNowPlaying(isPlaying: false)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor [weak self] in
-            self?.player = nil
+            guard let self, self.player === player else { return }
+            // Uma interrupção pode avisar que o player parou sem a fila ter
+            // terminado. Já um término natural ocorrido no mesmo instante em
+            // que a pessoa pausou deve avançar e preservar a fila como pausada.
+            guard flag || !self.isPaused else { return }
+            self.player = nil
             if flag {
-                self?.continueQueue()
+                self.continueQueue()
             } else {
-                self?.finishQueue()
+                // Parada não natural: pode ser o delegate chegando antes da
+                // notificação de interrupção (ligação). Preservar a fila como
+                // pausa recuperável — o handler da interrupção ou a própria
+                // pessoa retomam; o segmento é rebaixado e recarregado.
+                self.logSegmentFailure(index: self.currentSegmentIndex, reason: "audio_player_stopped")
+                self.pendingSegmentIndex = self.currentSegmentIndex
+                self.isSpeaking = false
+                self.isGenerating = false
+                self.isPaused = true
+                self.updateNowPlaying(isPlaying: false)
             }
         }
     }
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         Task { @MainActor [weak self] in
-            self?.finishQueue()
+            guard let self, self.player === player else { return }
+            self.logSegmentFailure(index: self.currentSegmentIndex, reason: "audio_player_failure")
+            self.finishQueue()
         }
     }
 
@@ -651,5 +953,6 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         prefetchTask?.cancel()
         player?.stop()
         activeSpeechText = ""
+        NotificationCenter.default.removeObserver(self)
     }
 }
