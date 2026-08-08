@@ -87,10 +87,14 @@
 	</array>
 	<!--
 	  NSPrivacyTracking = true por causa da atribuição de campanhas do Meta
-	  SDK (IDFA condicionado ao consentimento via ATT). O domínio de tracking
-	  correspondente é declarado pelo manifest do próprio SDK da Meta.
+	  SDK (IDFA condicionado ao consentimento via ATT). O domínio também é
+	  declarado aqui para manter explícita a relação exigida pela Apple.
 	-->
 	<key>NSPrivacyTracking</key>
 	<true/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array>
+		<string>ep1.facebook.com</string>
+	</array>
 </dict>
 </plist>
