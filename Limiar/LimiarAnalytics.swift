@@ -25,6 +25,7 @@ enum LimiarAnalytics {
         case d7
         case d8
         case settings
+        case dashboard
     }
 
     enum Access: String {
@@ -96,6 +97,12 @@ enum LimiarAnalytics {
         ])
     }
 
+    static func trackGatePurchaseCompleted(_ plan: SubscriptionPlan) {
+        log("gate_purchase_completed", parameters: [
+            "plan": plan.analyticsName
+        ])
+    }
+
     static func trackTrialStarted(
         plan: SubscriptionPlan,
         originalTransactionID: UInt64
@@ -130,6 +137,14 @@ enum LimiarAnalytics {
 
     static func trackRestoreSucceeded() {
         log("restore_succeeded")
+    }
+
+    static func trackRestoreFailed() {
+        log("restore_failed")
+    }
+
+    static func trackEssentialIntroViewed() {
+        log("essential_intro_viewed")
     }
 
     static func trackTraversalStarted(turn: PauseCycleTurn, cycleKey: String) {

@@ -100,6 +100,26 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Testar em iPhone pequeno e iPhone grande.
 - Verificar se não há botões cortados, textos sobrepostos ou elementos fora da tela.
 
+## Portão de assinatura (1.13)
+
+- Abrir o app novo em modo avião ao fim do onboarding: o portão deve mostrar "Tentar novamente" (nunca botão morto); religar a rede e confirmar que os planos carregam pelo botão ou ao voltar ao app.
+- Reinstalar com assinatura ativa e sem rede: banner "Verificando sua assinatura" com Restaurar em destaque; com rede, acesso liberado sem passar pela venda.
+- Usuário pré-1.13 com onboarding completo que nunca iniciou o trial: após atualizar, deve cair na tela antiga "Começar minha travessia" (coorte legado), não no portão.
+- Selecionar plano Mensal enquanto os preços carregam: a seleção não pode voltar sozinha para o Anual.
+
+## Narração (estabilidade)
+
+- Receber ligação durante a narração: pausa; tocar "Continuar narração" com a ligação ativa mantém a pausa (não apaga a fila); ao desligar, retomar do mesmo ponto.
+- Desconectar o fone durante a narração: pausa recuperável.
+- Modo avião no meio da narração: botão muda para "Não foi possível continuar — tentar de novo"; religar e tocar retoma do segmento falho.
+- Tela bloqueada por 2+ minutos numa narração longa: controles de play/pause aparecem na tela bloqueada e a narração segue entre os parágrafos.
+- Tocar narração no dashboard e em um trecho salvo em sequência: nunca dois áudios ao mesmo tempo.
+
+## Onboarding (temas por tradição)
+
+- Escolher tradição Espírita no passo 1: o passo de temas deve abrir com 8 temas pré-selecionados do conjunto espírita.
+- Desmarcar todos os temas: "Continuar" não avança e mostra a mensagem de mínimo.
+
 ## Critério de aprovação
 
 O app só deve ser considerado pronto para publicação quando todos os fluxos acima passarem em aparelho real. Qualquer falha encontrada deve ser corrigida e testada novamente antes de seguir para App Store.

@@ -819,6 +819,11 @@ final class SubscriptionManager {
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
                 message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium ativo." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
+                if hasActiveSubscription, origin == .subscriptionGate {
+                    // Conversão do portão medida diretamente, sem depender de
+                    // inferência por gate_purchase_started.
+                    LimiarAnalytics.trackGatePurchaseCompleted(plan)
+                }
             case .pending:
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
@@ -859,6 +864,9 @@ final class SubscriptionManager {
                 LimiarAnalytics.trackRestoreSucceeded()
             }
         } catch {
+            if origin == .subscriptionGate {
+                LimiarAnalytics.trackRestoreFailed()
+            }
             state = .failed(error.localizedDescription)
             message = "Não foi possível restaurar agora: \(error.localizedDescription)"
         }
