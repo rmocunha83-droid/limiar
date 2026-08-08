@@ -244,7 +244,7 @@ final class SubscriptionManager {
     private(set) var introductoryOfferEligibility: [String: IntroductoryOfferEligibility] = [:]
     private(set) var state = SubscriptionPurchaseState.idle
     private(set) var message = ""
-    var selectedPlan = SubscriptionPlan.yearly
+    var selectedPlan = SubscriptionPlan.monthly
 
     /// Marcador do Keychain de que este aparelho já teve assinatura ativa.
     /// Sobrevive à reinstalação e permite verificar antes de vender.
@@ -643,6 +643,15 @@ final class SubscriptionManager {
         introductoryOfferEligibility[plan.productID] ?? .unknown
     }
 
+    /// Preço mensal equivalente do plano anual ("sai por R$ 7,49/mês"),
+    /// formatado na moeda da própria loja. Âncora de custo-benefício no
+    /// portão quando o mensal vem primeiro na lista.
+    func monthlyEquivalentDisplayPrice(for plan: SubscriptionPlan) -> String? {
+        guard plan == .yearly, let product = product(for: plan) else { return nil }
+        let monthly = product.price / 12
+        return monthly.formatted(product.priceFormatStyle)
+    }
+
     func hasEligibleFreeTrial(for plan: SubscriptionPlan) -> Bool {
         hasConfirmedFreeTrial(for: plan) && introductoryOfferEligibility(for: plan) == .eligible
     }
@@ -895,8 +904,8 @@ final class SubscriptionManager {
                 } else if product(for: .monthly) != nil {
                     selectedPlan = .monthly
                 }
-            } else if !userDidSelectPlan, product(for: .yearly) != nil {
-                selectedPlan = .yearly
+            } else if !userDidSelectPlan, product(for: .monthly) != nil {
+                selectedPlan = .monthly
             }
             state = products.isEmpty ? .productsUnavailable : .idle
             if products.isEmpty {
