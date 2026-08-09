@@ -185,7 +185,7 @@ struct OnboardingView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .familyActivityPicker(
             headerText: "Escolha quais apps vão ativar o Limiar.",
             footerText: "O Limiar usa o seletor nativo do Tempo de Uso.",
@@ -1000,6 +1000,7 @@ struct WelcomeHeroScreen: View {
                 .padding(.horizontal, horizontalInset)
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .onAppear(perform: startEntranceAnimation)
     }
 
