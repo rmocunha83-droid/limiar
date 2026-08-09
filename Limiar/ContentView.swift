@@ -581,10 +581,16 @@ private struct DashboardView: View {
 
     private var readingRequirementHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("SEU LIMIAR", systemImage: "book.closed")
-                .limiarFont(13, weight: .bold, relativeTo: .caption)
-                .tracking(1.3)
-                .foregroundStyle(Color.warmGold)
+            HStack(spacing: 12) {
+                Label("SEU LIMIAR", systemImage: "book.closed")
+                    .limiarFont(13, weight: .bold, relativeTo: .caption)
+                    .tracking(1.3)
+                    .foregroundStyle(Color.warmGold)
+
+                Spacer(minLength: 8)
+
+                ReadingTextScaleMenu()
+            }
 
             Text(model.currentReadingTitle)
                 .limiarFont(40, design: .serif, relativeTo: .largeTitle)

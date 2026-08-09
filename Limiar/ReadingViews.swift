@@ -184,6 +184,10 @@ struct SpiritualReadingCard: View {
     var showsNarration = true
     var isSaveLocked = false
     var isNarrationLocked = false
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var readingTextScale = ReadingTextScalePolicy.defaultValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -218,7 +222,12 @@ struct SpiritualReadingCard: View {
             .dynamicTypeSize(...DynamicTypeSize.xxLarge)
 
             Text(item.text)
-                .limiarFont(22, design: .serif, relativeTo: .title3)
+                .readingFont(
+                    22,
+                    textScale: readingTextScale,
+                    design: .serif,
+                    relativeTo: .title3
+                )
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
@@ -227,17 +236,27 @@ struct SpiritualReadingCard: View {
             if showsReflection && item.hasExplanationContent {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Explicação espiritual \(item.reference)")
-                        .limiarFont(13, weight: .bold, relativeTo: .footnote)
+                        .readingFont(
+                            13,
+                            textScale: readingTextScale,
+                            weight: .bold,
+                            relativeTo: .footnote
+                        )
                         .tracking(1.1)
                         .foregroundStyle(Color.warmGold)
 
                     Text(item.homily)
-                        .limiarFont(16, weight: .medium, relativeTo: .body)
+                        .readingFont(
+                            16,
+                            textScale: readingTextScale,
+                            weight: .medium,
+                            relativeTo: .body
+                        )
                         .foregroundStyle(Color.ivory.opacity(0.92))
                         .lineSpacing(5)
 
                     Text(item.practicalConclusion)
-                        .limiarFont(15, relativeTo: .body)
+                        .readingFont(15, textScale: readingTextScale, relativeTo: .body)
                         .foregroundStyle(Color.softText.opacity(0.92))
                         .lineSpacing(5)
                 }
@@ -279,12 +298,17 @@ struct SpiritualReadingCard: View {
         }
         .padding(18)
         .limiarPanel()
+        .readingTextScaleGesture()
     }
 }
 
 struct ReadingBlock: View {
     let title: String
     let text: String
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var readingTextScale = ReadingTextScalePolicy.defaultValue
 
     private var cleanedText: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -294,11 +318,16 @@ struct ReadingBlock: View {
         if !cleanedText.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .limiarFont(14, weight: .bold, relativeTo: .headline)
+                    .readingFont(
+                        14,
+                        textScale: readingTextScale,
+                        weight: .bold,
+                        relativeTo: .headline
+                    )
                     .tracking(0.8)
                     .foregroundStyle(Color.gold)
                 Text(cleanedText)
-                    .limiarFont(17, relativeTo: .body)
+                    .readingFont(17, textScale: readingTextScale, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
             }
