@@ -121,14 +121,14 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Testar em iPhone pequeno e iPhone grande.
 - Verificar se não há botões cortados, textos sobrepostos ou elementos fora da tela.
 
-## Texto acessível — Dynamic Type
+## Texto acessível — somente na leitura
 
-- Com Dynamic Type em `.xxLarge`, percorrer o onboarding inteiro, inclusive boas-vindas e prova social: todo conteúdo deve poder rolar, a barra inferior deve permanecer íntegra e os botões devem continuar alcançáveis.
-- Em `.xxLarge`, conferir dashboard, estados de preparação/erro e tela de conclusão: nenhuma mensagem, cartão ou ação pode ficar cortada ou sobreposta.
-- Com Dynamic Type em `.accessibility3`, abrir travessias Curta e Mais profunda: trecho, explicação espiritual, `Sentido espiritual`, `Para levar para o dia` e `Pergunta para refletir` devem crescer e permanecer legíveis por rolagem.
-- Em `.accessibility3`, abrir um trecho salvo e confirmar que o mesmo conteúdo de leitura respeita o tamanho ampliado sem truncamento.
-- Confirmar que títulos e subtítulos quebram em mais linhas em vez de encolher, inclusive `SelectableRow`, chips e ações do onboarding.
-- Comparar portão e paywalls com a versão anterior em tamanho padrão e confirmar que a promoção do modifier de fonte não alterou o visual.
+- Com o Dynamic Type do aparelho em `.accessibility3`, percorrer o onboarding inteiro, inclusive boas-vindas e prova social: a tipografia deve permanecer idêntica ao tamanho desenhado, as linhas animadas não podem quebrar e `Continuar`/`Começar` devem ficar em uma linha.
+- Ainda em `.accessibility3`, conferir o chrome do dashboard e a tela de conclusão: títulos, mensagens e ações devem permanecer no tamanho-base, sem corte ou sobreposição.
+- No dashboard, comparar o `Aa` em 100% e 160% em travessias Curta e Mais profunda: somente trecho, explicação espiritual, `Sentido espiritual`, `Para levar para o dia` e `Pergunta para refletir` devem crescer e continuar legíveis por rolagem.
+- Abrir um trecho salvo e confirmar que o mesmo ajuste `Aa` e o atalho de pinça continuam aplicados ao conteúdo da revisita, sem alterar o chrome da tela.
+- Confirmar que o menu `Aa`, a pinça, a persistência e o evento `reading_text_scale_changed` continuam funcionando após matar e reabrir o app.
+- Comparar portão e paywalls com a versão anterior em `.xxLarge` e confirmar que permanecem visualmente inalterados.
 
 ## Portão de assinatura (1.13)
 

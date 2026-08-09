@@ -53,6 +53,18 @@ final class LocalReadingSessionTests: XCTestCase {
         )
     }
 
+    func testReadingTextScaleReaches160PercentWhenSystemTypeIsCappedAtLarge() {
+        XCTAssertEqual(
+            ReadingTextScalePolicy.composedScale(
+                value: 160,
+                systemScale: 1,
+                accessibility3Scale: 2.4
+            ),
+            1.6,
+            accuracy: 0.001
+        )
+    }
+
     func testReadingTextScaleStoreDefaultsNormalizesAndPersistsInInjectedSuite() throws {
         let suiteName = "LocalReadingSessionTests.ReadingTextScale.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

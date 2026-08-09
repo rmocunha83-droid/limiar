@@ -420,6 +420,7 @@ private struct DashboardView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .navigationDestination(isPresented: $showingSettings) {
             SettingsView()
         }
@@ -902,7 +903,7 @@ private struct DashboardView: View {
                 .padding(.bottom, 44)
             }
         }
-        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .dynamicTypeSize(...DynamicTypeSize.large)
     }
 
     private var completionPresentation: CompletionScreenPresentation {
