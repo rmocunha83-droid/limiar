@@ -146,7 +146,7 @@ struct OnboardingView: View {
                             moveToPreviousStep()
                         } label: {
                             Image(systemName: "arrow.left")
-                                .font(.system(size: 21, weight: .regular))
+                                .limiarFont(21, relativeTo: .title3)
                                 .frame(width: 46, height: 46)
                                 .glassCircle()
                         }
@@ -168,11 +168,10 @@ struct OnboardingView: View {
                         } label: {
                             HStack(spacing: 10) {
                                 Text(displayedStep == finalOnboardingStep ? "Começar" : "Continuar")
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.72)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 if displayedStep != finalOnboardingStep {
                                     Image(systemName: "arrow.right")
-                                        .font(.system(size: 18, weight: .regular))
+                                        .limiarFont(18, relativeTo: .headline)
                                 }
                             }
                         }
@@ -186,6 +185,7 @@ struct OnboardingView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .familyActivityPicker(
             headerText: "Escolha quais apps vão ativar o Limiar.",
             footerText: "O Limiar usa o seletor nativo do Tempo de Uso.",
@@ -296,7 +296,7 @@ struct OnboardingView: View {
                 }
                 if !themeSelectionMessage.isEmpty {
                     Label(themeSelectionMessage, systemImage: "info.circle")
-                        .font(.system(size: 14, weight: .medium))
+                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                         .foregroundStyle(Color.warmGold)
                 }
             }
@@ -315,7 +315,7 @@ struct OnboardingView: View {
                 OnboardingTitle(eyebrow: "LEITURAS", title: config.question)
 
                 Text(config.subtitle)
-                    .font(.system(size: 15, weight: .medium))
+                    .limiarFont(15, weight: .medium, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
@@ -335,12 +335,12 @@ struct OnboardingView: View {
                 Text(selectedCount == 1
                     ? "1 leitura selecionada"
                     : "\(selectedCount) leituras selecionadas")
-                    .font(.system(size: 13, weight: .medium))
+                    .limiarFont(13, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.warmGold)
 
                 if selectedCount == 3 {
                     Text("Dica: escolher mais estilos traz mais variedade às suas manhãs.")
-                        .font(.system(size: 14, weight: .medium))
+                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                         .foregroundStyle(Color.softText.opacity(0.86))
                         .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
@@ -350,7 +350,7 @@ struct OnboardingView: View {
 
                 if !readingPreferenceMessage.isEmpty {
                     Label(readingPreferenceMessage, systemImage: "info.circle")
-                        .font(.system(size: 14, weight: .medium))
+                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                         .foregroundStyle(Color.sageButton)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -379,7 +379,7 @@ struct OnboardingView: View {
                 }
 
                 Text("Você pode mudar isso depois em Configurações.")
-                    .font(.system(size: 14, weight: .medium))
+                    .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                     .foregroundStyle(Color.softText.opacity(0.86))
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -399,7 +399,7 @@ struct OnboardingView: View {
                 )
 
                 Text("Escolha o turno em que o Limiar deve preparar sua pausa diária.")
-                    .font(.system(size: 15, weight: .medium))
+                    .limiarFont(15, weight: .medium, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -415,7 +415,7 @@ struct OnboardingView: View {
                 }
 
                 Text("Você poderá mudar depois em Configurações. A mudança valerá no ciclo seguinte.")
-                    .font(.system(size: 14, weight: .medium))
+                    .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                     .foregroundStyle(Color.softText.opacity(0.86))
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -436,13 +436,13 @@ struct OnboardingView: View {
                     )
 
                     Text("Avaliações de quem usa o Limiar todos os dias.")
-                        .font(.system(size: 15, weight: .medium))
+                        .limiarFont(15, weight: .medium, relativeTo: .body)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(5)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text("★★★★★")
-                        .font(.system(size: 17, weight: .semibold))
+                        .limiarFont(17, weight: .semibold, relativeTo: .headline)
                         .tracking(2)
                         .foregroundStyle(Color(red: 0.89, green: 0.70, blue: 0.30))
                         .accessibilityLabel("Cinco estrelas")
@@ -476,7 +476,7 @@ struct OnboardingView: View {
                 OnboardingTitle(eyebrow: "ATIVAÇÃO", title: "Ative o Limiar")
 
                 Text("Siga estas 2 etapas para começar.")
-                    .font(.system(size: 20, weight: .regular))
+                    .limiarFont(20, relativeTo: .title3)
                     .foregroundStyle(Color.sageButton)
                     .lineSpacing(5)
 
@@ -497,12 +497,12 @@ struct OnboardingView: View {
 
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "info.circle")
-                        .font(.system(size: 17, weight: .medium))
+                        .limiarFont(17, weight: .medium, relativeTo: .headline)
                         .foregroundStyle(Color.sageButton)
                         .padding(.top, 1)
 
                     Text(status.isEmpty ? "O iOS pedirá permissão antes de ativar as pausas." : status)
-                        .font(.system(size: 15, weight: .medium))
+                        .limiarFont(15, weight: .medium, relativeTo: .body)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                 }
@@ -513,7 +513,7 @@ struct OnboardingView: View {
                     completeOnboarding()
                 } label: {
                     Text("Fazer isso depois")
-                        .font(.system(size: 16, weight: .semibold))
+                        .limiarFont(16, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.sageButton)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
@@ -771,11 +771,11 @@ struct ScreenTimeStepBadge: View {
 
             if isComplete {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 25, weight: .medium))
+                    .limiarFont(25, weight: .medium, relativeTo: .title2)
                     .foregroundStyle(Color.sageButton)
             } else {
                 Text(label)
-                    .font(.system(size: 22, weight: .semibold, design: .serif))
+                    .limiarFont(22, weight: .semibold, design: .serif, relativeTo: .title3)
                     .foregroundStyle(isEnabled ? Color.sageButton : Color.softText.opacity(0.70))
             }
         }
@@ -794,20 +794,19 @@ struct ScreenTimeSetupStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 20, weight: .semibold))
+                .limiarFont(20, weight: .semibold, relativeTo: .title3)
                 .foregroundStyle(titleForeground)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(subtitle)
-                .font(.system(size: 15, weight: .medium))
+                .limiarFont(15, weight: .medium, relativeTo: .body)
                 .foregroundStyle(subtitleForeground)
                 .lineSpacing(4)
 
             Button(action: action) {
                 Label(buttonTitle, systemImage: systemImage)
-                    .font(.system(size: 16, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.76)
+                    .limiarFont(16, weight: .semibold, relativeTo: .headline)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
                     .background(buttonBackground, in: RoundedRectangle(cornerRadius: 8))
@@ -920,44 +919,46 @@ struct WelcomeHeroScreen: View {
                         .ignoresSafeArea()
                     }
 
-                VStack(alignment: .leading, spacing: 0) {
-                    Spacer()
-                        .frame(height: proxy.size.height * 0.24)
+                VStack(spacing: 0) {
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Image("LimiarLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 84, height: 84, alignment: .leading)
+                                .opacity(showLogo ? 1 : 0)
+                                .scaleEffect(showLogo ? (logoBreathing && !reduceMotion ? 1.015 : 1) : 0.95)
 
-                    Image("LimiarLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 84, height: 84, alignment: .leading)
-                        .opacity(showLogo ? 1 : 0)
-                        .scaleEffect(showLogo ? (logoBreathing && !reduceMotion ? 1.015 : 1) : 0.95)
+                            Text("B E M - V I N D O")
+                                .limiarFont(18, weight: .medium, relativeTo: .headline)
+                                .foregroundStyle(Color.warmGold)
+                                .padding(.top, 14)
+                                .opacity(showWelcome ? 1 : 0)
 
-                    Text("B E M - V I N D O")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.warmGold)
-                        .padding(.top, 14)
-                        .opacity(showWelcome ? 1 : 0)
+                            Text("Limiar")
+                                .limiarFont(76, design: .serif, relativeTo: .largeTitle)
+                                .foregroundStyle(Color.ivory)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 16)
+                                .opacity(showTitle ? 1 : 0)
+                                .offset(y: reduceMotion ? 0 : (showTitle ? 0 : 12))
 
-                    Text("Limiar")
-                        .font(.system(size: 76, weight: .regular, design: .serif))
-                        .foregroundStyle(Color.ivory)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                        .padding(.top, 16)
-                        .opacity(showTitle ? 1 : 0)
-                        .offset(y: reduceMotion ? 0 : (showTitle ? 0 : 12))
-
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(Array(bodyLines.enumerated()), id: \.offset) { index, line in
-                            Text(line)
-                                .font(.system(size: 27, weight: .regular))
-                                .foregroundStyle(Color.softText)
-                                .opacity(visibleBodyLineCount > index ? 1 : 0)
-                                .offset(y: reduceMotion ? 0 : (visibleBodyLineCount > index ? 0 : 8))
+                            VStack(alignment: .leading, spacing: 14) {
+                                ForEach(Array(bodyLines.enumerated()), id: \.offset) { index, line in
+                                    Text(line)
+                                        .limiarFont(27, relativeTo: .title2)
+                                        .foregroundStyle(Color.softText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .opacity(visibleBodyLineCount > index ? 1 : 0)
+                                        .offset(y: reduceMotion ? 0 : (visibleBodyLineCount > index ? 0 : 8))
+                                }
+                            }
+                            .padding(.top, 26)
                         }
+                        .frame(width: contentWidth, alignment: .leading)
+                        .padding(.top, max(32, proxy.size.height * 0.16))
+                        .padding(.bottom, 24)
                     }
-                        .padding(.top, 26)
-
-                    Spacer()
 
                     HStack(alignment: .center, spacing: 12) {
                         HStack(spacing: 13) {
@@ -971,27 +972,33 @@ struct WelcomeHeroScreen: View {
                             }
                         }
 
-                        Spacer()
+                        Spacer(minLength: 8)
 
                         Button(action: action) {
                             HStack(spacing: 14) {
                                 Text("Continuar")
                                 Image(systemName: "arrow.right")
-                                    .font(.system(size: 22, weight: .regular))
+                                    .limiarFont(22, relativeTo: .title3)
                             }
                         }
                         .buttonStyle(LimiarHeroButtonStyle())
                     }
                     .frame(width: contentWidth, alignment: .leading)
-                    .padding(.bottom, 42)
+                    .padding(.top, 12)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+                    .background(
+                        LinearGradient(
+                            colors: [Color.deepInk.opacity(0), Color.deepInk.opacity(0.98)],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                        .padding(.horizontal, -horizontalInset)
+                    )
                     .opacity(showButton ? 1 : 0)
                     .offset(y: reduceMotion ? 0 : (showButton ? 0 : 10))
                 }
-                .frame(width: contentWidth, alignment: .leading)
                 .padding(.horizontal, horizontalInset)
-                .ignoresSafeArea(edges: .top)
             }
-            .clipped()
         }
         .onAppear(perform: startEntranceAnimation)
     }
@@ -1061,15 +1068,13 @@ struct OnboardingTitle: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(eyebrow)
-                .font(.system(size: 13, weight: .bold))
+                .limiarFont(13, weight: .bold, relativeTo: .caption)
                 .tracking(1.3)
                 .foregroundStyle(Color.warmGold)
             Text(title)
-                .font(.system(size: 32, weight: .regular, design: .serif))
+                .limiarFont(32, design: .serif, relativeTo: .title)
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
-                .lineLimit(4)
-                .minimumScaleFactor(0.90)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -1088,21 +1093,20 @@ struct ReadingStyleChip: View {
         Button(action: action) {
             HStack(alignment: .center, spacing: 14) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22, weight: .medium))
+                    .limiarFont(22, weight: .medium, relativeTo: .title3)
                     .foregroundStyle(isSelected ? Color.deepInk : Color.softText.opacity(0.55))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(category.label)
-                        .font(.system(size: 16, weight: .semibold))
+                        .limiarFont(16, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(isSelected ? Color.deepInk : Color.ivory)
                         .multilineTextAlignment(.leading)
 
                     Text(category.hint)
-                        .font(.system(size: 13, weight: .medium))
+                        .limiarFont(13, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(isSelected ? Color.deepInk.opacity(0.72) : Color.softText)
                         .multilineTextAlignment(.leading)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 0)
@@ -1141,11 +1145,11 @@ struct OptionalBooksRefinement: View {
             } label: {
                 HStack(spacing: 10) {
                     Text("Afinar por livros específicos (opcional)")
-                        .font(.system(size: 15, weight: .semibold))
+                        .limiarFont(15, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 14, weight: .semibold))
+                        .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundStyle(Color.softText)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
@@ -1167,7 +1171,7 @@ struct OptionalBooksRefinement: View {
             if isExpanded {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Estes livros terão prioridade nas suas leituras diárias — os demais livros das suas escolhas continuam aparecendo para variar.")
-                        .font(.system(size: 13, weight: .medium))
+                        .limiarFont(13, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(Color.softText)
 
                     FlowLayout(spacing: 10) {
@@ -1179,10 +1183,10 @@ struct OptionalBooksRefinement: View {
                                     HStack(spacing: 6) {
                                         if isSelected {
                                             Image(systemName: "checkmark")
-                                                .font(.system(size: 12, weight: .bold))
+                                                .limiarFont(12, weight: .bold, relativeTo: .caption)
                                         }
                                         Text(config.bookDisplayTitle(book, tradition: model.faithProfile.tradition))
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
                                     }
                                     .foregroundStyle(isSelected ? Color.deepInk : Color.ivory)
                                     .padding(.horizontal, 14)

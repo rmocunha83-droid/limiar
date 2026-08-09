@@ -27,18 +27,18 @@ struct AIReadingPreparationView: View {
                         .frame(width: 58, height: 58)
 
                     Image(systemName: "sparkles")
-                        .font(.system(size: 22, weight: .semibold))
+                        .limiarFont(22, weight: .semibold, relativeTo: .title3)
                         .foregroundStyle(Color.warmGold)
                         .scaleEffect(reduceMotion ? 1 : (isBreathing ? 1.04 : 0.98))
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Criando suas reflexões")
-                        .font(.system(size: 18, weight: .bold))
+                        .limiarFont(18, weight: .bold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
 
                     Text("Estamos preparando sua travessia bíblica com explicações para este momento.")
-                        .font(.system(size: 14, weight: .medium))
+                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                 }
@@ -67,13 +67,14 @@ struct AIReadingPreparationView: View {
                 }
 
                 Text("Isso costuma levar alguns segundos.")
-                    .font(.system(size: 13, weight: .medium))
+                    .limiarFont(13, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.softText.opacity(0.86))
                     .lineSpacing(4)
             }
         }
         .padding(18)
         .limiarPanel()
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) {
@@ -90,17 +91,17 @@ struct AIReadingRetryView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: "exclamationmark.circle")
-                    .font(.system(size: 22, weight: .medium))
+                    .limiarFont(22, weight: .medium, relativeTo: .title3)
                     .foregroundStyle(Color.warmGold)
                     .frame(width: 34, height: 34)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Não foi possível preparar sua reflexão agora")
-                        .font(.system(size: 17, weight: .bold))
+                        .limiarFont(17, weight: .bold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
 
                     Text("Tente novamente em instantes. Confira sua conexão com a internet antes de tentar outra vez.")
-                        .font(.system(size: 14, weight: .medium))
+                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                 }
@@ -111,7 +112,7 @@ struct AIReadingRetryView: View {
                     Image(systemName: "arrow.clockwise")
                     Text("Tentar novamente")
                 }
-                .font(.system(size: 15, weight: .bold))
+                .limiarFont(15, weight: .bold, relativeTo: .headline)
                 .foregroundStyle(Color.deepInk)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
@@ -120,6 +121,7 @@ struct AIReadingRetryView: View {
         }
         .padding(18)
         .limiarPanel()
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -131,12 +133,12 @@ struct AIReadingLocalSessionNotice: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "wifi.slash")
-                    .font(.system(size: 18, weight: .semibold))
+                    .limiarFont(18, weight: .semibold, relativeTo: .headline)
                     .foregroundStyle(Color.warmGold)
                     .frame(width: 28, height: 28)
 
                 Text("Não foi possível preparar as explicações agora. Sua leitura de hoje está aqui — as explicações voltam quando a conexão for restabelecida.")
-                    .font(.system(size: 14, weight: .medium))
+                    .limiarFont(14, weight: .medium, relativeTo: .subheadline)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -153,7 +155,7 @@ struct AIReadingLocalSessionNotice: View {
                     }
                     Text(isRetrying ? "Tentando novamente" : "Tentar novamente")
                 }
-                .font(.system(size: 14, weight: .bold))
+                .limiarFont(14, weight: .bold, relativeTo: .headline)
                 .foregroundStyle(Color.sageButton)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
@@ -168,6 +170,7 @@ struct AIReadingLocalSessionNotice: View {
         }
         .padding(16)
         .limiarPanel()
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -181,25 +184,29 @@ struct SpiritualReadingCard: View {
     var showsNarration = true
     var isSaveLocked = false
     var isNarrationLocked = false
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var readingTextScale = ReadingTextScalePolicy.defaultValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 12) {
                 Label(item.reference, systemImage: "quote.opening")
-                    .font(.system(size: 14, weight: .bold))
+                    .limiarFont(14, weight: .bold, relativeTo: .headline)
                     .foregroundStyle(Color.warmGold)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 
                 Button(action: saveAction) {
                     ZStack(alignment: .bottomTrailing) {
                         Image(systemName: isSaved ? "heart.fill" : "heart")
-                            .font(.system(size: 19, weight: .semibold))
+                            .limiarFont(19, weight: .semibold, relativeTo: .title3)
                             .foregroundStyle(isSaved ? Color.sageButton : Color.ivory)
                         if isSaveLocked {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 8, weight: .bold))
+                                .limiarFont(8, weight: .bold, relativeTo: .caption2)
                                 .foregroundStyle(Color.deepInk)
                                 .padding(4)
                                 .background(Color.warmGold, in: Circle())
@@ -212,32 +219,50 @@ struct SpiritualReadingCard: View {
                 }
                 .accessibilityLabel(isSaveLocked ? "Guardar trecho é um recurso Premium" : (isSaved ? "Remover trecho salvo" : "Salvar trecho"))
             }
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
 
             Text(item.text)
-                .font(.system(size: 22, weight: .regular, design: .serif))
+                .readingFont(
+                    22,
+                    textScale: readingTextScale,
+                    design: .serif,
+                    relativeTo: .title3
+                )
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility3)
 
             if showsReflection && item.hasExplanationContent {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Explicação espiritual \(item.reference)")
-                        .font(.system(size: 13, weight: .bold))
+                        .readingFont(
+                            13,
+                            textScale: readingTextScale,
+                            weight: .bold,
+                            relativeTo: .footnote
+                        )
                         .tracking(1.1)
                         .foregroundStyle(Color.warmGold)
 
                     Text(item.homily)
-                        .font(.system(size: 16, weight: .medium))
+                        .readingFont(
+                            16,
+                            textScale: readingTextScale,
+                            weight: .medium,
+                            relativeTo: .body
+                        )
                         .foregroundStyle(Color.ivory.opacity(0.92))
                         .lineSpacing(5)
 
                     Text(item.practicalConclusion)
-                        .font(.system(size: 15, weight: .regular))
+                        .readingFont(15, textScale: readingTextScale, relativeTo: .body)
                         .foregroundStyle(Color.softText.opacity(0.92))
                         .lineSpacing(5)
                 }
                 .padding(14)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .dynamicTypeSize(...DynamicTypeSize.accessibility3)
             }
 
             if showsNarration {
@@ -252,7 +277,7 @@ struct SpiritualReadingCard: View {
                                 Image(systemName: narrationState.systemImage)
                                 if isNarrationLocked {
                                     Image(systemName: "lock.fill")
-                                        .font(.system(size: 7, weight: .bold))
+                                        .limiarFont(7, weight: .bold, relativeTo: .caption2)
                                         .foregroundStyle(Color.deepInk)
                                         .padding(3)
                                         .background(Color.warmGold, in: Circle())
@@ -263,21 +288,27 @@ struct SpiritualReadingCard: View {
                         }
 
                         Text(narrationState.title)
-                            .lineLimit(1)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .buttonStyle(ReadingActionButtonStyle(isHighlighted: narrationState.isHighlighted))
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                 .accessibilityLabel(isNarrationLocked ? "Ouvir este trecho é um recurso Premium" : narrationState.title)
             }
         }
         .padding(18)
         .limiarPanel()
+        .readingTextScaleGesture()
     }
 }
 
 struct ReadingBlock: View {
     let title: String
     let text: String
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var readingTextScale = ReadingTextScalePolicy.defaultValue
 
     private var cleanedText: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -287,16 +318,22 @@ struct ReadingBlock: View {
         if !cleanedText.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.system(size: 14, weight: .bold))
+                    .readingFont(
+                        14,
+                        textScale: readingTextScale,
+                        weight: .bold,
+                        relativeTo: .headline
+                    )
                     .tracking(0.8)
                     .foregroundStyle(Color.gold)
                 Text(cleanedText)
-                    .font(.system(size: 17))
+                    .readingFont(17, textScale: readingTextScale, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
             }
             .padding(16)
             .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         }
     }
 }
@@ -306,7 +343,7 @@ struct ReadingActionButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .semibold))
+            .limiarFont(15, weight: .semibold, relativeTo: .headline)
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity)
             .frame(height: 46)

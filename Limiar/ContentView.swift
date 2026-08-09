@@ -336,11 +336,11 @@ private struct DashboardView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Limiar")
-                                    .font(.system(size: 48, weight: .regular, design: .serif))
+                                    .limiarFont(48, design: .serif, relativeTo: .largeTitle)
                                     .foregroundStyle(Color.ivory)
 
                                 Text("Reserve alguns minutos para uma leitura que fortaleça sua fé.")
-                                    .font(.system(size: 18, weight: .regular))
+                                    .limiarFont(18, relativeTo: .body)
                                     .foregroundStyle(Color.softText)
                                     .lineSpacing(4)
                             }
@@ -357,6 +357,7 @@ private struct DashboardView: View {
                             }
                             .accessibilityLabel("Abrir perfil")
                         }
+                        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
 
                         blockedAppsStrip
                         winbackBanner
@@ -486,7 +487,7 @@ private struct DashboardView: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 Label("ACESSO COMPLETO", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
-                    .font(.system(size: 13, weight: .bold))
+                    .limiarFont(13, weight: .bold, relativeTo: .caption)
                     .tracking(1.3)
                     .foregroundStyle(Color.warmGold)
 
@@ -495,12 +496,12 @@ private struct DashboardView: View {
                         ? "Seu acesso completo termina \(remainingText)"
                         : "Sua assinatura termina \(remainingText)"
                 )
-                .font(.system(size: 23, weight: .regular, design: .serif))
+                .limiarFont(23, design: .serif, relativeTo: .title2)
                 .foregroundStyle(Color.ivory)
                 .fixedSize(horizontal: false, vertical: true)
 
                 Text("Reative para não perder suas pausas, narrações e trechos salvos.")
-                    .font(.system(size: 15))
+                    .limiarFont(15, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -510,7 +511,7 @@ private struct DashboardView: View {
                     showingManageSubscriptions = true
                 } label: {
                     Text("Reativar assinatura")
-                        .font(.system(size: 16, weight: .semibold))
+                        .limiarFont(16, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.deepInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -520,6 +521,7 @@ private struct DashboardView: View {
             }
             .padding(18)
             .limiarPanel()
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
             .onAppear {
                 LimiarAnalytics.trackWinbackBannerShown(phase: phase.analyticsPhase)
             }
@@ -529,7 +531,7 @@ private struct DashboardView: View {
     private var blockedAppsStrip: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("APPS QUE ATIVAM O LIMIAR")
-                .font(.system(size: 13, weight: .bold))
+                .limiarFont(13, weight: .bold, relativeTo: .caption)
                 .tracking(1.5)
                 .foregroundStyle(Color.warmGold)
 
@@ -565,6 +567,7 @@ private struct DashboardView: View {
         }
         .padding(18)
         .limiarPanel()
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .onTapGesture {
             showingPicker = true
@@ -578,22 +581,29 @@ private struct DashboardView: View {
 
     private var readingRequirementHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("SEU LIMIAR", systemImage: "book.closed")
-                .font(.system(size: 13, weight: .bold))
-                .tracking(1.3)
-                .foregroundStyle(Color.warmGold)
+            HStack(spacing: 12) {
+                Label("SEU LIMIAR", systemImage: "book.closed")
+                    .limiarFont(13, weight: .bold, relativeTo: .caption)
+                    .tracking(1.3)
+                    .foregroundStyle(Color.warmGold)
+
+                Spacer(minLength: 8)
+
+                ReadingTextScaleMenu()
+            }
 
             Text(model.currentReadingTitle)
-                .font(.system(size: 40, weight: .regular, design: .serif))
+                .limiarFont(40, design: .serif, relativeTo: .largeTitle)
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text("Leia com calma e reflita sobre sua vida.")
-                .font(.system(size: 18))
+                .limiarFont(18, relativeTo: .body)
                 .foregroundStyle(Color.softText)
                 .lineSpacing(5)
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 
     private var readingItemsList: some View {
@@ -662,10 +672,11 @@ private struct DashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
             if model.currentSpiritualReadingItems.count > 1 {
                 Label("Reflexão breve", systemImage: "sparkle")
-                    .font(.system(size: 13, weight: .bold))
+                    .limiarFont(13, weight: .bold, relativeTo: .caption)
                     .tracking(1.2)
                     .foregroundStyle(Color.warmGold)
                     .padding(.top, 4)
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                 ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
             }
             ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
@@ -681,11 +692,11 @@ private struct DashboardView: View {
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Reflexão breve", systemImage: "lock.fill")
-                    .font(.system(size: 13, weight: .bold))
+                    .limiarFont(13, weight: .bold, relativeTo: .caption)
                     .tracking(1.2)
                     .foregroundStyle(Color.warmGold)
                 Text(model.currentReflection.summary)
-                    .font(.system(size: 16, weight: .regular, design: .serif))
+                    .limiarFont(16, design: .serif, relativeTo: .body)
                     .foregroundStyle(Color.ivory.opacity(0.58))
                     .lineLimit(1)
                     .blur(radius: 3)
@@ -696,6 +707,7 @@ private struct DashboardView: View {
             .limiarPanel()
         }
         .buttonStyle(.plain)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .accessibilityLabel("Reflexão breve bloqueada. Abrir Limiar completo")
     }
 
@@ -705,16 +717,16 @@ private struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 10) {
                         Image(systemName: "leaf.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundStyle(Color.sageButton)
 
                         Text("Modo Essencial")
-                            .font(.system(size: 14, weight: .bold))
+                            .limiarFont(14, weight: .bold, relativeTo: .headline)
                             .foregroundStyle(Color.ivory)
                     }
 
                     Text("Você está lendo os trechos principais com explicações essenciais. Narração, maior variedade e experiência sem anúncios ficam no Limiar completo.")
-                        .font(.system(size: 13, weight: .medium))
+                        .limiarFont(13, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
@@ -725,7 +737,7 @@ private struct DashboardView: View {
                             PaywallView(analyticsOrigin: .dashboard)
                         } label: {
                             Text("Ver planos")
-                                .font(.system(size: 13, weight: .bold))
+                                .limiarFont(13, weight: .bold, relativeTo: .headline)
                                 .foregroundStyle(Color.sageButton)
                         }
                     }
@@ -737,6 +749,7 @@ private struct DashboardView: View {
                         .stroke(Color.sageButton.opacity(0.18), lineWidth: 1)
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
             }
         }
     }
@@ -747,23 +760,23 @@ private struct DashboardView: View {
         } label: {
             HStack(spacing: 16) {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 24, weight: .regular))
+                    .limiarFont(24, relativeTo: .title2)
                     .frame(width: 52, height: 52)
                     .glassCircle()
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Editar apps da pausa")
-                        .font(.system(size: 19, weight: .regular, design: .serif))
+                        .limiarFont(19, design: .serif, relativeTo: .title3)
                         .foregroundStyle(Color.ivory)
                     Text("Escolha quais apps vão abrir com a pausa do Limiar.")
-                        .font(.system(size: 15))
+                        .limiarFont(15, relativeTo: .body)
                         .foregroundStyle(Color.softText)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 20, weight: .semibold))
+                    .limiarFont(20, weight: .semibold, relativeTo: .title3)
                     .foregroundStyle(Color.sageButton)
             }
             .contentShape(Rectangle())
@@ -771,14 +784,16 @@ private struct DashboardView: View {
         .padding(16)
         .limiarPanel()
         .padding(.top, 8)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 
     private var completionExplanation: some View {
         Text("Após concluir a leitura, os apps selecionados ficarão disponíveis até o próximo ciclo.")
-            .font(.system(size: 14))
+            .limiarFont(14, relativeTo: .subheadline)
             .foregroundStyle(Color.softText)
             .lineSpacing(5)
             .padding(.horizontal, 2)
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 
     private var unlockButton: some View {
@@ -787,18 +802,18 @@ private struct DashboardView: View {
         } label: {
             HStack(spacing: 18) {
                 Image(systemName: "sunrise.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .limiarFont(20, weight: .semibold, relativeTo: .title3)
                     .foregroundStyle(Color.deepInk.opacity(0.70))
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Despausar apps, continuar")
-                        .font(.system(size: 22, weight: .regular, design: .serif))
+                        .limiarFont(22, design: .serif, relativeTo: .title3)
                         .foregroundStyle(Color.deepInk)
                 }
                 Spacer()
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 24, weight: .regular))
+                    .limiarFont(24, relativeTo: .title2)
                     .foregroundStyle(Color.deepInk)
             }
             .padding(.horizontal, 34)
@@ -811,6 +826,7 @@ private struct DashboardView: View {
             .shadow(color: Color.black.opacity(0.20), radius: 8, x: 0, y: 10)
         }
         .disabled(showingCompletionScreen)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .accessibilityLabel("Despausar apps, continuar")
     }
 
@@ -819,10 +835,11 @@ private struct DashboardView: View {
             Image(systemName: "shield.lefthalf.filled")
             Text("Você no controle. Você escolhe o que atravessar.")
         }
-        .font(.system(size: 15, weight: .medium))
+        .limiarFont(15, weight: .medium, relativeTo: .body)
         .foregroundStyle(Color.sageButton)
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 
     private var completionScreen: some View {
@@ -836,12 +853,12 @@ private struct DashboardView: View {
 
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: presentation.iconName)
-                        .font(.system(size: 46, weight: .regular))
+                        .limiarFont(46, relativeTo: .largeTitle)
                         .foregroundStyle(Color.warmGold)
                         .symbolEffect(.bounce, value: showingCompletionScreen)
 
                     Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
+                        .limiarFont(10, weight: .bold, relativeTo: .caption2)
                         .foregroundStyle(Color.deepInk)
                         .frame(width: 22, height: 22)
                         .background(Color.sageButton, in: Circle())
@@ -853,17 +870,17 @@ private struct DashboardView: View {
                 .accessibilityLabel("Travessia concluída no turno da \(presentation.turn.title.lowercased())")
 
                 Text("Travessia concluída")
-                    .font(.system(size: 40, weight: .regular, design: .serif))
+                    .limiarFont(40, design: .serif, relativeTo: .largeTitle)
                     .foregroundStyle(Color.ivory)
                     .multilineTextAlignment(.center)
 
                 VStack(spacing: 12) {
                     Text("Seus apps estão liberados até o próximo ciclo, \(presentation.nextCycleReference).")
-                        .font(.system(size: 18, weight: .semibold))
+                        .limiarFont(18, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
 
                     Text("Pode fechar o Limiar e seguir seu dia. Leve a leitura de hoje com você.")
-                        .font(.system(size: 16, weight: .regular))
+                        .limiarFont(16, relativeTo: .body)
                         .foregroundStyle(Color.softText)
                 }
                 .multilineTextAlignment(.center)
@@ -878,7 +895,7 @@ private struct DashboardView: View {
                     }
                 } label: {
                     Text("Permanecer no Limiar")
-                        .font(.system(size: 15, weight: .medium))
+                        .limiarFont(15, weight: .medium, relativeTo: .body)
                         .foregroundStyle(Color.sageButton)
                 }
                 .accessibilityHint("Fecha a tela de conclusão e volta para a leitura")

@@ -2,6 +2,18 @@
 
 Este checklist deve ser executado depois que o Limiar estiver instalado em um iPhone físico com assinatura válida da Apple Developer.
 
+## Texto acessível — ajuste de leitura Aa
+
+- No dashboard, abrir o menu `Aa` ao lado de `SEU LIMIAR` e conferir os passos 90%, 100%, 110%, 125%, 140% e 160%.
+- Confirmar com VoiceOver que o controle anuncia “Tamanho do texto da leitura” e o valor atual.
+- Verificar que o ajuste muda somente o trecho, a explicação espiritual e os blocos de reflexão; título, botões e demais elementos do app permanecem no tamanho do sistema.
+- Com Dynamic Type em `.xxLarge` e `.accessibility3`, testar 90% e 160% e confirmar que a composição não fica menor que 90% nem ultrapassa o teto visual de `.accessibility3`.
+- No cartão de leitura, usar Option + arrasto no simulador para pinçar: para fora aumenta um passo, para dentro diminui um passo, com indicador transitório `Aa N%` e sem bloquear a rolagem vertical.
+- Com Reduzir Movimento ligado, repetir a pinça e confirmar que o texto troca sem animação de escala e que o indicador usa apenas aparecimento/desaparecimento.
+- Alterar o tamanho, encerrar o app e reabrir; o valor escolhido deve persistir.
+- Abrir um trecho em Configurações > Trechos salvos e confirmar que o mesmo tamanho e o mesmo atalho de pinça são aplicados ao detalhe.
+- Confirmar no DebugView do Firebase o evento `reading_text_scale_changed` com `value` numérico e `method` igual a `aa` ou `pinch`, sem referência, texto ou tema espiritual.
+
 ## Onboarding
 
 - Conferir se a tela inicial abre com a imagem, fonte, cores e botão corretos.
@@ -108,6 +120,15 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Testar com fonte do iOS aumentada.
 - Testar em iPhone pequeno e iPhone grande.
 - Verificar se não há botões cortados, textos sobrepostos ou elementos fora da tela.
+
+## Texto acessível — Dynamic Type
+
+- Com Dynamic Type em `.xxLarge`, percorrer o onboarding inteiro, inclusive boas-vindas e prova social: todo conteúdo deve poder rolar, a barra inferior deve permanecer íntegra e os botões devem continuar alcançáveis.
+- Em `.xxLarge`, conferir dashboard, estados de preparação/erro e tela de conclusão: nenhuma mensagem, cartão ou ação pode ficar cortada ou sobreposta.
+- Com Dynamic Type em `.accessibility3`, abrir travessias Curta e Mais profunda: trecho, explicação espiritual, `Sentido espiritual`, `Para levar para o dia` e `Pergunta para refletir` devem crescer e permanecer legíveis por rolagem.
+- Em `.accessibility3`, abrir um trecho salvo e confirmar que o mesmo conteúdo de leitura respeita o tamanho ampliado sem truncamento.
+- Confirmar que títulos e subtítulos quebram em mais linhas em vez de encolher, inclusive `SelectableRow`, chips e ações do onboarding.
+- Comparar portão e paywalls com a versão anterior em tamanho padrão e confirmar que a promoção do modifier de fonte não alterou o visual.
 
 ## Portão de assinatura (1.13)
 

@@ -45,6 +45,11 @@ enum LimiarAnalytics {
         case paid
     }
 
+    enum ReadingTextScaleChangeMethod: String {
+        case aa
+        case pinch
+    }
+
     private enum Keys {
         static let lastAccess = "limiar.analytics.lastAccess"
         static let traversalStartedPrefix = "limiar.analytics.traversalStarted"
@@ -230,6 +235,16 @@ enum LimiarAnalytics {
     static func trackWinbackBannerTapped(phase: WinbackPhase) {
         log("winback_banner_tapped", parameters: [
             "phase": phase.rawValue
+        ])
+    }
+
+    static func trackReadingTextScaleChanged(
+        value: Int,
+        method: ReadingTextScaleChangeMethod
+    ) {
+        log("reading_text_scale_changed", parameters: [
+            "value": value,
+            "method": method.rawValue
         ])
     }
 

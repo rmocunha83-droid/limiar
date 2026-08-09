@@ -4,6 +4,74 @@ import SwiftUI
 @testable import Limiar
 
 final class LocalReadingSessionTests: XCTestCase {
+    func testReadingTextScalePolicyNormalizesAndMovesThroughSteps() {
+        XCTAssertEqual(ReadingTextScalePolicy.steps, [90, 100, 110, 125, 140, 160])
+        XCTAssertEqual(ReadingTextScalePolicy.normalized(107), 110)
+        XCTAssertEqual(ReadingTextScalePolicy.normalized(105), 100)
+        XCTAssertEqual(ReadingTextScalePolicy.incremented(100), 110)
+        XCTAssertEqual(ReadingTextScalePolicy.incremented(160), 160)
+        XCTAssertEqual(ReadingTextScalePolicy.decremented(125), 110)
+        XCTAssertEqual(ReadingTextScalePolicy.decremented(90), 90)
+    }
+
+    func testReadingTextScaleCompositionRespectsLocalFloorAndAccessibility3Ceiling() {
+        XCTAssertEqual(
+            ReadingTextScalePolicy.composedScale(
+                value: 90,
+                systemScale: 1,
+                accessibility3Scale: 2.4
+            ),
+            0.9,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            ReadingTextScalePolicy.composedScale(
+                value: 90,
+                systemScale: 0.8,
+                accessibility3Scale: 2.4
+            ),
+            0.9,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            ReadingTextScalePolicy.composedScale(
+                value: 125,
+                systemScale: 1.2,
+                accessibility3Scale: 2.4
+            ),
+            1.5,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            ReadingTextScalePolicy.composedScale(
+                value: 160,
+                systemScale: 2,
+                accessibility3Scale: 2.4
+            ),
+            2.4,
+            accuracy: 0.001
+        )
+    }
+
+    func testReadingTextScaleStoreDefaultsNormalizesAndPersistsInInjectedSuite() throws {
+        let suiteName = "LocalReadingSessionTests.ReadingTextScale.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let store = ReadingTextScaleStore(defaults: defaults)
+
+        XCTAssertEqual(store.value, 100)
+
+        store.save(125)
+        XCTAssertEqual(defaults.integer(forKey: ReadingTextScaleStore.key), 125)
+        XCTAssertEqual(store.value, 125)
+
+        store.save(133)
+        XCTAssertEqual(defaults.integer(forKey: ReadingTextScaleStore.key), 140)
+        XCTAssertEqual(store.value, 140)
+    }
+
     func testOnboardingNavigationDirectionMirrorsPageEdges() {
         XCTAssertEqual(OnboardingNavigationDirection.forward.insertionEdge, .trailing)
         XCTAssertEqual(OnboardingNavigationDirection.forward.removalEdge, .leading)
