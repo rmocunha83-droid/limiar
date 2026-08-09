@@ -109,6 +109,15 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Testar em iPhone pequeno e iPhone grande.
 - Verificar se não há botões cortados, textos sobrepostos ou elementos fora da tela.
 
+## Texto acessível — Dynamic Type
+
+- Com Dynamic Type em `.xxLarge`, percorrer o onboarding inteiro, inclusive boas-vindas e prova social: todo conteúdo deve poder rolar, a barra inferior deve permanecer íntegra e os botões devem continuar alcançáveis.
+- Em `.xxLarge`, conferir dashboard, estados de preparação/erro e tela de conclusão: nenhuma mensagem, cartão ou ação pode ficar cortada ou sobreposta.
+- Com Dynamic Type em `.accessibility3`, abrir travessias Curta e Mais profunda: trecho, explicação espiritual, `Sentido espiritual`, `Para levar para o dia` e `Pergunta para refletir` devem crescer e permanecer legíveis por rolagem.
+- Em `.accessibility3`, abrir um trecho salvo e confirmar que o mesmo conteúdo de leitura respeita o tamanho ampliado sem truncamento.
+- Confirmar que títulos e subtítulos quebram em mais linhas em vez de encolher, inclusive `SelectableRow`, chips e ações do onboarding.
+- Comparar portão e paywalls com a versão anterior em tamanho padrão e confirmar que a promoção do modifier de fonte não alterou o visual.
+
 ## Portão de assinatura (1.13)
 
 - Abrir o app novo em modo avião ao fim do onboarding: o portão deve mostrar "Tentar novamente" (nunca botão morto); religar a rede e confirmar que os planos carregam pelo botão ou ao voltar ao app.

@@ -3,6 +3,57 @@ import FamilyControls
 import ManagedSettings
 import SwiftUI
 
+private struct LimiarScaledFontModifier: ViewModifier {
+    @ScaledMetric private var scaledSize: CGFloat
+
+    let weight: Font.Weight
+    let design: Font.Design
+
+    init(
+        size: CGFloat,
+        weight: Font.Weight,
+        design: Font.Design,
+        relativeTo textStyle: Font.TextStyle
+    ) {
+        _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: scaledSize, weight: weight, design: design))
+    }
+}
+
+extension View {
+    func limiarFont(
+        _ size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        modifier(
+            LimiarScaledFontModifier(
+                size: size,
+                weight: weight,
+                design: design,
+                relativeTo: textStyle
+            )
+        )
+    }
+
+    /// Alias de compatibilidade para as telas de conversão. Mantém a mesma
+    /// matemática e evita qualquer mudança visual nos paywalls existentes.
+    func conversionFont(
+        _ size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        limiarFont(size, weight: weight, design: design, relativeTo: textStyle)
+    }
+}
+
 struct InstagramIcon: View {
     var body: some View {
         ZStack {
@@ -55,11 +106,11 @@ struct BlockedCategoryIcon: View {
     var body: some View {
         BlockedSelectionTile(width: 150) {
             Label(token)
-                .font(.system(size: 13, weight: .semibold))
+                .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                 .foregroundStyle(Color.ivory)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 6)
         }
         .accessibilityLabel("Categoria selecionada")
     }
@@ -71,11 +122,11 @@ struct BlockedWebDomainIcon: View {
     var body: some View {
         BlockedSelectionTile(width: 150) {
             Label(token)
-                .font(.system(size: 13, weight: .semibold))
+                .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                 .foregroundStyle(Color.ivory)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 6)
         }
         .accessibilityLabel("Site selecionado")
     }
@@ -102,7 +153,8 @@ private struct BlockedSelectionTile<Content: View>: View {
 
     var body: some View {
         content
-            .frame(width: width, height: 58)
+            .frame(width: width)
+            .frame(minHeight: 58)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
@@ -134,12 +186,12 @@ struct BlockedSelectionHierarchySummary: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("SELEÇÃO ATUAL")
-                    .font(.system(size: 12, weight: .bold))
+                    .limiarFont(12, weight: .bold, relativeTo: .caption)
                     .tracking(1.3)
                     .foregroundStyle(Color.warmGold)
 
                 Text(selectionCountText)
-                    .font(.system(size: 12, weight: .semibold))
+                    .limiarFont(12, weight: .semibold, relativeTo: .caption)
                     .foregroundStyle(Color.softText.opacity(0.78))
             }
 
@@ -219,7 +271,7 @@ struct BlockedSelectionGroup<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
+                    .limiarFont(15, weight: .semibold, relativeTo: .headline)
                     .foregroundStyle(Color.sageButton)
                     .frame(width: 30, height: 30)
                     .background(Color.sageButton.opacity(0.13), in: Circle())
@@ -227,16 +279,16 @@ struct BlockedSelectionGroup<Content: View>: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(title)
-                            .font(.system(size: 16, weight: .semibold))
+                            .limiarFont(16, weight: .semibold, relativeTo: .headline)
                             .foregroundStyle(Color.ivory)
 
                         Text(countText)
-                            .font(.system(size: 12, weight: .semibold))
+                            .limiarFont(12, weight: .semibold, relativeTo: .caption)
                             .foregroundStyle(Color.softText.opacity(0.68))
                     }
 
                     Text(subtitle)
-                        .font(.system(size: 12, weight: .medium))
+                        .limiarFont(12, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(Color.softText.opacity(0.74))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -244,7 +296,7 @@ struct BlockedSelectionGroup<Content: View>: View {
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.up")
-                    .font(.system(size: 13, weight: .semibold))
+                    .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.sageButton.opacity(0.80))
             }
             .padding(12)
@@ -303,11 +355,10 @@ struct TokenChildRow<Content: View>: View {
             }
 
             content
-                .font(.system(size: 14, weight: .semibold))
+                .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
                 .labelStyle(.titleAndIcon)
                 .foregroundStyle(Color.ivory.opacity(0.92))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -373,6 +424,8 @@ struct LimiarBackground: View {
 }
 
 struct SelectableRow: View {
+    @ScaledMetric(relativeTo: .subheadline) private var scaledSubtitleSize: CGFloat = 14
+
     let title: String
     let subtitle: String
     let emphasizedSubtitleText: String?
@@ -395,7 +448,7 @@ struct SelectableRow: View {
 
     private var styledSubtitle: AttributedString {
         var attributedSubtitle = AttributedString(subtitle)
-        attributedSubtitle.font = .system(size: 14)
+        attributedSubtitle.font = .system(size: scaledSubtitleSize)
         attributedSubtitle.foregroundColor = Color.softText
 
         guard let emphasizedSubtitleText,
@@ -404,7 +457,7 @@ struct SelectableRow: View {
             return attributedSubtitle
         }
 
-        attributedSubtitle[emphasizedRange].font = .system(size: 14, weight: .bold)
+        attributedSubtitle[emphasizedRange].font = .system(size: scaledSubtitleSize, weight: .bold)
         attributedSubtitle[emphasizedRange].foregroundColor = Color.ivory
         return attributedSubtitle
     }
@@ -416,13 +469,11 @@ struct SelectableRow: View {
                     .foregroundStyle(isSelected ? Color.sageButton : Color.softText)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 19, weight: .semibold))
+                        .limiarFont(19, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(styledSubtitle)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.78)
+                        .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
@@ -450,9 +501,8 @@ struct ChipGrid: View {
                     action(item)
                 } label: {
                     Text(item)
-                        .font(.system(size: 15, weight: .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
+                        .limiarFont(15, weight: .medium, relativeTo: .body)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(selected.contains(item) ? Color.sageButton.opacity(0.30) : Color.white.opacity(0.08), in: Capsule())
@@ -508,9 +558,9 @@ struct FlowLayout: Layout {
 struct LimiarPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 22, weight: .regular, design: .serif))
+            .limiarFont(22, design: .serif, relativeTo: .title3)
             .padding(.horizontal, 12)
-            .frame(width: 148, height: 58)
+            .frame(minWidth: 132, minHeight: 58)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
     }
@@ -519,8 +569,9 @@ struct LimiarPrimaryButtonStyle: ButtonStyle {
 struct LimiarHeroButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 22, weight: .regular, design: .serif))
-            .frame(width: 154, height: 62)
+            .limiarFont(22, design: .serif, relativeTo: .title3)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 142, minHeight: 62)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
     }
@@ -757,10 +808,9 @@ extension Color {
         HStack(spacing: 14) {
             BlockedSelectionTile(width: 150) {
                 Label("Redes Sociais", systemImage: "square.stack.3d.up.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.ivory)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
             }
 
@@ -768,10 +818,9 @@ extension Color {
 
             BlockedSelectionTile(width: 150) {
                 Label("youtube.com", systemImage: "globe")
-                    .font(.system(size: 13, weight: .semibold))
+                    .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.ivory)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
             }
         }
