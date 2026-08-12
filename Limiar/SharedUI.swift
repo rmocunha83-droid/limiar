@@ -2,6 +2,369 @@
 import FamilyControls
 import ManagedSettings
 import SwiftUI
+import UIKit
+
+private struct LimiarScaledFontModifier: ViewModifier {
+    @ScaledMetric private var scaledSize: CGFloat
+
+    let weight: Font.Weight
+    let design: Font.Design
+
+    init(
+        size: CGFloat,
+        weight: Font.Weight,
+        design: Font.Design,
+        relativeTo textStyle: Font.TextStyle
+    ) {
+        _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: scaledSize, weight: weight, design: design))
+    }
+}
+
+enum ReadingTextScalePolicy {
+    static let steps = [90, 100, 110, 125, 140, 160]
+    static let defaultValue = 100
+    static let minimumValue = steps[0]
+    static let maximumValue = steps[steps.count - 1]
+
+    static func normalized(_ value: Int) -> Int {
+        steps.min { lhs, rhs in
+            let lhsDistance = abs(lhs - value)
+            let rhsDistance = abs(rhs - value)
+            return lhsDistance == rhsDistance ? lhs < rhs : lhsDistance < rhsDistance
+        } ?? defaultValue
+    }
+
+    static func incremented(_ value: Int) -> Int {
+        let current = normalized(value)
+        guard let index = steps.firstIndex(of: current), index < steps.count - 1 else {
+            return maximumValue
+        }
+        return steps[index + 1]
+    }
+
+    static func decremented(_ value: Int) -> Int {
+        let current = normalized(value)
+        guard let index = steps.firstIndex(of: current), index > 0 else {
+            return minimumValue
+        }
+        return steps[index - 1]
+    }
+
+    /// Compõe a preferência local com o Dynamic Type. O teto numérico é o
+    /// fator que o mesmo estilo alcança em `.accessibility3`; assim o ajuste
+    /// Aa nunca ultrapassa a categoria máxima escolhida para a leitura.
+    static func composedScale(
+        value: Int,
+        systemScale: Double,
+        accessibility3Scale: Double
+    ) -> Double {
+        let safeSystemScale = max(systemScale, 0)
+        let requestedScale = Double(normalized(value)) / 100
+        let scaledRequest = max(safeSystemScale * requestedScale, 0.9)
+        return min(
+            scaledRequest,
+            max(accessibility3Scale, 0.9)
+        )
+    }
+}
+
+struct ReadingTextScaleStore {
+    static let key = "limiar.reading.textScale"
+    nonisolated(unsafe) static let appGroupDefaults = UserDefaults(
+        suiteName: ScreenTimePolicyStore.appGroupIdentifier
+    ) ?? .standard
+
+    let defaults: UserDefaults
+
+    init(defaults: UserDefaults = appGroupDefaults) {
+        self.defaults = defaults
+    }
+
+    var value: Int {
+        guard defaults.object(forKey: Self.key) != nil else {
+            return ReadingTextScalePolicy.defaultValue
+        }
+        return ReadingTextScalePolicy.normalized(defaults.integer(forKey: Self.key))
+    }
+
+    func save(_ value: Int) {
+        defaults.set(ReadingTextScalePolicy.normalized(value), forKey: Self.key)
+    }
+}
+
+private struct LimiarReadingFontModifier: ViewModifier {
+    @ScaledMetric private var systemScaledSize: CGFloat
+
+    let baseSize: CGFloat
+    let textScale: Int
+    let weight: Font.Weight
+    let design: Font.Design
+    let textStyle: Font.TextStyle
+
+    init(
+        size: CGFloat,
+        textScale: Int,
+        weight: Font.Weight,
+        design: Font.Design,
+        relativeTo textStyle: Font.TextStyle
+    ) {
+        _systemScaledSize = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+        baseSize = size
+        self.textScale = textScale
+        self.weight = weight
+        self.design = design
+        self.textStyle = textStyle
+    }
+
+    func body(content: Content) -> some View {
+        let systemScale = Double(systemScaledSize / baseSize)
+        let maximumPointSize = UIFontMetrics(forTextStyle: textStyle.uiTextStyle)
+            .scaledValue(
+                for: baseSize,
+                compatibleWith: UITraitCollection(
+                    preferredContentSizeCategory: .accessibilityExtraLarge
+                )
+            )
+        let maximumScale = Double(maximumPointSize / baseSize)
+        let composedScale = ReadingTextScalePolicy.composedScale(
+            value: textScale,
+            systemScale: systemScale,
+            accessibility3Scale: maximumScale
+        )
+
+        content.font(
+            .system(
+                size: baseSize * CGFloat(composedScale),
+                weight: weight,
+                design: design
+            )
+        )
+    }
+}
+
+private extension Font.TextStyle {
+    var uiTextStyle: UIFont.TextStyle {
+        switch self {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .callout: .callout
+        case .caption: .caption1
+        case .caption2: .caption2
+        case .footnote: .footnote
+        default: .body
+        }
+    }
+}
+
+extension View {
+    func limiarFont(
+        _ size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        modifier(
+            LimiarScaledFontModifier(
+                size: size,
+                weight: weight,
+                design: design,
+                relativeTo: textStyle
+            )
+        )
+    }
+
+    /// Alias de compatibilidade para as telas de conversão. Mantém a mesma
+    /// matemática e evita qualquer mudança visual nos paywalls existentes.
+    func conversionFont(
+        _ size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        limiarFont(size, weight: weight, design: design, relativeTo: textStyle)
+    }
+
+    /// Fonte exclusiva da superfície de leitura. Compõe Dynamic Type com o
+    /// ajuste local Aa sem alterar títulos, botões ou outro chrome do app.
+    func readingFont(
+        _ size: CGFloat,
+        textScale: Int,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        modifier(
+            LimiarReadingFontModifier(
+                size: size,
+                textScale: textScale,
+                weight: weight,
+                design: design,
+                relativeTo: textStyle
+            )
+        )
+    }
+}
+
+struct ReadingTextScaleMenu: View {
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var storedValue = ReadingTextScalePolicy.defaultValue
+
+    private var value: Int {
+        ReadingTextScalePolicy.normalized(storedValue)
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(ReadingTextScalePolicy.steps, id: \.self) { option in
+                Button {
+                    guard option != value else { return }
+                    storedValue = option
+                    LimiarAnalytics.trackReadingTextScaleChanged(
+                        value: option,
+                        method: .aa
+                    )
+                } label: {
+                    if option == value {
+                        Label("\(option)%", systemImage: "checkmark")
+                    } else {
+                        Text("\(option)%")
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Aa")
+                    .limiarFont(15, weight: .bold, relativeTo: .headline)
+                Text("\(value)%")
+                    .limiarFont(12, weight: .semibold, relativeTo: .caption)
+            }
+            .foregroundStyle(Color.ivory)
+            .padding(.horizontal, 11)
+            .frame(minHeight: 38)
+            .background(Color.white.opacity(0.08), in: Capsule())
+            .overlay(Capsule().stroke(Color.sageButton.opacity(0.25), lineWidth: 1))
+        }
+        .accessibilityLabel("Tamanho do texto da leitura")
+        .accessibilityValue("\(value) por cento")
+        .onAppear {
+            if storedValue != value {
+                storedValue = value
+            }
+        }
+    }
+}
+
+private struct ReadingTextScaleGestureModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var storedValue = ReadingTextScalePolicy.defaultValue
+    @State private var gestureAnchor: CGFloat = 1
+    @State private var isGestureActive = false
+    @State private var indicatorValue: Int?
+    @State private var hideIndicatorTask: Task<Void, Never>?
+
+    private let threshold: CGFloat = 1.12
+
+    func body(content: Content) -> some View {
+        content
+            .simultaneousGesture(
+                MagnificationGesture(minimumScaleDelta: 0.02)
+                    .onChanged(handleMagnification)
+                    .onEnded { _ in
+                        gestureAnchor = 1
+                        isGestureActive = false
+                    }
+            )
+            .overlay(alignment: .topTrailing) {
+                if let indicatorValue {
+                    Text("Aa \(indicatorValue)%")
+                        .limiarFont(13, weight: .bold, relativeTo: .caption)
+                        .foregroundStyle(Color.deepInk)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Color.sageButton, in: Capsule())
+                        .padding(10)
+                        .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                        .accessibilityHidden(true)
+                }
+            }
+            .onDisappear {
+                hideIndicatorTask?.cancel()
+            }
+    }
+
+    private func handleMagnification(_ magnification: CGFloat) {
+        if !isGestureActive {
+            isGestureActive = true
+            gestureAnchor = 1
+        }
+
+        let relativeScale = magnification / max(gestureAnchor, 0.01)
+        if relativeScale >= threshold {
+            changeScale(increasing: true)
+            gestureAnchor = magnification
+        } else if relativeScale <= 1 / threshold {
+            changeScale(increasing: false)
+            gestureAnchor = magnification
+        }
+    }
+
+    private func changeScale(increasing: Bool) {
+        let current = ReadingTextScalePolicy.normalized(storedValue)
+        let next = increasing
+            ? ReadingTextScalePolicy.incremented(current)
+            : ReadingTextScalePolicy.decremented(current)
+        guard next != current else { return }
+
+        storedValue = next
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        LimiarAnalytics.trackReadingTextScaleChanged(value: next, method: .pinch)
+        showIndicator(next)
+    }
+
+    private func showIndicator(_ value: Int) {
+        hideIndicatorTask?.cancel()
+        if reduceMotion {
+            indicatorValue = value
+        } else {
+            withAnimation(.easeOut(duration: 0.16)) {
+                indicatorValue = value
+            }
+        }
+
+        hideIndicatorTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            if reduceMotion {
+                indicatorValue = nil
+            } else {
+                withAnimation(.easeOut(duration: 0.16)) {
+                    indicatorValue = nil
+                }
+            }
+        }
+    }
+}
+
+extension View {
+    func readingTextScaleGesture() -> some View {
+        modifier(ReadingTextScaleGestureModifier())
+    }
+}
 
 struct InstagramIcon: View {
     var body: some View {
@@ -55,11 +418,11 @@ struct BlockedCategoryIcon: View {
     var body: some View {
         BlockedSelectionTile(width: 150) {
             Label(token)
-                .font(.system(size: 13, weight: .semibold))
+                .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                 .foregroundStyle(Color.ivory)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 6)
         }
         .accessibilityLabel("Categoria selecionada")
     }
@@ -71,11 +434,11 @@ struct BlockedWebDomainIcon: View {
     var body: some View {
         BlockedSelectionTile(width: 150) {
             Label(token)
-                .font(.system(size: 13, weight: .semibold))
+                .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                 .foregroundStyle(Color.ivory)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 6)
         }
         .accessibilityLabel("Site selecionado")
     }
@@ -102,7 +465,8 @@ private struct BlockedSelectionTile<Content: View>: View {
 
     var body: some View {
         content
-            .frame(width: width, height: 58)
+            .frame(width: width)
+            .frame(minHeight: 58)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
@@ -134,12 +498,12 @@ struct BlockedSelectionHierarchySummary: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("SELEÇÃO ATUAL")
-                    .font(.system(size: 12, weight: .bold))
+                    .limiarFont(12, weight: .bold, relativeTo: .caption)
                     .tracking(1.3)
                     .foregroundStyle(Color.warmGold)
 
                 Text(selectionCountText)
-                    .font(.system(size: 12, weight: .semibold))
+                    .limiarFont(12, weight: .semibold, relativeTo: .caption)
                     .foregroundStyle(Color.softText.opacity(0.78))
             }
 
@@ -219,7 +583,7 @@ struct BlockedSelectionGroup<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
+                    .limiarFont(15, weight: .semibold, relativeTo: .headline)
                     .foregroundStyle(Color.sageButton)
                     .frame(width: 30, height: 30)
                     .background(Color.sageButton.opacity(0.13), in: Circle())
@@ -227,16 +591,16 @@ struct BlockedSelectionGroup<Content: View>: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(title)
-                            .font(.system(size: 16, weight: .semibold))
+                            .limiarFont(16, weight: .semibold, relativeTo: .headline)
                             .foregroundStyle(Color.ivory)
 
                         Text(countText)
-                            .font(.system(size: 12, weight: .semibold))
+                            .limiarFont(12, weight: .semibold, relativeTo: .caption)
                             .foregroundStyle(Color.softText.opacity(0.68))
                     }
 
                     Text(subtitle)
-                        .font(.system(size: 12, weight: .medium))
+                        .limiarFont(12, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(Color.softText.opacity(0.74))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -244,7 +608,7 @@ struct BlockedSelectionGroup<Content: View>: View {
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.up")
-                    .font(.system(size: 13, weight: .semibold))
+                    .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.sageButton.opacity(0.80))
             }
             .padding(12)
@@ -303,11 +667,10 @@ struct TokenChildRow<Content: View>: View {
             }
 
             content
-                .font(.system(size: 14, weight: .semibold))
+                .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
                 .labelStyle(.titleAndIcon)
                 .foregroundStyle(Color.ivory.opacity(0.92))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -373,6 +736,8 @@ struct LimiarBackground: View {
 }
 
 struct SelectableRow: View {
+    @ScaledMetric(relativeTo: .subheadline) private var scaledSubtitleSize: CGFloat = 14
+
     let title: String
     let subtitle: String
     let emphasizedSubtitleText: String?
@@ -395,7 +760,7 @@ struct SelectableRow: View {
 
     private var styledSubtitle: AttributedString {
         var attributedSubtitle = AttributedString(subtitle)
-        attributedSubtitle.font = .system(size: 14)
+        attributedSubtitle.font = .system(size: scaledSubtitleSize)
         attributedSubtitle.foregroundColor = Color.softText
 
         guard let emphasizedSubtitleText,
@@ -404,7 +769,7 @@ struct SelectableRow: View {
             return attributedSubtitle
         }
 
-        attributedSubtitle[emphasizedRange].font = .system(size: 14, weight: .bold)
+        attributedSubtitle[emphasizedRange].font = .system(size: scaledSubtitleSize, weight: .bold)
         attributedSubtitle[emphasizedRange].foregroundColor = Color.ivory
         return attributedSubtitle
     }
@@ -416,13 +781,11 @@ struct SelectableRow: View {
                     .foregroundStyle(isSelected ? Color.sageButton : Color.softText)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 19, weight: .semibold))
+                        .limiarFont(19, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(styledSubtitle)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.78)
+                        .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
@@ -450,9 +813,8 @@ struct ChipGrid: View {
                     action(item)
                 } label: {
                     Text(item)
-                        .font(.system(size: 15, weight: .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
+                        .limiarFont(15, weight: .medium, relativeTo: .body)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(selected.contains(item) ? Color.sageButton.opacity(0.30) : Color.white.opacity(0.08), in: Capsule())
@@ -508,9 +870,11 @@ struct FlowLayout: Layout {
 struct LimiarPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 22, weight: .regular, design: .serif))
+            .limiarFont(22, design: .serif, relativeTo: .title3)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 12)
-            .frame(width: 148, height: 58)
+            .frame(minWidth: 132, minHeight: 58)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
     }
@@ -519,8 +883,11 @@ struct LimiarPrimaryButtonStyle: ButtonStyle {
 struct LimiarHeroButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 22, weight: .regular, design: .serif))
-            .frame(width: 154, height: 62)
+            .limiarFont(22, design: .serif, relativeTo: .title3)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 142, minHeight: 62)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
     }
@@ -757,10 +1124,9 @@ extension Color {
         HStack(spacing: 14) {
             BlockedSelectionTile(width: 150) {
                 Label("Redes Sociais", systemImage: "square.stack.3d.up.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.ivory)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
             }
 
@@ -768,10 +1134,9 @@ extension Color {
 
             BlockedSelectionTile(width: 150) {
                 Label("youtube.com", systemImage: "globe")
-                    .font(.system(size: 13, weight: .semibold))
+                    .limiarFont(13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.ivory)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
             }
         }

@@ -2,6 +2,18 @@
 
 Este checklist deve ser executado depois que o Limiar estiver instalado em um iPhone físico com assinatura válida da Apple Developer.
 
+## Texto acessível — ajuste de leitura Aa
+
+- No dashboard, abrir o menu `Aa` ao lado de `SEU LIMIAR` e conferir os passos 90%, 100%, 110%, 125%, 140% e 160%.
+- Confirmar com VoiceOver que o controle anuncia “Tamanho do texto da leitura” e o valor atual.
+- Verificar que o ajuste muda somente o trecho, a explicação espiritual e os blocos de reflexão; título, botões e demais elementos do app permanecem no tamanho do sistema.
+- Com Dynamic Type em `.xxLarge` e `.accessibility3`, testar 90% e 160% e confirmar que a composição não fica menor que 90% nem ultrapassa o teto visual de `.accessibility3`.
+- No cartão de leitura, usar Option + arrasto no simulador para pinçar: para fora aumenta um passo, para dentro diminui um passo, com indicador transitório `Aa N%` e sem bloquear a rolagem vertical.
+- Com Reduzir Movimento ligado, repetir a pinça e confirmar que o texto troca sem animação de escala e que o indicador usa apenas aparecimento/desaparecimento.
+- Alterar o tamanho, encerrar o app e reabrir; o valor escolhido deve persistir.
+- Abrir um trecho em Configurações > Trechos salvos e confirmar que o mesmo tamanho e o mesmo atalho de pinça são aplicados ao detalhe.
+- Confirmar no DebugView do Firebase o evento `reading_text_scale_changed` com `value` numérico e `method` igual a `aa` ou `pinch`, sem referência, texto ou tema espiritual.
+
 ## Onboarding
 
 - Conferir se a tela inicial abre com a imagem, fonte, cores e botão corretos.
@@ -108,6 +120,15 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Testar com fonte do iOS aumentada.
 - Testar em iPhone pequeno e iPhone grande.
 - Verificar se não há botões cortados, textos sobrepostos ou elementos fora da tela.
+
+## Texto acessível — somente na leitura
+
+- Com o Dynamic Type do aparelho em `.accessibility3`, percorrer o onboarding inteiro, inclusive boas-vindas e prova social: a tipografia deve permanecer idêntica ao tamanho desenhado, as linhas animadas não podem quebrar e `Continuar`/`Começar` devem ficar em uma linha.
+- Ainda em `.accessibility3`, conferir o chrome do dashboard e a tela de conclusão: títulos, mensagens e ações devem permanecer no tamanho-base, sem corte ou sobreposição.
+- No dashboard, comparar o `Aa` em 100% e 160% em travessias Curta e Mais profunda: somente trecho, explicação espiritual, `Sentido espiritual`, `Para levar para o dia` e `Pergunta para refletir` devem crescer e continuar legíveis por rolagem.
+- Abrir um trecho salvo e confirmar que o mesmo ajuste `Aa` e o atalho de pinça continuam aplicados ao conteúdo da revisita, sem alterar o chrome da tela.
+- Confirmar que o menu `Aa`, a pinça, a persistência e o evento `reading_text_scale_changed` continuam funcionando após matar e reabrir o app.
+- Comparar portão e paywalls com a versão anterior em `.xxLarge` e confirmar que permanecem visualmente inalterados.
 
 ## Portão de assinatura (1.13)
 
