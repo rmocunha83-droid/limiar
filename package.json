@@ -7,11 +7,13 @@
     "start": "python3 -m http.server 4173",
     "preview": "python3 -m http.server 4173",
     "test:ai-backend": "node --test tests/ai-backend.test.js",
+    "test:subscriptions": "node --test tests/app-store-notifications.test.js",
     "validate:passages": "python3 scripts/validate_passages.py",
     "prewarm:narration": "node scripts/prewarm_narration.js",
     "tone:preview": "node scripts/tone_preview.js"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "@vercel/blob": "^2.3.0"
   }
 }

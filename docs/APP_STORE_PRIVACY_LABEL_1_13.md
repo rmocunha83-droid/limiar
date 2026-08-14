@@ -30,6 +30,14 @@ Fonte da verdade: `Limiar/PrivacyInfo.xcprivacy` (app) + manifests dos SDKs
 - Usado para rastreamento? **Não** para o Firebase. (O rastreamento já está
   coberto pela categoria de identificador acima; não marcar aqui.)
 
+### 2A. Compras → Histórico de compras
+- Coletado pelo backend a partir de notificações assinadas da App Store sobre
+  teste, renovação, falha de cobrança, expiração e reembolso.
+- Uso: **Análises** e **Funcionalidade do app**.
+- Vinculado à identidade? **Não**. O backend não recebe conta do Limiar e
+  persiste apenas uma chave pseudônima da série de assinatura.
+- Usado para rastreamento? **Não**.
+
 ### 3. Diagnóstico → Dados de falha
 - Coletado por: Crashlytics.
 - Uso: **Funcionalidade do app**.

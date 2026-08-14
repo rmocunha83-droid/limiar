@@ -1,7 +1,37 @@
+import StoreKit
 import XCTest
 @testable import Limiar
 
 final class SubscriptionGateHardeningTests: XCTestCase {
+    func testPurchaseFailureDiagnosticsUsesSafeStableCodes() {
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(for: SubscriptionVerificationError.unverifiedTransaction),
+            .unverifiedTransaction
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(
+                for: NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+            ),
+            .networkError
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(
+                for: NSError(domain: SKErrorDomain, code: SKError.paymentCancelled.rawValue)
+            ),
+            .userCancelled
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(
+                for: NSError(domain: SKErrorDomain, code: SKError.unknown.rawValue)
+            ),
+            .storeKitError
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(for: NSError(domain: "LimiarTests", code: 1)),
+            .unknownError
+        )
+    }
+
     // MARK: - Banner de reativação
 
     func testWinbackAppearsOnlyForNewActiveSubscriptionWithRenewalOff() {

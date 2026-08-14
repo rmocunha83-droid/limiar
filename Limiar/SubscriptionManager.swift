@@ -52,6 +52,29 @@ enum SubscriptionPurchaseOrigin {
     case legacyPaywall
 }
 
+enum PurchaseFailureDiagnostics {
+    static func code(for error: Error) -> LimiarAnalytics.PurchaseFailureCode {
+        if error is SubscriptionVerificationError {
+            return .unverifiedTransaction
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            return .networkError
+        }
+
+        let normalizedDomain = nsError.domain.lowercased()
+        if nsError.domain == SKErrorDomain || normalizedDomain.contains("storekit") {
+            if nsError.code == SKError.paymentCancelled.rawValue {
+                return .userCancelled
+            }
+            return .storeKitError
+        }
+
+        return .unknownError
+    }
+}
+
 enum SubscriptionCohort: String, Equatable {
     case legacy
     case new
@@ -61,6 +84,14 @@ enum IntroductoryOfferEligibility: Equatable {
     case unknown
     case eligible
     case ineligible
+
+    var analyticsName: String {
+        switch self {
+        case .unknown: "unknown"
+        case .eligible: "eligible"
+        case .ineligible: "ineligible"
+        }
+    }
 }
 
 enum SubscriptionOfferPolicy {
@@ -818,32 +849,50 @@ final class SubscriptionManager {
     }
 
     func purchaseSelectedPlan(
-        origin: SubscriptionPurchaseOrigin = .legacyPaywall
+        origin: SubscriptionPurchaseOrigin = .legacyPaywall,
+        legacyPaywallOrigin: LimiarAnalytics.PaywallOrigin? = nil
     ) async {
-        await purchase(selectedPlan, origin: origin)
+        await purchase(
+            selectedPlan,
+            origin: origin,
+            legacyPaywallOrigin: legacyPaywallOrigin
+        )
     }
 
     func purchase(
         _ plan: SubscriptionPlan,
-        origin: SubscriptionPurchaseOrigin = .legacyPaywall
+        origin: SubscriptionPurchaseOrigin = .legacyPaywall,
+        legacyPaywallOrigin: LimiarAnalytics.PaywallOrigin? = nil
     ) async {
         if products.isEmpty {
             await loadProducts()
         }
 
+        let analyticsOrigin = checkoutAnalyticsOrigin(
+            purchaseOrigin: origin,
+            legacyPaywallOrigin: legacyPaywallOrigin
+        )
+        let offerEligibility = introductoryOfferEligibility(for: plan)
+
         guard let product = product(for: plan) else {
-            if origin == .subscriptionGate {
-                LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
-            }
+            LimiarAnalytics.trackPurchaseFailed(
+                plan: plan,
+                reason: .error,
+                errorCode: .productUnavailable,
+                origin: analyticsOrigin,
+                offerEligibility: offerEligibility
+            )
             state = .productsUnavailable
             message = "Não encontramos este plano no StoreKit. Confirme o produto \(plan.productID) no App Store Connect."
             return
         }
 
         MetaAppEvents.trackCheckoutStarted()
-        if origin == .subscriptionGate {
-            LimiarAnalytics.trackGatePurchaseStarted(plan)
-        }
+        LimiarAnalytics.trackGatePurchaseStarted(
+            plan,
+            origin: analyticsOrigin,
+            offerEligibility: offerEligibility
+        )
         state = .purchasing
         message = ""
 
@@ -853,36 +902,58 @@ final class SubscriptionManager {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
-                trackFirebasePurchaseLifecycle(for: transaction)
+                trackFirebasePurchaseLifecycle(
+                    for: transaction,
+                    origin: analyticsOrigin
+                )
                 await transaction.finish()
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
                 message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium ativo." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
-                if hasActiveSubscription, origin == .subscriptionGate {
+                if hasActiveSubscription {
                     // Conversão do portão medida diretamente, sem depender de
                     // inferência por gate_purchase_started.
-                    LimiarAnalytics.trackGatePurchaseCompleted(plan)
+                    LimiarAnalytics.trackGatePurchaseCompleted(
+                        plan,
+                        origin: analyticsOrigin,
+                        offerEligibility: offerEligibility
+                    )
                 }
             case .pending:
+                LimiarAnalytics.trackPurchasePending(
+                    plan: plan,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility
+                )
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
             case .userCancelled:
-                if origin == .subscriptionGate {
-                    LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .cancelled)
-                }
+                LimiarAnalytics.trackPurchaseCancelled(
+                    plan: plan,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility
+                )
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."
             @unknown default:
-                if origin == .subscriptionGate {
-                    LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
-                }
+                LimiarAnalytics.trackPurchaseFailed(
+                    plan: plan,
+                    reason: .error,
+                    errorCode: .unknownPurchaseResult,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility
+                )
                 state = .failed("Não foi possível concluir a compra agora.")
                 message = "Não foi possível concluir a compra agora."
             }
         } catch {
-            if origin == .subscriptionGate {
-                LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
-            }
+            LimiarAnalytics.trackPurchaseFailed(
+                plan: plan,
+                reason: .error,
+                errorCode: PurchaseFailureDiagnostics.code(for: error),
+                origin: analyticsOrigin,
+                offerEligibility: offerEligibility
+            )
             state = .failed(error.localizedDescription)
             message = "Não foi possível concluir a compra: \(error.localizedDescription)"
         }
@@ -1050,7 +1121,7 @@ final class SubscriptionManager {
     private func handle(transactionResult: VerificationResult<Transaction>) async {
         do {
             let transaction = try checkVerified(transactionResult)
-            trackFirebasePurchaseLifecycle(for: transaction)
+            trackFirebasePurchaseLifecycle(for: transaction, origin: .storeKitUpdate)
             await transaction.finish()
             await refreshEntitlements()
         } catch {
@@ -1162,18 +1233,23 @@ final class SubscriptionManager {
         }
     }
 
-    private func trackFirebasePurchaseLifecycle(for transaction: Transaction) {
+    private func trackFirebasePurchaseLifecycle(
+        for transaction: Transaction,
+        origin: LimiarAnalytics.CheckoutOrigin
+    ) {
         guard let plan = SubscriptionPlan(rawValue: transaction.productID) else { return }
 
         if transactionStartsIntroductoryFreeTrial(transaction) {
             LimiarAnalytics.trackTrialStarted(
                 plan: plan,
-                originalTransactionID: transaction.originalID
+                originalTransactionID: transaction.originalID,
+                origin: origin
             )
         } else {
             LimiarAnalytics.trackSubscriptionActivated(
                 plan: plan,
-                originalTransactionID: transaction.originalID
+                originalTransactionID: transaction.originalID,
+                origin: origin
             )
         }
     }
@@ -1188,7 +1264,25 @@ final class SubscriptionManager {
               transaction.purchaseDate >= monitoringStartedAt else {
             return
         }
-        trackFirebasePurchaseLifecycle(for: transaction)
+        trackFirebasePurchaseLifecycle(for: transaction, origin: .storeKitUpdate)
+    }
+
+    private func checkoutAnalyticsOrigin(
+        purchaseOrigin: SubscriptionPurchaseOrigin,
+        legacyPaywallOrigin: LimiarAnalytics.PaywallOrigin?
+    ) -> LimiarAnalytics.CheckoutOrigin {
+        if purchaseOrigin == .subscriptionGate {
+            return .subscriptionGate
+        }
+
+        switch legacyPaywallOrigin {
+        case .d6: return LimiarAnalytics.CheckoutOrigin.d6
+        case .d7: return LimiarAnalytics.CheckoutOrigin.d7
+        case .d8: return LimiarAnalytics.CheckoutOrigin.d8
+        case .settings: return LimiarAnalytics.CheckoutOrigin.settings
+        case .dashboard: return LimiarAnalytics.CheckoutOrigin.dashboard
+        case nil: return LimiarAnalytics.CheckoutOrigin.dashboard
+        }
     }
 
     private func transactionStartsIntroductoryFreeTrial(_ transaction: Transaction) -> Bool {

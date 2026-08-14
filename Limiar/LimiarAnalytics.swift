@@ -36,8 +36,29 @@ enum LimiarAnalytics {
     }
 
     enum PurchaseFailureReason: String {
-        case cancelled
         case error
+    }
+
+    enum CheckoutOrigin: String {
+        case subscriptionGate = "subscription_gate"
+        case d6
+        case d7
+        case d8
+        case settings
+        case dashboard
+        case storeKitUpdate = "storekit_update"
+    }
+
+    /// Código operacional de baixa cardinalidade. Não inclui mensagens de erro,
+    /// identificadores de transação ou qualquer dado fornecido pela pessoa.
+    enum PurchaseFailureCode: String {
+        case productUnavailable = "product_unavailable"
+        case userCancelled = "user_cancelled"
+        case unknownPurchaseResult = "unknown_purchase_result"
+        case unverifiedTransaction = "unverified_transaction"
+        case networkError = "network_error"
+        case storeKitError = "storekit_error"
+        case unknownError = "unknown_error"
     }
 
     enum WinbackPhase: String {
@@ -93,58 +114,146 @@ enum LimiarAnalytics {
         ])
     }
 
-    static func trackGateViewed() {
-        log("gate_viewed")
+    static func trackGateViewed(
+        plan: SubscriptionPlan,
+        offerEligibility: IntroductoryOfferEligibility
+    ) {
+        log("gate_viewed", parameters: checkoutParameters(
+            plan: plan,
+            origin: .subscriptionGate,
+            offerEligibility: offerEligibility
+        ))
     }
 
-    static func trackGatePlanSelected(_ plan: SubscriptionPlan) {
-        log("gate_plan_selected", parameters: [
-            "plan": plan.analyticsName
-        ])
+    static func trackGatePlanSelected(
+        _ plan: SubscriptionPlan,
+        offerEligibility: IntroductoryOfferEligibility
+    ) {
+        log("gate_plan_selected", parameters: checkoutParameters(
+            plan: plan,
+            origin: .subscriptionGate,
+            offerEligibility: offerEligibility
+        ))
     }
 
-    static func trackGatePurchaseStarted(_ plan: SubscriptionPlan) {
-        log("gate_purchase_started", parameters: [
-            "plan": plan.analyticsName
-        ])
+    static func trackGatePurchaseStarted(
+        _ plan: SubscriptionPlan,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility
+    ) {
+        log("gate_purchase_started", parameters: checkoutParameters(
+            plan: plan,
+            origin: origin,
+            offerEligibility: offerEligibility
+        ))
     }
 
-    static func trackGatePurchaseCompleted(_ plan: SubscriptionPlan) {
-        log("gate_purchase_completed", parameters: [
-            "plan": plan.analyticsName
-        ])
+    static func trackGatePurchaseCompleted(
+        _ plan: SubscriptionPlan,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility
+    ) {
+        log("gate_purchase_completed", parameters: checkoutParameters(
+            plan: plan,
+            origin: origin,
+            offerEligibility: offerEligibility
+        ))
     }
 
     static func trackTrialStarted(
         plan: SubscriptionPlan,
-        originalTransactionID: UInt64
+        originalTransactionID: UInt64,
+        origin: CheckoutOrigin
     ) {
         logOnce(
             "trial_started",
             key: "\(Keys.trialStartedPrefix).\(originalTransactionID)",
-            parameters: ["plan": plan.analyticsName]
+            parameters: checkoutParameters(
+                plan: plan,
+                origin: origin,
+                offerEligibility: .eligible
+            )
         )
     }
 
     static func trackSubscriptionActivated(
         plan: SubscriptionPlan,
-        originalTransactionID: UInt64
+        originalTransactionID: UInt64,
+        origin: CheckoutOrigin
     ) {
         logOnce(
             "subscription_activated",
             key: "\(Keys.subscriptionActivatedPrefix).\(originalTransactionID)",
-            parameters: ["plan": plan.analyticsName]
+            parameters: checkoutParameters(
+                plan: plan,
+                origin: origin,
+                offerEligibility: .ineligible
+            )
         )
+    }
+
+    static func trackPurchasePending(
+        plan: SubscriptionPlan,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility
+    ) {
+        log("purchase_pending", parameters: checkoutParameters(
+            plan: plan,
+            origin: origin,
+            offerEligibility: offerEligibility
+        ))
+    }
+
+    static func trackPurchaseCancelled(
+        plan: SubscriptionPlan,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility
+    ) {
+        log("purchase_cancelled", parameters: checkoutParameters(
+            plan: plan,
+            origin: origin,
+            offerEligibility: offerEligibility
+        ))
     }
 
     static func trackPurchaseFailed(
         plan: SubscriptionPlan,
-        reason: PurchaseFailureReason
+        reason: PurchaseFailureReason,
+        errorCode: PurchaseFailureCode,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility
     ) {
-        log("purchase_failed", parameters: [
+        var parameters = checkoutParameters(
+            plan: plan,
+            origin: origin,
+            offerEligibility: offerEligibility
+        )
+        parameters["reason"] = reason.rawValue
+        parameters["error_code"] = errorCode.rawValue
+        log("purchase_failed", parameters: parameters)
+    }
+
+    private static func checkoutParameters(
+        plan: SubscriptionPlan,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility
+    ) -> [String: Any] {
+        let paywallVersion: String
+        switch origin {
+        case .subscriptionGate:
+            paywallVersion = "subscription_gate_v1"
+        case .storeKitUpdate:
+            paywallVersion = "storekit_observer"
+        case .d6, .d7, .d8, .settings, .dashboard:
+            paywallVersion = "legacy_paywall_v1"
+        }
+
+        return [
             "plan": plan.analyticsName,
-            "reason": reason.rawValue
-        ])
+            "origin": origin.rawValue,
+            "offer_eligibility": offerEligibility.analyticsName,
+            "paywall_version": paywallVersion
+        ]
     }
 
     static func trackRestoreSucceeded() {
