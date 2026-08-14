@@ -609,7 +609,6 @@ struct SpiritualReadingItem: Identifiable, Codable, Equatable {
 
     var hasExplanationContent: Bool {
         !homily.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !practicalConclusion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 
@@ -1818,7 +1817,7 @@ final class LimiarAppModel {
         profile: UserFaithProfile,
         reason: String
     ) {
-        let items = LocalReadingSessionFactory.items(
+        var items = LocalReadingSessionFactory.items(
             from: passages,
             itemCount: profile.explanationDepth.readingItemCount
         )
@@ -1829,7 +1828,28 @@ final class LimiarAppModel {
             return
         }
 
-        let reflection = emptyReflection()
+        var reflection = emptyReflection()
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceExplanationFixture") {
+            items = items.map { item in
+                SpiritualReadingItem(
+                    id: item.id,
+                    reference: item.reference,
+                    text: item.text,
+                    homily: "A homilia de teste termina neste conteúdo e deve fechar o painel sem um segundo bloco.\n\nEste segundo parágrafo permite confirmar que a narração usa somente os parágrafos da homilia.",
+                    practicalConclusion: "CONCLUSÃO PRÁTICA SENTINELA — NÃO DEVE APARECER NEM SER NARRADA.",
+                    passageID: item.passageID
+                )
+            }
+            reflection = AIReflection(
+                summary: "Resumo de teste da travessia.",
+                spiritualMeaning: "A pausa ajuda a devolver intenção ao próximo gesto.",
+                practicalApplication: "Escolha uma pequena ação consciente para levar ao restante do dia.",
+                conclusion: "A travessia termina com uma escolha mais presente.",
+                meditationQuestion: "Qual gesto pode receber sua atenção agora?"
+            )
+        }
+#endif
         applyGeneratedSession(items: items, reflection: reflection, profile: profile)
         localSessionFailureReason = reason
         dailySessionStore.save(

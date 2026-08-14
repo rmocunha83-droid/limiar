@@ -321,6 +321,63 @@ final class LocalReadingSessionTests: XCTestCase {
         )
     }
 
+    func testReadingNarrationUsesCanonicalPassageAndHomilyWithoutPracticalConclusion() {
+        let item = SpiritualReadingItem(
+            id: "salmo-23",
+            reference: "Salmo 23, 1",
+            text: "O Senhor é meu pastor.",
+            homily: "Primeiro parágrafo da homilia.\n\nSegundo parágrafo da homilia.",
+            practicalConclusion: "Conclusão prática que não deve ser narrada."
+        )
+
+        let segments = readingNarrationSegments(for: item)
+
+        XCTAssertEqual(
+            segments,
+            [
+                canonicalPassageNarrationText(reference: item.reference, text: item.text),
+                "Primeiro parágrafo da homilia.",
+                "Segundo parágrafo da homilia."
+            ]
+        )
+        XCTAssertFalse(segments.contains(item.practicalConclusion))
+    }
+
+    func testSpiritualReadingCardPresentationUsesOnlyHomily() {
+        let item = SpiritualReadingItem(
+            id: "mateus-11",
+            reference: "Mateus 11, 28",
+            text: "Vinde a mim.",
+            homily: "A homilia permanece visível no card.",
+            practicalConclusion: "CONCLUSÃO SENTINELA QUE NÃO DEVE SER RENDERIZADA."
+        )
+
+        let renderedExplanation = SpiritualReadingCardPresentation.explanationText(for: item)
+
+        XCTAssertEqual(renderedExplanation, item.homily)
+        XCTAssertFalse(renderedExplanation.contains(item.practicalConclusion))
+    }
+
+    func testExplanationPanelAvailabilityDependsOnlyOnHomily() {
+        let conclusionOnly = SpiritualReadingItem(
+            id: "conclusion-only",
+            reference: "Salmo 1, 1",
+            text: "Texto.",
+            homily: "  \n",
+            practicalConclusion: "Conclusão preservada apenas para compatibilidade."
+        )
+        let homily = SpiritualReadingItem(
+            id: "homily",
+            reference: "Salmo 1, 2",
+            text: "Texto.",
+            homily: "Homilia visível.",
+            practicalConclusion: ""
+        )
+
+        XCTAssertFalse(conclusionOnly.hasExplanationContent)
+        XCTAssertTrue(homily.hasExplanationContent)
+    }
+
     func testFavoritePassagePreservesExplanationThroughCodableRoundTrip() throws {
         let favorite = FavoritePassageItem(
             id: UUID(),

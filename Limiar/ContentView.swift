@@ -34,6 +34,12 @@ func narrationExplanationSegments(_ parts: [String]) -> [String] {
     }
 }
 
+func readingNarrationSegments(for item: SpiritualReadingItem) -> [String] {
+    [
+        canonicalPassageNarrationText(reference: item.reference, text: item.text)
+    ] + narrationExplanationSegments([item.homily])
+}
+
 private extension SubscriptionWinbackPhase {
     var analyticsPhase: LimiarAnalytics.WinbackPhase {
         switch self {
@@ -624,9 +630,7 @@ private struct DashboardView: View {
                 }
 
                 ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
-                    let narrationSegments = [
-                        canonicalPassageNarrationText(reference: item.reference, text: item.text)
-                    ] + narrationExplanationSegments([item.homily, item.practicalConclusion])
+                    let narrationSegments = readingNarrationSegments(for: item)
 
                     SpiritualReadingCard(
                         item: item,

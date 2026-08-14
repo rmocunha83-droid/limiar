@@ -57,10 +57,21 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 
 - Abrir o Limiar a partir do fluxo de pausa.
 - Confirmar que aparecem 1, 2 ou 3 leituras adequadas ao perfil, conforme a profundidade Curta, Média ou Mais profunda.
+- Em cada card, confirmar que `Explicação espiritual {referência}` contém somente a homilia e termina nela, sem uma conclusão prática adicional ou espaço residual.
+- Confirmar que o bloco `Para levar para o dia` permanece fora do card e mostra a aplicação prática da reflexão da travessia.
 - Verificar se trechos muito curtos são combinados em uma leitura maior.
 - Finalizar a leitura.
 - Conferir se os apps selecionados ficam disponíveis depois da leitura.
 - Confirmar que a pausa diária volta a ser aplicada no ciclo seguinte, às 5h da manhã.
+
+### QA de homilia sem conclusão duplicada
+
+- No simulador, iniciar Debug com `-LimiarForceLocalSession -LimiarForceExplanationFixture -LimiarExplanationDepth curta`; repetir trocando a profundidade por `media` e `profunda`.
+- Confirmar respectivamente 1, 2 e 3 cards, todos terminando no segundo parágrafo da homilia de teste.
+- Confirmar que o texto sentinela `CONCLUSÃO PRÁTICA SENTINELA — NÃO DEVE APARECER NEM SER NARRADA.` não aparece em nenhuma profundidade.
+- Rolar além dos cards e confirmar que `Para levar para o dia` permanece visível com a aplicação prática da reflexão.
+- Tocar `Ouvir este trecho` e conferir no Diagnóstico técnico o evento `narration_started` com `segments=3`: trecho canônico + dois parágrafos da homilia.
+- Salvar um trecho, abrir Configurações > Trechos salvos e repetir a conferência visual e de narração; a conclusão sentinela deve permanecer persistida no favorito, mas nunca aparecer ou ser narrada.
 
 ## Contingência sem conexão
 
