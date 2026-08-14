@@ -245,7 +245,7 @@ struct SpiritualReadingCard: View {
                         .tracking(1.1)
                         .foregroundStyle(Color.warmGold)
 
-                    Text(item.homily)
+                    Text(SpiritualReadingCardPresentation.explanationText(for: item))
                         .readingFont(
                             16,
                             textScale: readingTextScale,
@@ -253,11 +253,6 @@ struct SpiritualReadingCard: View {
                             relativeTo: .body
                         )
                         .foregroundStyle(Color.ivory.opacity(0.92))
-                        .lineSpacing(5)
-
-                    Text(item.practicalConclusion)
-                        .readingFont(15, textScale: readingTextScale, relativeTo: .body)
-                        .foregroundStyle(Color.softText.opacity(0.92))
                         .lineSpacing(5)
                 }
                 .padding(14)
@@ -299,6 +294,12 @@ struct SpiritualReadingCard: View {
         .padding(18)
         .limiarPanel()
         .readingTextScaleGesture()
+    }
+}
+
+enum SpiritualReadingCardPresentation {
+    static func explanationText(for item: SpiritualReadingItem) -> String {
+        item.homily
     }
 }
 

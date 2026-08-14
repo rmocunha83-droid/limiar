@@ -523,15 +523,7 @@ private struct FavoritePassageDetailView: View {
     }
 
     private var narrationSegments: [String] {
-        [
-            canonicalPassageNarrationText(
-                reference: readingItem.reference,
-                text: readingItem.text
-            )
-        ] + narrationExplanationSegments([
-            readingItem.homily,
-            readingItem.practicalConclusion
-        ])
+        readingNarrationSegments(for: readingItem)
     }
 
     var body: some View {
