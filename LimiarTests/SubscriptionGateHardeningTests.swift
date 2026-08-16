@@ -32,6 +32,70 @@ final class SubscriptionGateHardeningTests: XCTestCase {
         )
     }
 
+    func testPurchaseFailureDiagnosticsMapsTerminalOutcome() {
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.outcome(for: .userCancelled),
+            .userCancelled
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.outcome(for: .unverifiedTransaction),
+            .unverified
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.outcome(for: .networkError),
+            .error
+        )
+    }
+
+    func testLocalTrialRoutesOnlyToCustomMetaEvent() {
+        XCTAssertEqual(
+            MetaTrialTrackingPolicy.destination(for: .local),
+            .localCustomEvent
+        )
+    }
+
+    func testStoreKitTrialRoutesOnlyToStandardStartTrial() {
+        XCTAssertEqual(
+            MetaTrialTrackingPolicy.destination(for: .storeKit),
+            .standardStartTrial
+        )
+    }
+
+    func testMetaTrialDedupIsIndependentAndMigratesLegacyKey() {
+        XCTAssertFalse(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .local,
+                legacyWasTracked: true,
+                localWasTracked: false,
+                storeKitWasTracked: false
+            )
+        )
+        XCTAssertTrue(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .storeKit,
+                legacyWasTracked: true,
+                localWasTracked: true,
+                storeKitWasTracked: false
+            )
+        )
+        XCTAssertFalse(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .storeKit,
+                legacyWasTracked: false,
+                localWasTracked: false,
+                storeKitWasTracked: true
+            )
+        )
+        XCTAssertTrue(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .local,
+                legacyWasTracked: false,
+                localWasTracked: false,
+                storeKitWasTracked: true
+            )
+        )
+    }
+
     // MARK: - Banner de reativação
 
     func testWinbackAppearsOnlyForNewActiveSubscriptionWithRenewalOff() {

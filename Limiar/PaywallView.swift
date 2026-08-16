@@ -63,6 +63,7 @@ struct PaywallView: View {
             MetaAppEvents.trackPaywallViewed()
             LimiarAnalytics.trackPaywallViewed(origin: analyticsOrigin)
             subscription.start()
+            await subscription.prepareProductsIfNeeded()
         }
     }
 }
@@ -145,6 +146,7 @@ struct SubscriptionGateView: View {
                 )
             )
             subscription.start()
+            await subscription.prepareProductsIfNeeded()
         }
     }
 

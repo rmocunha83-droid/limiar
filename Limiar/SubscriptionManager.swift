@@ -73,6 +73,16 @@ enum PurchaseFailureDiagnostics {
 
         return .unknownError
     }
+
+    static func outcome(
+        for code: LimiarAnalytics.PurchaseFailureCode
+    ) -> LimiarAnalytics.PurchaseAttemptOutcome {
+        switch code {
+        case .userCancelled: .userCancelled
+        case .unverifiedTransaction: .unverified
+        default: .error
+        }
+    }
 }
 
 enum SubscriptionCohort: String, Equatable {
@@ -330,6 +340,7 @@ final class SubscriptionManager {
     @ObservationIgnored private var userDidSelectPlan = false
     @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
     @ObservationIgnored private var hasStarted = false
+    @ObservationIgnored private var productLoadingTask: Task<Void, Never>?
     @ObservationIgnored private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
 
     init() {
@@ -642,6 +653,16 @@ final class SubscriptionManager {
         await refreshEntitlements()
     }
 
+    /// Tenta carregar os produtos ao apresentar uma oferta. Diferente de
+    /// `start()`, pode ser chamado novamente depois de uma falha de rede.
+    func prepareProductsIfNeeded() async {
+        guard products.isEmpty else { return }
+        await loadProducts()
+        if products.isEmpty {
+            await loadProducts()
+        }
+    }
+
     func refreshAccessState(now: Date = Date()) {
         accessState = SubscriptionCohortPolicy.accessState(
             cohort: cohort,
@@ -669,7 +690,7 @@ final class SubscriptionManager {
             trialStartedAt = now
             TrialStartStore.save(now)
             message = "Seu acesso inicial de 7 dias começou."
-            MetaAppEvents.trackStartedTrial()
+            MetaAppEvents.trackLocalTrialStarted()
         }
 
         refreshAccessState()
@@ -875,6 +896,13 @@ final class SubscriptionManager {
         let offerEligibility = introductoryOfferEligibility(for: plan)
 
         guard let product = product(for: plan) else {
+            LimiarAnalytics.trackPurchaseAttemptResult(
+                plan: plan,
+                outcome: .productUnavailable,
+                origin: analyticsOrigin,
+                offerEligibility: offerEligibility,
+                errorCode: .productUnavailable
+            )
             LimiarAnalytics.trackPurchaseFailed(
                 plan: plan,
                 reason: .error,
@@ -902,6 +930,12 @@ final class SubscriptionManager {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
+                LimiarAnalytics.trackPurchaseAttemptResult(
+                    plan: plan,
+                    outcome: .success,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility
+                )
                 trackFirebasePurchaseLifecycle(
                     for: transaction,
                     origin: analyticsOrigin
@@ -920,6 +954,12 @@ final class SubscriptionManager {
                     )
                 }
             case .pending:
+                LimiarAnalytics.trackPurchaseAttemptResult(
+                    plan: plan,
+                    outcome: .pending,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility
+                )
                 LimiarAnalytics.trackPurchasePending(
                     plan: plan,
                     origin: analyticsOrigin,
@@ -928,6 +968,12 @@ final class SubscriptionManager {
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
             case .userCancelled:
+                LimiarAnalytics.trackPurchaseAttemptResult(
+                    plan: plan,
+                    outcome: .userCancelled,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility
+                )
                 LimiarAnalytics.trackPurchaseCancelled(
                     plan: plan,
                     origin: analyticsOrigin,
@@ -936,6 +982,13 @@ final class SubscriptionManager {
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."
             @unknown default:
+                LimiarAnalytics.trackPurchaseAttemptResult(
+                    plan: plan,
+                    outcome: .error,
+                    origin: analyticsOrigin,
+                    offerEligibility: offerEligibility,
+                    errorCode: .unknownPurchaseResult
+                )
                 LimiarAnalytics.trackPurchaseFailed(
                     plan: plan,
                     reason: .error,
@@ -947,10 +1000,18 @@ final class SubscriptionManager {
                 message = "Não foi possível concluir a compra agora."
             }
         } catch {
+            let errorCode = PurchaseFailureDiagnostics.code(for: error)
+            LimiarAnalytics.trackPurchaseAttemptResult(
+                plan: plan,
+                outcome: PurchaseFailureDiagnostics.outcome(for: errorCode),
+                origin: analyticsOrigin,
+                offerEligibility: offerEligibility,
+                errorCode: errorCode
+            )
             LimiarAnalytics.trackPurchaseFailed(
                 plan: plan,
                 reason: .error,
-                errorCode: PurchaseFailureDiagnostics.code(for: error),
+                errorCode: errorCode,
                 origin: analyticsOrigin,
                 offerEligibility: offerEligibility
             )
@@ -987,6 +1048,22 @@ final class SubscriptionManager {
             await refreshIntroductoryOfferEligibility()
             return
         }
+
+        if let productLoadingTask {
+            await productLoadingTask.value
+            return
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.performProductLoad()
+        }
+        productLoadingTask = task
+        await task.value
+        productLoadingTask = nil
+    }
+
+    private func performProductLoad() async {
 
         state = .loadingProducts
         message = ""
@@ -1225,7 +1302,7 @@ final class SubscriptionManager {
 
     private func trackPurchaseLifecycle(for transaction: Transaction) {
         if transactionStartsIntroductoryFreeTrial(transaction) {
-            MetaAppEvents.trackStartedTrial()
+            MetaAppEvents.trackStoreKitTrialStarted()
         } else {
             MetaAppEvents.trackSubscriptionActivated(
                 originalTransactionID: transaction.originalID

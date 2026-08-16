@@ -61,6 +61,15 @@ enum LimiarAnalytics {
         case unknownError = "unknown_error"
     }
 
+    enum PurchaseAttemptOutcome: String {
+        case success
+        case userCancelled = "user_cancelled"
+        case pending
+        case productUnavailable = "product_unavailable"
+        case unverified
+        case error
+    }
+
     enum WinbackPhase: String {
         case trial
         case paid
@@ -231,6 +240,29 @@ enum LimiarAnalytics {
         parameters["reason"] = reason.rawValue
         parameters["error_code"] = errorCode.rawValue
         log("purchase_failed", parameters: parameters)
+    }
+
+    /// Um único desfecho terminal por chamada a `purchase()`. Os eventos de
+    /// funil e ciclo de vida existentes continuam separados para preservar as
+    /// séries históricas, mas esta linha permite medir a saída da folha Apple
+    /// sem inferir uma sequência a partir de contagens agregadas.
+    static func trackPurchaseAttemptResult(
+        plan: SubscriptionPlan,
+        outcome: PurchaseAttemptOutcome,
+        origin: CheckoutOrigin,
+        offerEligibility: IntroductoryOfferEligibility,
+        errorCode: PurchaseFailureCode? = nil
+    ) {
+        var parameters = checkoutParameters(
+            plan: plan,
+            origin: origin,
+            offerEligibility: offerEligibility
+        )
+        parameters["outcome"] = outcome.rawValue
+        if let errorCode {
+            parameters["error_code"] = errorCode.rawValue
+        }
+        log("purchase_attempt_result", parameters: parameters)
     }
 
     private static func checkoutParameters(

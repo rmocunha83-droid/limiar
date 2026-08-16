@@ -187,12 +187,48 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
     }
 }
 
+enum MetaTrialSource: Equatable {
+    case local
+    case storeKit
+}
+
+enum MetaTrialDestination: Equatable {
+    case localCustomEvent
+    case standardStartTrial
+}
+
+enum MetaTrialTrackingPolicy {
+    static func destination(for source: MetaTrialSource) -> MetaTrialDestination {
+        switch source {
+        case .local: .localCustomEvent
+        case .storeKit: .standardStartTrial
+        }
+    }
+
+    static func shouldEmit(
+        source: MetaTrialSource,
+        legacyWasTracked: Bool,
+        localWasTracked: Bool,
+        storeKitWasTracked: Bool
+    ) -> Bool {
+        switch source {
+        case .local:
+            return !legacyWasTracked && !localWasTracked
+        case .storeKit:
+            return !storeKitWasTracked
+        }
+    }
+}
+
 @MainActor
 enum MetaAppEvents {
     private static let completedRegistrationKey = "limiar.meta.completedRegistration"
-    private static let startedTrialKey = "limiar.meta.startedTrial"
+    private static let legacyStartedTrialKey = "limiar.meta.startedTrial"
+    private static let localTrialStartedKey = "limiar.meta.localTrialStarted"
+    private static let storeKitTrialStartedKey = "limiar.meta.storeKitTrialStarted"
     private static let pauseConfiguredKey = "limiar.meta.pauseConfigured"
     private static let checkoutStartedEvent = AppEvents.Name("LimiarCheckoutStarted")
+    private static let localTrialStartedEvent = AppEvents.Name("LimiarLocalTrialStarted")
     private static let subscriptionActivatedEvent = AppEvents.Name("LimiarSubscriptionActivated")
     private static let readingCompletedEvent = AppEvents.Name("LimiarReadingCompleted")
     private static let pauseConfiguredEvent = AppEvents.Name("LimiarPauseConfigured")
@@ -228,8 +264,12 @@ enum MetaAppEvents {
         trackAfterAuthorization(event: .completedRegistration, defaultsKey: completedRegistrationKey)
     }
 
-    static func trackStartedTrial() {
-        trackAfterAuthorization(event: .startTrial, defaultsKey: startedTrialKey)
+    static func trackLocalTrialStarted() {
+        trackTrialStarted(source: .local)
+    }
+
+    static func trackStoreKitTrialStarted() {
+        trackTrialStarted(source: .storeKit)
     }
 
     static func trackPaywallViewed() {
@@ -253,6 +293,41 @@ enum MetaAppEvents {
 
     static func trackPauseConfigured() {
         trackAfterAuthorization(event: pauseConfiguredEvent, defaultsKey: pauseConfiguredKey)
+    }
+
+    private static func trackTrialStarted(source: MetaTrialSource) {
+        let defaults = UserDefaults.standard
+        let legacyWasTracked = defaults.bool(forKey: legacyStartedTrialKey)
+        let localWasTracked = defaults.bool(forKey: localTrialStartedKey)
+        let storeKitWasTracked = defaults.bool(forKey: storeKitTrialStartedKey)
+
+        guard MetaTrialTrackingPolicy.shouldEmit(
+            source: source,
+            legacyWasTracked: legacyWasTracked,
+            localWasTracked: localWasTracked,
+            storeKitWasTracked: storeKitWasTracked
+        ) else {
+            // A chave antiga pode ter sido consumida por qualquer um dos dois
+            // fluxos. Para a migração, ela bloqueia apenas o evento local; o
+            // StartTrial verificado pelo StoreKit ganha sua própria deduplicação.
+            if source == .local, legacyWasTracked, !localWasTracked {
+                defaults.set(true, forKey: localTrialStartedKey)
+            }
+            return
+        }
+
+        switch MetaTrialTrackingPolicy.destination(for: source) {
+        case .localCustomEvent:
+            trackAfterAuthorization(
+                event: localTrialStartedEvent,
+                defaultsKey: localTrialStartedKey
+            )
+        case .standardStartTrial:
+            trackAfterAuthorization(
+                event: .startTrial,
+                defaultsKey: storeKitTrialStartedKey
+            )
+        }
     }
 
     static func initialize(
