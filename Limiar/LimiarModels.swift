@@ -628,6 +628,12 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
     let text: String?
     let homily: String?
     let practicalConclusion: String?
+    /// Frase curta exibida em "Para lembrar hoje". Opcional para que
+    /// favoritos anteriores a esta versão continuem decodificando sem migração.
+    let rememberToday: String?
+    /// Metadado local usado apenas para reencontrar um favorito relacionado
+    /// à leitura atual. Favoritos antigos decodificam com nil normalmente.
+    let theme: SpiritualTheme?
     let savedAt: Date
 
     init(
@@ -638,6 +644,8 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
         text: String?,
         homily: String? = nil,
         practicalConclusion: String? = nil,
+        rememberToday: String? = nil,
+        theme: SpiritualTheme? = nil,
         savedAt: Date
     ) {
         self.id = id
@@ -647,7 +655,97 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
         self.text = text
         self.homily = homily
         self.practicalConclusion = practicalConclusion
+        self.rememberToday = rememberToday
+        self.theme = theme
         self.savedAt = savedAt
+    }
+}
+
+enum SavedPassageRevisitReason: Equatable {
+    case savedSevenDaysAgo
+    case startOfWeek
+    case currentTheme
+    case recentFavorite
+
+    var eyebrow: String {
+        switch self {
+        case .savedSevenDaysAgo:
+            "UM TRECHO QUE VOCÊ SALVOU HÁ 7 DIAS"
+        case .startOfWeek:
+            "RELEIA ANTES DE COMEÇAR A SEMANA"
+        case .currentTheme:
+            "UM TRECHO SALVO PARA O TEMA DE HOJE"
+        case .recentFavorite:
+            "UM TRECHO SALVO PARA REVISITAR"
+        }
+    }
+}
+
+struct SavedPassageRevisitSuggestion: Equatable {
+    let favorite: FavoritePassageItem
+    let reason: SavedPassageRevisitReason
+}
+
+enum SavedPassageRevisitPolicy {
+    static func suggestion(
+        favorites: [FavoritePassageItem],
+        currentThemes: Set<SpiritualTheme>,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> SavedPassageRevisitSuggestion? {
+        guard !favorites.isEmpty else { return nil }
+
+        if let anniversary = favorites.first(where: {
+            let days = calendar.dateComponents(
+                [.day],
+                from: calendar.startOfDay(for: $0.savedAt),
+                to: calendar.startOfDay(for: now)
+            ).day ?? 0
+            return (6...8).contains(days)
+        }) {
+            return SavedPassageRevisitSuggestion(
+                favorite: anniversary,
+                reason: .savedSevenDaysAgo
+            )
+        }
+
+        if calendar.component(.weekday, from: now) == 2,
+           let oldest = favorites.min(by: { $0.savedAt < $1.savedAt }) {
+            return SavedPassageRevisitSuggestion(favorite: oldest, reason: .startOfWeek)
+        }
+
+        if let themed = favorites.first(where: {
+            guard let theme = $0.theme else { return false }
+            return currentThemes.contains(theme)
+        }) {
+            return SavedPassageRevisitSuggestion(favorite: themed, reason: .currentTheme)
+        }
+
+        return SavedPassageRevisitSuggestion(
+            favorite: favorites[0],
+            reason: .recentFavorite
+        )
+    }
+}
+
+enum WeeklyPauseSummaryPolicy {
+    static func completedCount(
+        history: [ReadingHistoryItem],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> Int {
+        guard let interval = calendar.dateInterval(of: .weekOfYear, for: now) else {
+            return 0
+        }
+        return history.filter { interval.contains($0.completedAt) }.count
+    }
+
+    static func message(completedCount: Int) -> String? {
+        guard completedCount > 0 else { return nil }
+        if completedCount == 1 {
+            return "Nesta semana, você transformou 1 impulso em pausa."
+        }
+        return "Nesta semana, você transformou \(completedCount) impulsos em pausas."
     }
 }
 
@@ -820,6 +918,33 @@ final class LimiarAppModel {
             ),
             profile: savedProfile
         )
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-LimiarForceSmartRevisitFixture") {
+            let now = Date()
+            favoritePassages = [
+                FavoritePassageItem(
+                    id: UUID(),
+                    passageID: currentPassage.id,
+                    passageTitle: currentPassage.title,
+                    reference: currentPassage.reference,
+                    text: currentPassage.text,
+                    homily: "Este trecho volta como um convite sereno para perceber o que mudou desde a primeira leitura.",
+                    practicalConclusion: "Escolha uma forma concreta de carregá-lo novamente hoje.",
+                    theme: currentPassage.theme,
+                    savedAt: Calendar.current.date(byAdding: .day, value: -7, to: now) ?? now
+                )
+            ]
+            history = (0..<5).map { offset in
+                ReadingHistoryItem(
+                    id: UUID(),
+                    passageID: "debug-\(offset)",
+                    passageTitle: "Travessia de teste",
+                    reference: "Teste \(offset + 1)",
+                    completedAt: Calendar.current.date(byAdding: .day, value: -offset, to: now) ?? now
+                )
+            }
+        }
+#endif
         // O acesso ainda não foi restaurado pelo SubscriptionManager neste
         // ponto. O ContentView reaplica a política assim que o estado local de
         // trial/assinatura estiver disponível, evitando uma janela sem shield.
@@ -1127,6 +1252,7 @@ final class LimiarAppModel {
         )
         let recents = recentPassageIDs
         let reflections = recentAIReflections
+        let pauseTurn = pauseCycleTurn
         let requestID = UUID()
         prewarmRequestID = requestID
         prewarmDayKeyInFlight = dayKey
@@ -1137,11 +1263,12 @@ final class LimiarAppModel {
                 .merging(LimiarAIDiagnostics.profileSnapshot(profile)) { current, _ in current }
         )
 
-        let task = Task<LimiarPrewarmResult, Never> { [weak self, candidates, profile, profileKey, dayKey, recents, reflections] in
+        let task = Task<LimiarPrewarmResult, Never> { [weak self, candidates, profile, profileKey, dayKey, recents, reflections, pauseTurn] in
             let service = RemoteAIReadingSessionService()
             let outcome = await service.readingSession(
                 for: Array(candidates.prefix(36)),
                 profile: profile,
+                pauseTurn: pauseTurn,
                 recentPassageIDs: recents,
                 recentReflections: reflections
             )
@@ -1330,7 +1457,9 @@ final class LimiarAppModel {
     }
 
     func isFavorite(_ item: SpiritualReadingItem) -> Bool {
-        favoritePassages.contains { $0.passageID == item.id }
+        favoritePassages.contains {
+            $0.passageID == item.id || $0.passageID == item.passageID
+        }
     }
 
     func favoritePassageText(for item: FavoritePassageItem) -> String {
@@ -1353,6 +1482,19 @@ final class LimiarAppModel {
         )?.text ?? ""
     }
 
+    var savedPassageRevisitSuggestion: SavedPassageRevisitSuggestion? {
+        SavedPassageRevisitPolicy.suggestion(
+            favorites: favoritePassages,
+            currentThemes: Set(currentReadingPlan.map(\.theme))
+        )
+    }
+
+    var weeklyPauseSummaryText: String? {
+        WeeklyPauseSummaryPolicy.message(
+            completedCount: WeeklyPauseSummaryPolicy.completedCount(history: history)
+        )
+    }
+
     /// Teto de trechos salvos persistidos no app group. Os favoritos agora
     /// carregam a explicação completa (KBs por item) e o plist do grupo é
     /// carregado inteiro também pelas extensões de Shield, que têm teto de
@@ -1361,17 +1503,24 @@ final class LimiarAppModel {
 
     func toggleFavorite(_ item: SpiritualReadingItem) {
         if isFavorite(item) {
-            favoritePassages.removeAll { $0.passageID == item.id }
+            favoritePassages.removeAll {
+                $0.passageID == item.id || $0.passageID == item.passageID
+            }
         } else {
+            let resolvedTheme = currentReadingPlan.first(where: {
+                $0.id == item.passageID || $0.reference == item.reference
+            })?.theme
             favoritePassages.insert(
                 FavoritePassageItem(
                     id: UUID(),
-                    passageID: item.id,
+                    passageID: item.passageID ?? item.id,
                     passageTitle: item.reference,
                     reference: item.reference,
                     text: item.text,
                     homily: item.homily,
                     practicalConclusion: item.practicalConclusion,
+                    rememberToday: currentReflection.conclusion,
+                    theme: resolvedTheme,
                     savedAt: Date()
                 ),
                 at: 0
@@ -1603,13 +1752,14 @@ final class LimiarAppModel {
     /// prompt do backend mudar o tamanho ou a estrutura dos textos: invalida
     /// sessões e prewarms gerados pela versão anterior, para que a pessoa não
     /// passe dias vendo o formato antigo depois de atualizar o app.
-    static let editorialFormatVersion = "editorial:v2"
+    static let editorialFormatVersion = "editorial:v3"
 
     private func sessionProfileKey(for profile: UserFaithProfile) -> String {
         [
             Self.editorialFormatVersion,
             profile.tradition.rawValue,
             profile.explanationDepth.rawValue,
+            "turn:\(pauseCycleTurn.rawValue)",
             "item-count:\(profile.explanationDepth.readingItemCount)",
             profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
@@ -1646,6 +1796,7 @@ final class LimiarAppModel {
             passages.map(\.id).joined(separator: "+"),
             profile.tradition.rawValue,
             profile.explanationDepth.rawValue,
+            "turn:\(pauseCycleTurn.rawValue)",
             "item-count:\(profile.explanationDepth.readingItemCount)",
             profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
             profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
@@ -1672,12 +1823,14 @@ final class LimiarAppModel {
     ) {
         let recentPassageIDs = recentPassageIDs
         let recentReflections = recentAIReflections
-        aiGenerationTask = Task { [passages, fallbackPlan, profile, recentPassageIDs, recentReflections] in
+        let pauseTurn = pauseCycleTurn
+        aiGenerationTask = Task { [passages, fallbackPlan, profile, recentPassageIDs, recentReflections, pauseTurn] in
             let readingSessionService = RemoteAIReadingSessionService()
 
             let outcome = await readingSessionService.readingSession(
                 for: passages,
                 profile: profile,
+                pauseTurn: pauseTurn,
                 recentPassageIDs: recentPassageIDs,
                 recentReflections: recentReflections
             )
@@ -1738,14 +1891,16 @@ final class LimiarAppModel {
         )
         let recents = recentPassageIDs
         let reflections = recentAIReflections
+        let pauseTurn = pauseCycleTurn
         let generationID = UUID()
         aiGenerationID = generationID
         isRetryingLocalSession = true
 
-        aiGenerationTask = Task { [candidates, profile, profileKey, recents, reflections] in
+        aiGenerationTask = Task { [candidates, profile, profileKey, recents, reflections, pauseTurn] in
             let outcome = await RemoteAIReadingSessionService().readingSession(
                 for: Array(candidates.prefix(36)),
                 profile: profile,
+                pauseTurn: pauseTurn,
                 recentPassageIDs: recents,
                 recentReflections: reflections
             )

@@ -98,6 +98,106 @@ struct ReadingTextScaleStore {
     }
 }
 
+enum NarrationPlaybackSpeedPolicy {
+    static let steps: [Double] = [0.8, 1.0, 1.2, 1.4]
+    static let defaultValue = 1.0
+
+    static func normalized(_ value: Double) -> Double {
+        steps.min(by: { abs($0 - value) < abs($1 - value) }) ?? defaultValue
+    }
+
+    static func label(for value: Double) -> String {
+        let normalizedValue = normalized(value)
+        return normalizedValue == 1 ? "1×" : String(format: "%.1f×", normalizedValue)
+    }
+}
+
+enum NarrationVoicePreference: String, CaseIterable, Identifiable {
+    case antonio = "pt-BR-AntonioNeural"
+    case francisca = "pt-BR-FranciscaNeural"
+    case brenda = "pt-BR-BrendaNeural"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .antonio: "Antônio"
+        case .francisca: "Francisca"
+        case .brenda: "Brenda"
+        }
+    }
+}
+
+struct NarrationPreferenceStore {
+    static let speedKey = "limiar.narration.playbackSpeed"
+    static let voiceKey = "limiar.narration.voice"
+    nonisolated(unsafe) static let appGroupDefaults = UserDefaults(
+        suiteName: ScreenTimePolicyStore.appGroupIdentifier
+    ) ?? .standard
+
+    let defaults: UserDefaults
+
+    init(defaults: UserDefaults = appGroupDefaults) {
+        self.defaults = defaults
+    }
+
+    var speed: Double {
+        guard defaults.object(forKey: Self.speedKey) != nil else {
+            return NarrationPlaybackSpeedPolicy.defaultValue
+        }
+        return NarrationPlaybackSpeedPolicy.normalized(defaults.double(forKey: Self.speedKey))
+    }
+
+    var voice: NarrationVoicePreference {
+        guard let rawValue = defaults.string(forKey: Self.voiceKey),
+              let voice = NarrationVoicePreference(rawValue: rawValue) else {
+            return .antonio
+        }
+        return voice
+    }
+
+    func saveSpeed(_ value: Double) {
+        defaults.set(NarrationPlaybackSpeedPolicy.normalized(value), forKey: Self.speedKey)
+    }
+
+    func saveVoice(_ voice: NarrationVoicePreference) {
+        defaults.set(voice.rawValue, forKey: Self.voiceKey)
+    }
+}
+
+struct NarrationResumeCheckpoint: Codable, Equatable {
+    let queueID: String
+    let segmentIndex: Int
+    let elapsedSeconds: TimeInterval
+}
+
+struct NarrationResumeStore {
+    static let key = "limiar.narration.resumeCheckpoint"
+    nonisolated(unsafe) static let appGroupDefaults = UserDefaults(
+        suiteName: ScreenTimePolicyStore.appGroupIdentifier
+    ) ?? .standard
+
+    let defaults: UserDefaults
+
+    init(defaults: UserDefaults = appGroupDefaults) {
+        self.defaults = defaults
+    }
+
+    func load() -> NarrationResumeCheckpoint? {
+        guard let data = defaults.data(forKey: Self.key) else { return nil }
+        return try? JSONDecoder().decode(NarrationResumeCheckpoint.self, from: data)
+    }
+
+    func save(_ checkpoint: NarrationResumeCheckpoint) {
+        guard let data = try? JSONEncoder().encode(checkpoint) else { return }
+        defaults.set(data, forKey: Self.key)
+    }
+
+    func clear() {
+        defaults.removeObject(forKey: Self.key)
+    }
+}
+
 private struct LimiarReadingFontModifier: ViewModifier {
     @ScaledMetric private var systemScaledSize: CGFloat
 
@@ -262,6 +362,108 @@ struct ReadingTextScaleMenu: View {
             if storedValue != value {
                 storedValue = value
             }
+        }
+    }
+}
+
+struct ReadingPreferencesMenu: View {
+    var narrationPreferenceChanged: () -> Void = {}
+
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var storedTextScale = ReadingTextScalePolicy.defaultValue
+    @AppStorage(
+        NarrationPreferenceStore.speedKey,
+        store: NarrationPreferenceStore.appGroupDefaults
+    ) private var storedSpeed = NarrationPlaybackSpeedPolicy.defaultValue
+    @AppStorage(
+        NarrationPreferenceStore.voiceKey,
+        store: NarrationPreferenceStore.appGroupDefaults
+    ) private var storedVoice = NarrationVoicePreference.antonio.rawValue
+
+    private var textScale: Int {
+        ReadingTextScalePolicy.normalized(storedTextScale)
+    }
+
+    private var speed: Double {
+        NarrationPlaybackSpeedPolicy.normalized(storedSpeed)
+    }
+
+    private var voice: NarrationVoicePreference {
+        NarrationVoicePreference(rawValue: storedVoice) ?? .antonio
+    }
+
+    var body: some View {
+        Menu {
+            Section("Tamanho do texto") {
+                ForEach(ReadingTextScalePolicy.steps, id: \.self) { option in
+                    Button {
+                        guard option != textScale else { return }
+                        storedTextScale = option
+                        LimiarAnalytics.trackReadingTextScaleChanged(value: option, method: .aa)
+                    } label: {
+                        preferenceLabel("\(option)%", selected: option == textScale)
+                    }
+                }
+            }
+
+            Section("Velocidade da narração") {
+                ForEach(NarrationPlaybackSpeedPolicy.steps, id: \.self) { option in
+                    Button {
+                        guard option != speed else { return }
+                        storedSpeed = option
+                        narrationPreferenceChanged()
+                    } label: {
+                        preferenceLabel(
+                            NarrationPlaybackSpeedPolicy.label(for: option),
+                            selected: option == speed
+                        )
+                    }
+                }
+            }
+
+            Section("Voz") {
+                ForEach(NarrationVoicePreference.allCases) { option in
+                    Button {
+                        guard option != voice else { return }
+                        storedVoice = option.rawValue
+                        narrationPreferenceChanged()
+                    } label: {
+                        preferenceLabel(option.title, selected: option == voice)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Aa")
+                    .limiarFont(15, weight: .bold, relativeTo: .headline)
+                Text(NarrationPlaybackSpeedPolicy.label(for: speed))
+                    .limiarFont(12, weight: .semibold, relativeTo: .caption)
+            }
+            .foregroundStyle(Color.ivory)
+            .padding(.horizontal, 11)
+            .frame(minHeight: 38)
+            .background(Color.white.opacity(0.08), in: Capsule())
+            .overlay(Capsule().stroke(Color.sageButton.opacity(0.25), lineWidth: 1))
+        }
+        .accessibilityLabel("Ajustes da leitura e narração")
+        .accessibilityValue(
+            "Texto \(textScale) por cento, velocidade \(NarrationPlaybackSpeedPolicy.label(for: speed)), voz \(voice.title)"
+        )
+        .onAppear {
+            if storedTextScale != textScale { storedTextScale = textScale }
+            if storedSpeed != speed { storedSpeed = speed }
+            if storedVoice != voice.rawValue { storedVoice = voice.rawValue }
+        }
+    }
+
+    @ViewBuilder
+    private func preferenceLabel(_ title: String, selected: Bool) -> some View {
+        if selected {
+            Label(title, systemImage: "checkmark")
+        } else {
+            Text(title)
         }
     }
 }

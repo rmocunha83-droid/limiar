@@ -180,6 +180,8 @@ struct SpiritualReadingCard: View {
     let saveAction: () -> Void
     let listenAction: () -> Void
     let narrationState: PassageNarrationButtonState
+    var narrationSegmentIndex: Int? = nil
+    var narrationIdleTitle: String? = nil
     var showsReflection = true
     var showsNarration = true
     var isSaveLocked = false
@@ -188,6 +190,21 @@ struct SpiritualReadingCard: View {
         ReadingTextScaleStore.key,
         store: ReadingTextScaleStore.appGroupDefaults
     ) private var readingTextScale = ReadingTextScalePolicy.defaultValue
+
+    private var explanationParagraphs: [String] {
+        item.homily
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private var narrationButtonTitle: String {
+        if narrationState == .idle, let narrationIdleTitle {
+            return narrationIdleTitle
+        }
+        return narrationState.title
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -231,6 +248,13 @@ struct SpiritualReadingCard: View {
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(7)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(10)
+                .background(
+                    narrationSegmentIndex == 0
+                        ? Color.sageButton.opacity(0.12)
+                        : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 8)
+                )
                 .dynamicTypeSize(...DynamicTypeSize.accessibility3)
 
             if showsReflection && item.hasExplanationContent {
@@ -245,15 +269,25 @@ struct SpiritualReadingCard: View {
                         .tracking(1.1)
                         .foregroundStyle(Color.warmGold)
 
-                    Text(SpiritualReadingCardPresentation.explanationText(for: item))
-                        .readingFont(
-                            16,
-                            textScale: readingTextScale,
-                            weight: .medium,
-                            relativeTo: .body
-                        )
-                        .foregroundStyle(Color.ivory.opacity(0.92))
-                        .lineSpacing(5)
+                    ForEach(Array(explanationParagraphs.enumerated()), id: \.offset) { index, paragraph in
+                        Text(paragraph)
+                            .readingFont(
+                                16,
+                                textScale: readingTextScale,
+                                weight: .medium,
+                                relativeTo: .body
+                            )
+                            .foregroundStyle(Color.ivory.opacity(0.92))
+                            .lineSpacing(5)
+                            .padding(8)
+                            .background(
+                                narrationSegmentIndex == index + 1
+                                    ? Color.sageButton.opacity(0.14)
+                                    : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 7)
+                            )
+                            .animation(.easeInOut(duration: 0.2), value: narrationSegmentIndex)
+                    }
                 }
                 .padding(14)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
@@ -282,13 +316,13 @@ struct SpiritualReadingCard: View {
                             .frame(width: 24, height: 24)
                         }
 
-                        Text(narrationState.title)
+                        Text(narrationButtonTitle)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .buttonStyle(ReadingActionButtonStyle(isHighlighted: narrationState.isHighlighted))
                 .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-                .accessibilityLabel(isNarrationLocked ? "Ouvir este trecho é um recurso Premium" : narrationState.title)
+                .accessibilityLabel(isNarrationLocked ? "Ouvir este trecho é um recurso Premium" : narrationButtonTitle)
             }
         }
         .padding(18)
@@ -414,16 +448,22 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     @Published var isGenerating = false
     @Published var isPaused = false
     @Published var isFailed = false
+    @Published private(set) var activeSegmentIndex: Int?
 
     private let speechService = RemoteAISpeechService()
     private let eventLog = LimiarEventLog(source: "narration")
+    private let preferenceStore = NarrationPreferenceStore()
+    private let resumeStore = NarrationResumeStore()
     private var player: AVAudioPlayer?
     private var playbackTask: Task<Void, Never>?
     private var prefetchTask: Task<Void, Never>?
     private var activeSpeechText = ""
+    private var activeQueueID = ""
     private var activeContext = "travessia"
+    private var activeVoice = NarrationVoicePreference.antonio
     private var queue: [String] = []
     private var currentSegmentIndex = 0
+    private var pendingResumeElapsedSeconds: TimeInterval?
     private var pendingSegmentIndex: Int?
     private var prefetchedAudio: Data?
     private var prefetchedSegmentIndex: Int?
@@ -490,6 +530,28 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         return .idle
     }
 
+    func highlightedSegmentIndex(for segments: [String]) -> Int? {
+        let prepared = preparedSegments(from: segments)
+        guard activeSpeechText == queueIdentifier(for: prepared),
+              isSpeaking || isPaused || isGenerating || isFailed else {
+            return nil
+        }
+        return activeSegmentIndex ?? pendingSegmentIndex
+    }
+
+    /// Reaplica velocidade imediatamente. Se a voz mudou, preserva o ponto e
+    /// encerra o áudio atual para que o próximo toque retome com a voz nova.
+    func applyStoredPreferences() {
+        let storedVoice = preferenceStore.voice
+        if !activeSpeechText.isEmpty, storedVoice != activeVoice {
+            stop(preservingProgress: true)
+            return
+        }
+        player?.enableRate = true
+        player?.rate = Float(preferenceStore.speed)
+        updateNowPlaying(isPlaying: isSpeaking)
+    }
+
     func pause() {
         guard isSpeaking else { return }
         if let player {
@@ -502,6 +564,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         }
         isSpeaking = false
         isPaused = true
+        persistCheckpoint()
         updateNowPlaying(isPlaying: false)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
@@ -530,6 +593,8 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             return
         }
 
+        player.enableRate = true
+        player.rate = Float(preferenceStore.speed)
         guard player.play() else {
             // Mesmo princípio: manter a pausa recuperável em vez de descartar
             // a fila inteira por uma falha momentânea do player.
@@ -551,7 +616,12 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         loadAndPlaySegment(at: index)
     }
 
-    func stop() {
+    func stop(preservingProgress: Bool = true) {
+        if preservingProgress {
+            persistCheckpoint()
+        } else {
+            resumeStore.clear()
+        }
         playbackTask?.cancel()
         playbackTask = nil
         prefetchTask?.cancel()
@@ -560,10 +630,13 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         player = nil
         queue = []
         currentSegmentIndex = 0
+        activeSegmentIndex = nil
         pendingSegmentIndex = nil
+        pendingResumeElapsedSeconds = nil
         prefetchedAudio = nil
         prefetchedSegmentIndex = nil
         activeSpeechText = ""
+        activeQueueID = ""
         isSpeaking = false
         isGenerating = false
         isPaused = false
@@ -574,13 +647,22 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     }
 
     private func speak(_ segments: [String], context: String) {
-        stop()
+        stop(preservingProgress: true)
 
         guard !segments.isEmpty else { return }
         queue = segments
         activeSpeechText = queueIdentifier(for: segments)
+        activeQueueID = stableQueueID(for: segments)
         activeContext = context
-        currentSegmentIndex = 0
+        activeVoice = preferenceStore.voice
+        let checkpoint = resumeStore.load().flatMap { checkpoint in
+            checkpoint.queueID == activeQueueID && queue.indices.contains(checkpoint.segmentIndex)
+                ? checkpoint
+                : nil
+        }
+        currentSegmentIndex = checkpoint?.segmentIndex ?? 0
+        activeSegmentIndex = currentSegmentIndex
+        pendingResumeElapsedSeconds = checkpoint?.elapsedSeconds
         isGenerating = true
         isSpeaking = false
         isPaused = false
@@ -588,7 +670,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         wasPausedByInterruption = false
         eventLog.log("narration_started", ["segments": String(segments.count), "context": context])
         LimiarAnalytics.trackNarrationStarted(context: context)
-        loadAndPlaySegment(at: 0)
+        loadAndPlaySegment(at: currentSegmentIndex)
     }
 
     private func loadAndPlaySegment(at index: Int) {
@@ -601,6 +683,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         playbackTask?.cancel()
         let expectedIdentifier = activeSpeechText
         let segment = queue[index]
+        let voice = activeVoice
         pendingSegmentIndex = index
         isGenerating = true
         isSpeaking = false
@@ -623,7 +706,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
                     }
                 }
                 do {
-                    let audio = try await service.audioData(for: segment)
+                    let audio = try await service.audioData(for: segment, voice: voice)
                     guard !Task.isCancelled else { return }
                     await MainActor.run {
                         guard self?.activeSpeechText == expectedIdentifier else { return }
@@ -675,6 +758,8 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         do {
             let audioPlayer = try AVAudioPlayer(data: data)
             audioPlayer.delegate = self
+            audioPlayer.enableRate = true
+            audioPlayer.rate = Float(preferenceStore.speed)
             guard audioPlayer.prepareToPlay() else {
                 logSegmentFailure(index: index, reason: "audio_player_failure")
                 finishQueue()
@@ -682,6 +767,14 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
             }
             player = audioPlayer
             currentSegmentIndex = index
+            activeSegmentIndex = index
+            if let pendingResumeElapsedSeconds {
+                audioPlayer.currentTime = min(
+                    max(0, pendingResumeElapsedSeconds),
+                    max(0, audioPlayer.duration - 0.1)
+                )
+                self.pendingResumeElapsedSeconds = nil
+            }
             pendingSegmentIndex = nil
             isGenerating = false
             isPaused = false
@@ -706,10 +799,11 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         prefetchTask?.cancel()
         let expectedIdentifier = activeSpeechText
         let segment = queue[nextIndex]
+        let voice = activeVoice
         let service = speechService
         prefetchTask = Task { [weak self] in
             do {
-                let audio = try await service.audioData(for: segment)
+                let audio = try await service.audioData(for: segment, voice: voice)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
                     guard self?.activeSpeechText == expectedIdentifier else { return }
@@ -730,6 +824,8 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         }
 
         pendingSegmentIndex = nextIndex
+        activeSegmentIndex = nextIndex
+        persistCheckpoint(segmentIndex: nextIndex, elapsedSeconds: 0)
         guard !isPaused else {
             isSpeaking = false
             return
@@ -774,6 +870,33 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
 
     private func queueIdentifier(for segments: [String]) -> String {
         segments.joined(separator: "\u{001F}")
+    }
+
+    private func stableQueueID(for segments: [String]) -> String {
+        // FNV-1a é estável entre execuções (ao contrário de String.hashValue)
+        // e evita persistir o conteúdo espiritual completo no app group.
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in queueIdentifier(for: segments).utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        return String(hash, radix: 16)
+    }
+
+    private func persistCheckpoint(
+        segmentIndex: Int? = nil,
+        elapsedSeconds: TimeInterval? = nil
+    ) {
+        guard !activeQueueID.isEmpty else { return }
+        let index = segmentIndex ?? pendingSegmentIndex ?? currentSegmentIndex
+        guard queue.indices.contains(index) else { return }
+        resumeStore.save(
+            NarrationResumeCheckpoint(
+                queueID: activeQueueID,
+                segmentIndex: index,
+                elapsedSeconds: elapsedSeconds ?? player?.currentTime ?? 0
+            )
+        )
     }
 
     private func activateAudioSession() throws {
@@ -821,7 +944,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         center.nowPlayingInfo = [
             MPMediaItemPropertyTitle: "Leitura de hoje",
             MPMediaItemPropertyArtist: "Limiar",
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? preferenceStore.speed : 0.0,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: player?.currentTime ?? 0,
             MPMediaItemPropertyPlaybackDuration: player?.duration ?? 0
         ]
@@ -855,6 +978,7 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         isGenerating = false
         isSpeaking = false
         isPaused = true
+        persistCheckpoint()
         if deactivateSession {
             try? AVAudioSession.sharedInstance().setActive(
                 false,
@@ -932,6 +1056,9 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
     private func finishQueue(completedNaturally: Bool = false) {
         if completedNaturally {
             eventLog.log("narration_completed")
+            resumeStore.clear()
+        } else {
+            persistCheckpoint()
         }
         player?.stop()
         player = nil
@@ -940,10 +1067,12 @@ final class PassageNarrationService: NSObject, ObservableObject, AVAudioPlayerDe
         prefetchTask?.cancel()
         prefetchTask = nil
         queue = []
+        activeSegmentIndex = nil
         prefetchedAudio = nil
         prefetchedSegmentIndex = nil
         pendingSegmentIndex = nil
         activeSpeechText = ""
+        activeQueueID = ""
         isGenerating = false
         isSpeaking = false
         isPaused = false

@@ -84,6 +84,126 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(store.value, 140)
     }
 
+    func testNarrationPreferencesNormalizeAndPersist() throws {
+        XCTAssertEqual(NarrationPlaybackSpeedPolicy.steps, [0.8, 1.0, 1.2, 1.4])
+        XCTAssertEqual(NarrationPlaybackSpeedPolicy.normalized(1.13), 1.2)
+        XCTAssertEqual(NarrationPlaybackSpeedPolicy.label(for: 1), "1×")
+        XCTAssertEqual(NarrationPlaybackSpeedPolicy.label(for: 1.4), "1.4×")
+
+        let suiteName = "LocalReadingSessionTests.NarrationPreferences.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = NarrationPreferenceStore(defaults: defaults)
+
+        XCTAssertEqual(store.speed, 1)
+        XCTAssertEqual(store.voice, .antonio)
+        store.saveSpeed(1.37)
+        store.saveVoice(.francisca)
+        XCTAssertEqual(store.speed, 1.4)
+        XCTAssertEqual(store.voice, .francisca)
+    }
+
+    func testNarrationResumeCheckpointPersistsWithoutNarrationText() throws {
+        let suiteName = "LocalReadingSessionTests.NarrationResume.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = NarrationResumeStore(defaults: defaults)
+        let checkpoint = NarrationResumeCheckpoint(
+            queueID: "hash-estavel",
+            segmentIndex: 2,
+            elapsedSeconds: 14.5
+        )
+
+        store.save(checkpoint)
+        XCTAssertEqual(store.load(), checkpoint)
+        store.clear()
+        XCTAssertNil(store.load())
+    }
+
+    func testLegacyFavoriteWithoutRememberTodayStillDecodes() throws {
+        let json = """
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "passageID": "salmo-27-1",
+          "passageTitle": "Salmo 27",
+          "reference": "Salmo 27, 1",
+          "text": "O Senhor é minha luz.",
+          "savedAt": 0
+        }
+        """.data(using: .utf8)!
+
+        let favorite = try JSONDecoder().decode(FavoritePassageItem.self, from: json)
+        XCTAssertNil(favorite.rememberToday)
+        XCTAssertNil(favorite.theme)
+    }
+
+    func testSavedPassageRevisitPrioritizesSevenDayAnniversaryThenTheme() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 8, day: 18, hour: 12))!
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now)!
+        let recent = calendar.date(byAdding: .day, value: -1, to: now)!
+        let anniversary = favorite(id: "anniversary", theme: .hope, savedAt: sevenDaysAgo)
+        let themed = favorite(id: "themed", theme: .family, savedAt: recent)
+
+        let first = SavedPassageRevisitPolicy.suggestion(
+            favorites: [themed, anniversary],
+            currentThemes: [.family],
+            now: now,
+            calendar: calendar
+        )
+        XCTAssertEqual(first?.favorite.passageID, "anniversary")
+        XCTAssertEqual(first?.reason, .savedSevenDaysAgo)
+
+        let second = SavedPassageRevisitPolicy.suggestion(
+            favorites: [themed],
+            currentThemes: [.family],
+            now: now,
+            calendar: calendar
+        )
+        XCTAssertEqual(second?.favorite.passageID, "themed")
+        XCTAssertEqual(second?.reason, .currentTheme)
+    }
+
+    func testSavedPassageRevisitUsesMondayPromptAndWeeklySummaryCountsCurrentWeek() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "pt_BR")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 17, hour: 12))!
+        let favorite = favorite(
+            id: "old",
+            theme: nil,
+            savedAt: calendar.date(byAdding: .day, value: -20, to: monday)!
+        )
+
+        XCTAssertEqual(
+            SavedPassageRevisitPolicy.suggestion(
+                favorites: [favorite],
+                currentThemes: [],
+                now: monday,
+                calendar: calendar
+            )?.reason,
+            .startOfWeek
+        )
+
+        let history = [
+            ReadingHistoryItem(id: UUID(), passageID: "1", passageTitle: "A", reference: "A", completedAt: monday),
+            ReadingHistoryItem(id: UUID(), passageID: "2", passageTitle: "B", reference: "B", completedAt: calendar.date(byAdding: .day, value: -8, to: monday)!)
+        ]
+        XCTAssertEqual(
+            WeeklyPauseSummaryPolicy.completedCount(history: history, now: monday, calendar: calendar),
+            1
+        )
+        XCTAssertEqual(
+            WeeklyPauseSummaryPolicy.message(completedCount: 1),
+            "Nesta semana, você transformou 1 impulso em pausa."
+        )
+        XCTAssertEqual(
+            WeeklyPauseSummaryPolicy.message(completedCount: 5),
+            "Nesta semana, você transformou 5 impulsos em pausas."
+        )
+    }
+
     func testOnboardingNavigationDirectionMirrorsPageEdges() {
         XCTAssertEqual(OnboardingNavigationDirection.forward.insertionEdge, .trailing)
         XCTAssertEqual(OnboardingNavigationDirection.forward.removalEdge, .leading)
@@ -582,6 +702,22 @@ final class LocalReadingSessionTests: XCTestCase {
             practicalApplication: "",
             conclusion: "",
             meditationQuestion: ""
+        )
+    }
+
+    private func favorite(
+        id: String,
+        theme: SpiritualTheme?,
+        savedAt: Date
+    ) -> FavoritePassageItem {
+        FavoritePassageItem(
+            id: UUID(),
+            passageID: id,
+            passageTitle: id,
+            reference: id,
+            text: "Texto",
+            theme: theme,
+            savedAt: savedAt
         )
     }
 

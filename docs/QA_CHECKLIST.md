@@ -108,11 +108,19 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Conferir se o trecho salvo aparece corretamente.
 - Abrir o histórico.
 - Confirmar que as leituras concluídas aparecem com referência, data e duração.
+- Com um favorito salvo há 6 a 8 dias, abrir o dashboard e confirmar o convite `UM TRECHO QUE VOCÊ SALVOU HÁ 7 DIAS`.
+- Numa segunda-feira, sem favorito na janela de 7 dias, confirmar `RELEIA ANTES DE COMEÇAR A SEMANA`.
+- Fora desses casos, confirmar que um favorito do mesmo tema da leitura atual tem prioridade; favoritos legados sem tema continuam abrindo normalmente.
+- Tocar `Revisitar` e confirmar texto completo e explicação; tocar `Ouvir novamente` e confirmar o mesmo gating Premium da leitura diária.
+- Concluir travessias na semana e confirmar o resumo `Nesta semana, você transformou N impulsos em pausas.`, com singular correto para uma.
 
 ## Narração
 
 - Tocar para ouvir o trecho.
-- Confirmar que a narração usa voz local do iOS em português do Brasil quando disponível.
+- No painel `Aa`, alternar entre Antônio, Francisca e Brenda e confirmar que a próxima reprodução usa a voz escolhida.
+- Alternar entre 0,8×, 1×, 1,2× e 1,4× e confirmar que a velocidade muda sem solicitar outro áudio ao backend.
+- Confirmar que o parágrafo atual recebe destaque sutil e que o destaque avança junto com a narração.
+- Pausar no meio de um parágrafo, sair da tela, reabrir e tocar para ouvir: deve retomar no segmento e no instante aproximado onde parou.
 - Pausar ou interromper a narração.
 - Sair da tela durante a narração e confirmar que o áudio não fica preso indevidamente.
 - Confirmar que tocar em “Ouvir este trecho” no Modo Essencial legado abre o paywall e não chama a narração.
@@ -137,6 +145,7 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Com o Dynamic Type do aparelho em `.accessibility3`, percorrer o onboarding inteiro, inclusive boas-vindas e prova social: a tipografia deve permanecer idêntica ao tamanho desenhado, as linhas animadas não podem quebrar e `Continuar`/`Começar` devem ficar em uma linha.
 - Ainda em `.accessibility3`, conferir o chrome do dashboard e a tela de conclusão: títulos, mensagens e ações devem permanecer no tamanho-base, sem corte ou sobreposição.
 - No dashboard, comparar o `Aa` em 100% e 160% em travessias Curta e Mais profunda: somente trecho, explicação espiritual, `Sentido espiritual`, `Para levar para o dia` e `Pergunta para refletir` devem crescer e continuar legíveis por rolagem.
+- No mesmo painel `Aa`, confirmar que tamanho, velocidade e voz aparecem agrupados e que o VoiceOver anuncia os três valores atuais.
 - Abrir um trecho salvo e confirmar que o mesmo ajuste `Aa` e o atalho de pinça continuam aplicados ao conteúdo da revisita, sem alterar o chrome da tela.
 - Confirmar que o menu `Aa`, a pinça, a persistência e o evento `reading_text_scale_changed` continuam funcionando após matar e reabrir o app.
 - Comparar portão e paywalls com a versão anterior em `.xxLarge` e confirmar que permanecem visualmente inalterados.
@@ -155,6 +164,13 @@ Este checklist deve ser executado depois que o Limiar estiver instalado em um iP
 - Modo avião no meio da narração: botão muda para "Não foi possível continuar — tentar de novo"; religar e tocar retoma do segmento falho.
 - Tela bloqueada por 2+ minutos numa narração longa: controles de play/pause aparecem na tela bloqueada e a narração segue entre os parágrafos.
 - Tocar narração no dashboard e em um trecho salvo em sequência: nunca dois áudios ao mesmo tempo.
+
+## Conteúdo por turno e conclusão
+
+- Gerar uma sessão nova pela manhã e confirmar direção prática para o dia; à tarde, tom de recentralização; à noite, exame sereno e descanso, sem culpa.
+- Em cada sessão, confirmar que explicação, sentido espiritual, aplicação e pergunta avançam a reflexão sem repetir frases ou a mesma ideia.
+- Confirmar o bloco final `PARA LEMBRAR HOJE`, com frase curta que funciona sozinha; testar `Salvar com o trecho` e `Copiar`.
+- Na conclusão, confirmar uma única passagem sutil de luz sobre a porta; com Reduzir Movimento, a luz permanece estática.
 
 ## Onboarding (temas por tradição)
 

@@ -502,7 +502,7 @@ struct FavoritePassagesView: View {
     }
 }
 
-private struct FavoritePassageDetailView: View {
+struct FavoritePassageDetailView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @Environment(\.dismiss) private var dismiss
@@ -510,6 +510,7 @@ private struct FavoritePassageDetailView: View {
     @State private var showingPaywall = false
 
     let favorite: FavoritePassageItem
+    var isPresentedModally = false
 
     private var readingItem: SpiritualReadingItem {
         SpiritualReadingItem(
@@ -531,25 +532,49 @@ private struct FavoritePassageDetailView: View {
             LimiarBackground()
 
             ScrollView {
-                SpiritualReadingCard(
-                    item: readingItem,
-                    isSaved: true,
-                    saveAction: removeFavorite,
-                    listenAction: listen,
-                    narrationState: model.isEssentialMode
-                        ? .idle
-                        : narration.state(for: narrationSegments),
-                    showsReflection: true,
-                    showsNarration: model.hasPremiumAccess || model.isEssentialMode,
-                    isSaveLocked: model.isEssentialMode,
-                    isNarrationLocked: model.isEssentialMode
-                )
+                VStack(alignment: .leading, spacing: 16) {
+                    SpiritualReadingCard(
+                        item: readingItem,
+                        isSaved: true,
+                        saveAction: removeFavorite,
+                        listenAction: listen,
+                        narrationState: model.isEssentialMode
+                            ? .idle
+                            : narration.state(for: narrationSegments),
+                        narrationSegmentIndex: model.isEssentialMode
+                            ? nil
+                            : narration.highlightedSegmentIndex(for: narrationSegments),
+                        narrationIdleTitle: "Ouvir novamente",
+                        showsReflection: true,
+                        showsNarration: model.hasPremiumAccess || model.isEssentialMode,
+                        isSaveLocked: model.isEssentialMode,
+                        isNarrationLocked: model.isEssentialMode
+                    )
+
+                    if let rememberToday = favorite.rememberToday {
+                        RememberTodayBlock(
+                            text: rememberToday,
+                            isSaved: true,
+                            saveAction: {}
+                        )
+                    }
+                }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
         }
         .navigationTitle(favorite.reference)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                ReadingPreferencesMenu {
+                    narration.applyStoredPreferences()
+                }
+                if isPresentedModally {
+                    Button("Fechar") { dismiss() }
+                }
+            }
+        }
         .onDisappear {
             narration.stop()
         }
