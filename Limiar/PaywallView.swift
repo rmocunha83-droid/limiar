@@ -97,48 +97,52 @@ struct SubscriptionGateView: View {
                 )
                 .transition(.opacity)
             } else {
-                VStack(spacing: 0) {
-                    ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 22) {
-                            VStack(alignment: .leading, spacing: 14) {
-                                OnboardingTitle(eyebrow: "ÚLTIMO PASSO", title: gateTitle)
-                                SubscriptionGateLead(showsEligibleTrial: showsEligibleTrial)
-                            }
-
-                            if showsRestoreFirstBanner {
-                                SubscriptionGateVerifyingBanner()
-                            }
-
-                            if showsEligibleTrial {
-                                SubscriptionGateTrialTimeline()
-                            }
-
-                            SubscriptionGatePlanPicker(
-                                selection: $subscription.selectedPlan,
-                                forcesTrialEligibilityForDebugging: forcesTrialEligibilityForDebugging
-                            )
-
-                            SubscriptionGateBenefits(
-                                profile: model.faithProfile,
-                                turn: model.pauseCycleTurn,
-                                title: showsEligibleTrial
-                                    ? "Tudo incluído nos seus 7 dias grátis"
-                                    : "Tudo incluído na sua assinatura"
-                            )
-
-                            ConversionTestimonials(startingIndex: 0, usesSmoothTransition: true)
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 22) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            OnboardingTitle(eyebrow: "ÚLTIMO PASSO", title: gateTitle)
+                            SubscriptionGateLead(showsEligibleTrial: showsEligibleTrial)
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 28)
-                        .padding(.bottom, 18)
-                        .containerRelativeFrame(.horizontal)
-                    }
 
-                    SubscriptionGateCompliance(
-                        termsURL: termsURL,
-                        privacyURL: privacyURL,
-                        forcesTrialEligibilityForDebugging: forcesTrialEligibilityForDebugging
-                    )
+                        if showsRestoreFirstBanner {
+                            SubscriptionGateVerifyingBanner()
+                        }
+
+                        if showsEligibleTrial {
+                            SubscriptionGateTrialTimeline()
+                        }
+
+                        SubscriptionGatePlanPicker(
+                            selection: $subscription.selectedPlan,
+                            forcesTrialEligibilityForDebugging: forcesTrialEligibilityForDebugging
+                        )
+
+                        SubscriptionGatePurchaseSection(
+                            forcesTrialEligibilityForDebugging: forcesTrialEligibilityForDebugging
+                        )
+
+                        SubscriptionGateSocialProof()
+
+                        SubscriptionGateBenefits(
+                            profile: model.faithProfile,
+                            turn: model.pauseCycleTurn,
+                            title: showsEligibleTrial
+                                ? "Tudo incluído nos seus 7 dias grátis"
+                                : "Tudo incluído na sua assinatura"
+                        )
+
+                        ConversionTestimonials(startingIndex: 0, usesSmoothTransition: true)
+
+                        SubscriptionGateFooterLinks(
+                            termsURL: termsURL,
+                            privacyURL: privacyURL
+                        )
+                        .padding(.top, 4)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 28)
+                    .padding(.bottom, 30)
+                    .containerRelativeFrame(.horizontal)
                 }
                 .transition(.opacity)
             }
@@ -184,18 +188,18 @@ struct SubscriptionGateView: View {
     }
 }
 
-/// Primeira frase do corpo responde à dúvida nº 1 de quem veio do anúncio:
-/// "vai me cobrar agora?".
+/// O benefício do teste abre a oferta; a confirmação de cobrança zero vem
+/// logo abaixo como resposta à principal objeção.
 private struct SubscriptionGateLead: View {
     let showsEligibleTrial: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if showsEligibleTrial {
-                Text("Você não paga nada hoje.")
+                Text("Teste tudo por 7 dias, grátis.")
                     .limiarFont(18, weight: .semibold, relativeTo: .headline)
                     .foregroundStyle(Color.ivory)
-                Text("Teste tudo por 7 dias, grátis.")
+                Text("Você não paga nada hoje.")
                     .limiarFont(16, weight: .medium, relativeTo: .body)
                     .foregroundStyle(Color.softText)
             } else {
@@ -226,32 +230,34 @@ private struct SubscriptionGateTrialTimeline: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(steps) { step in
-                HStack(alignment: .top, spacing: 14) {
-                    VStack(spacing: 0) {
+        ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(Color.warmGold.opacity(0.45))
+                .frame(width: 1)
+                .padding(.vertical, 17)
+                .offset(x: 16.5)
+
+            VStack(alignment: .leading, spacing: 22) {
+                ForEach(steps) { step in
+                    HStack(alignment: .center, spacing: 14) {
                         ZStack {
                             Circle()
+                                .fill(Color.deepInk)
+                            Circle()
                                 .stroke(Color.warmGold.opacity(0.8), lineWidth: 1.2)
-                                .frame(width: 34, height: 34)
                             Image(systemName: step.symbol)
                                 .limiarFont(14, weight: .medium, relativeTo: .footnote)
                                 .foregroundStyle(Color.warmGold)
                         }
-                        if step.id < steps.count - 1 {
-                            Rectangle()
-                                .fill(Color.warmGold.opacity(0.45))
-                                .frame(width: 1, height: 22)
-                        }
-                    }
+                        .frame(width: 34, height: 34)
 
-                    (Text(step.day).foregroundStyle(Color.ivory).fontWeight(.semibold)
-                        + Text(" — ").foregroundStyle(Color.softText)
-                        + Text(step.text).foregroundStyle(Color.softText))
-                        .limiarFont(15, weight: .medium, relativeTo: .subheadline)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 7)
+                        (Text(step.day).foregroundStyle(Color.ivory).fontWeight(.semibold)
+                            + Text(" — ").foregroundStyle(Color.softText)
+                            + Text(step.text).foregroundStyle(Color.softText))
+                            .limiarFont(15, weight: .medium, relativeTo: .subheadline)
+                            .lineSpacing(1)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }
@@ -320,25 +326,7 @@ private struct SubscriptionGateBenefits: View {
     }
 }
 
-/// Pontos de paginação iguais aos do onboarding: o portão é o último passo.
-private struct SubscriptionGateProgress: View {
-    private let stepCount = 7
-
-    var body: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<stepCount, id: \.self) { index in
-                Capsule()
-                    .fill(index == stepCount - 1 ? Color.sageButton : Color.white.opacity(0.18))
-                    .frame(width: index == stepCount - 1 ? 26 : 6, height: 7)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Onboarding concluído")
-    }
-}
-
-/// Mesma pílula sálvia do onboarding, um ponto menor para "Começar 7 dias
-/// grátis" caber ao lado dos pontos de paginação no iPhone SE.
+/// Pílula sálvia em largura total, agora inserida no fluxo de rolagem.
 private struct SubscriptionGateHeroButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -349,6 +337,11 @@ private struct SubscriptionGateHeroButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 56)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    LimiarHaptics.tap()
+                }
+            }
     }
 }
 
@@ -362,6 +355,7 @@ private struct SubscriptionGatePlanPicker: View {
             ForEach([SubscriptionPlan.monthly, .yearly]) { plan in
                 Button {
                     guard selection != plan else { return }
+                    LimiarHaptics.select()
                     selection = plan
                     subscription.noteUserSelectedPlan()
                     LimiarAnalytics.trackGatePlanSelected(
@@ -547,8 +541,8 @@ private struct SubscriptionGatePlanRow: View {
     }
 }
 
-/// Linha com o logo da Apple imediatamente antes do botão: a pessoa já sabe o
-/// que a folha da App Store vai mostrar e que o valor de hoje é zero.
+/// Linha com o logo da Apple logo depois do botão: antecipa o que a folha da
+/// App Store vai mostrar e reforça que o valor de hoje é zero.
 private struct SubscriptionGateAppleReassurance: View {
     @Environment(SubscriptionManager.self) private var subscription
 
@@ -563,6 +557,17 @@ private struct SubscriptionGateAppleReassurance: View {
                 .lineLimit(2)
                 .layoutPriority(1)
         }
+    }
+}
+
+private struct SubscriptionGateSocialProof: View {
+    var body: some View {
+        Text("Mais de 5 mil pessoas usam o Limiar para desacelerar, refletir e viver com mais presença.")
+            .limiarFont(13, weight: .medium, relativeTo: .footnote)
+            .foregroundStyle(Color.softText)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
     }
 }
 
@@ -591,41 +596,34 @@ private struct SubscriptionGateFooterLinks: View {
     }
 }
 
-private struct SubscriptionGateCompliance: View {
+private struct SubscriptionGatePurchaseSection: View {
     @Environment(SubscriptionManager.self) private var subscription
-    let termsURL: URL
-    let privacyURL: URL
     let forcesTrialEligibilityForDebugging: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Button {
+                Task {
+                    await subscription.purchaseSelectedPlan(origin: .subscriptionGate)
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    if subscription.state == .purchasing {
+                        ProgressView().tint(Color.deepInk)
+                    }
+                    Text(buttonTitle)
+                    Image(systemName: "arrow.right")
+                        .limiarFont(17, relativeTo: .headline)
+                }
+            }
+            .buttonStyle(SubscriptionGateHeroButtonStyle())
+            .disabled(!canSubscribe)
+            .opacity(canSubscribe ? 1 : 0.62)
+
             if showsEligibleTrial {
                 SubscriptionGateAppleReassurance()
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
-
-            HStack(spacing: 8) {
-                SubscriptionGateProgress()
-                Button {
-                    Task {
-                        await subscription.purchaseSelectedPlan(origin: .subscriptionGate)
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        if subscription.state == .purchasing {
-                            ProgressView().tint(Color.deepInk)
-                        }
-                        Text(buttonTitle)
-                        Image(systemName: "arrow.right")
-                            .limiarFont(17, relativeTo: .headline)
-                    }
-                }
-                .buttonStyle(SubscriptionGateHeroButtonStyle())
-                .layoutPriority(1)
-                .frame(maxWidth: 272)
-                .disabled(!canSubscribe)
-                .opacity(canSubscribe ? 1 : 0.62)
-            }
-            .frame(maxWidth: .infinity)
 
             if let statusText {
                 Text(statusText)
@@ -653,23 +651,8 @@ private struct SubscriptionGateCompliance: View {
                 .accessibilityLabel("Tentar carregar os planos novamente")
             }
 
-            Text(renewalLegalText)
-                .conversionFont(11, relativeTo: .caption)
-                .foregroundStyle(Color.softText.opacity(0.85))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-
-            SubscriptionGateFooterLinks(termsURL: termsURL, privacyURL: privacyURL)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
-        .background(Color.deepInk.opacity(0.97))
-        .overlay(alignment: .top) {
-            Divider().overlay(Color.conversionBorder)
-        }
-        .containerRelativeFrame(.horizontal)
+        .frame(maxWidth: .infinity)
     }
 
     private var showsEligibleTrial: Bool {
@@ -705,13 +688,6 @@ private struct SubscriptionGateCompliance: View {
             return subscription.products.isEmpty ? "Carregando planos" : "Plano indisponível"
         }
         return "Assinar por \(subscription.storeDisplayPrice(for: plan))"
-    }
-
-    private var renewalLegalText: String {
-        if showsEligibleTrial {
-            return "A assinatura renova automaticamente após os 7 dias. Cancele a qualquer momento em Ajustes › Assinaturas, até 24h antes do fim do período vigente."
-        }
-        return "A assinatura renova automaticamente. Cancele a qualquer momento em Ajustes › Assinaturas, até 24h antes do fim do período vigente."
     }
 
     private var statusText: String? {
@@ -782,6 +758,8 @@ private struct SubscriptionGateRecoveryView: View {
 
                     Button {
                         let plan = alternativePlan
+                        guard subscription.selectedPlan != plan else { return }
+                        LimiarHaptics.select()
                         subscription.selectedPlan = plan
                         subscription.noteUserSelectedPlan()
                         LimiarAnalytics.trackGatePlanSelected(

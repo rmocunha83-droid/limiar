@@ -546,7 +546,7 @@ struct OnboardingView: View {
         else {
             return
         }
-        model.selectTradition(tradition)
+        model.selectTradition(tradition, userInitiated: false)
         #endif
     }
 

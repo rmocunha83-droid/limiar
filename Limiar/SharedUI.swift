@@ -4,6 +4,30 @@ import ManagedSettings
 import SwiftUI
 import UIKit
 
+/// No Limiar, o háptico é respiração, não recompensa: confirma apenas os
+/// momentos essenciais e nunca acompanha a leitura ou seus gestos.
+@MainActor
+enum LimiarHaptics {
+    private static let tapGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let selectionGenerator = UISelectionFeedbackGenerator()
+    private static let completionGenerator = UINotificationFeedbackGenerator()
+
+    static func tap() {
+        tapGenerator.prepare()
+        tapGenerator.impactOccurred()
+    }
+
+    static func select() {
+        selectionGenerator.prepare()
+        selectionGenerator.selectionChanged()
+    }
+
+    static func complete() {
+        completionGenerator.prepare()
+        completionGenerator.notificationOccurred(.success)
+    }
+}
+
 private struct LimiarScaledFontModifier: ViewModifier {
     @ScaledMetric private var scaledSize: CGFloat
 
@@ -533,7 +557,7 @@ private struct ReadingTextScaleGestureModifier: ViewModifier {
         guard next != current else { return }
 
         storedValue = next
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        LimiarHaptics.tap()
         LimiarAnalytics.trackReadingTextScaleChanged(value: next, method: .pinch)
         showIndicator(next)
     }
@@ -1079,6 +1103,11 @@ struct LimiarPrimaryButtonStyle: ButtonStyle {
             .frame(minWidth: 132, minHeight: 58)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    LimiarHaptics.tap()
+                }
+            }
     }
 }
 
@@ -1092,6 +1121,11 @@ struct LimiarHeroButtonStyle: ButtonStyle {
             .frame(minWidth: 142, minHeight: 62)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    LimiarHaptics.tap()
+                }
+            }
     }
 }
 
