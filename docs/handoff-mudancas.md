@@ -11,6 +11,20 @@ Este documento combina o histórico já entregue com mudanças ainda em validaç
 
 ---
 
+## 0a. Portão de assinatura orientado a conversão — 22/08/2026 (branch `codex/paywall-conversao`)
+
+Motivação: no Events Manager da Meta, ~200 `LimiarCheckoutStarted`/semana viravam ~46 `StartTrial`. O código confirmou a causa: o evento de checkout disparava a cada toque (sem dedupe), o portão não preparava a pessoa para a folha da App Store, e quem cancelava só via "Compra cancelada".
+
+- **Portão redesenhado** (`SubscriptionGateView`): eyebrow "ÚLTIMO PASSO", título "Tudo pronto para sua primeira travessia.", primeira frase "Você não paga nada hoje.", linha do tempo Hoje / Dia 5 / Dia 7, planos com mensal pré-selecionado ("Mais escolhido") e anual ancorado ("Equivale a R$ X/mês · Economize R$ Y"), linha "A Apple pede sua confirmação · R$ 0,00 hoje" acima do CTA, pontos de paginação e botão-pílula iguais ao onboarding. Benefícios e depoimentos continuam abaixo dos planos.
+- **Tela de recuperação** (`SubscriptionGateRecoveryView`, "SEM PRESSA / A porta continua aberta."): aparece quando `product.purchase()` devolve `.userCancelled` vindo do portão (`SubscriptionManager.showsGateRecovery`). Três verificações (nada foi cobrado, aviso no dia 5, cancelar em 2 toques), plano atual com link para o outro, CTA "Tentar de novo, grátis", "Já sou assinante" (restaurar) e "Ver todos os planos". Flag separada de `state` porque `refreshEntitlements()` sobrescreve `state`.
+- **Lembrete do dia 5** (`LimiarNotificationCoordinator.syncTrialReminder`): notificação local 2 dias antes de `currentPeriodEndsAt` enquanto houver entitlement de teste introdutório; removida quando o teste deixa de existir. Só agenda com permissão concedida.
+- **Meta:** `LimiarCheckoutStarted` passa a disparar uma vez por aparelho (mesma mecânica do StartTrial); novos eventos `LimiarCheckoutCancelled` (folha fechada) e `LimiarCheckoutFailed` (erro técnico), pensados para o público de remarketing "cancelou o checkout". `privacy.html` atualizado (raiz e `marketing/site`).
+- **Firebase:** `gate_recovery_viewed`, `gate_recovery_retry{plan}`, `gate_recovery_dismissed`. Cada tentativa do portão termina em exatamente um evento entre `purchase_completed`, `purchase_pending`, `purchase_cancelled` e `purchase_failed`; cancelamento não é contado como falha técnica.
+- **QA:** `-LimiarForceSubscriptionGate -LimiarGateTrialEligible` abre o portão; `-LimiarForceGateRecovery` abre a recuperação (DEBUG). Sem arquivo `.storekit` no projeto, o simulador mostra "Carregando oferta" nos preços — validar preços em TestFlight.
+- Ver no Meta após publicar: total semanal de `StartTrial` no Events Manager (meta: sair de ~46 para 60+) e usuários únicos de `LimiarCheckoutCancelled` versus `LimiarCheckoutStarted`. Para taxa por tentativa, use os desfechos terminais do Firebase; `CheckoutStarted` é deduplicado por aparelho e não serve como denominador bruto de tentativas repetidas.
+
+---
+
 ## 0. Travessia adaptada ao ritmo escolhido — EM VALIDAÇÃO
 
 - A profundidade agora determina também a quantidade: **Curta = 1 leitura, Média = 2 e Mais profunda = 3**.

@@ -35,9 +35,15 @@ enum LimiarAnalytics {
         case essential
     }
 
-    enum PurchaseFailureReason: String {
+    enum PurchaseTerminalOutcome: String, CaseIterable {
+        case completed
+        case pending
         case cancelled
-        case error
+        case failed
+
+        var analyticsEventName: String {
+            "purchase_\(rawValue)"
+        }
     }
 
     enum WinbackPhase: String {
@@ -115,6 +121,22 @@ enum LimiarAnalytics {
         ])
     }
 
+    /// Tela "A porta continua aberta", mostrada depois de fechar a folha da
+    /// App Store. Permite medir quanto do abandono é recuperado.
+    static func trackGateRecoveryViewed() {
+        log("gate_recovery_viewed")
+    }
+
+    static func trackGateRecoveryRetry(_ plan: SubscriptionPlan) {
+        log("gate_recovery_retry", parameters: [
+            "plan": plan.analyticsName
+        ])
+    }
+
+    static func trackGateRecoveryDismissed() {
+        log("gate_recovery_dismissed")
+    }
+
     static func trackTrialStarted(
         plan: SubscriptionPlan,
         originalTransactionID: UInt64
@@ -137,13 +159,14 @@ enum LimiarAnalytics {
         )
     }
 
-    static func trackPurchaseFailed(
+    /// Registra exatamente um desfecho para cada tentativa iniciada no portão.
+    /// Cancelamento é uma decisão da pessoa, não uma falha técnica.
+    static func trackPurchaseTerminalOutcome(
         plan: SubscriptionPlan,
-        reason: PurchaseFailureReason
+        outcome: PurchaseTerminalOutcome
     ) {
-        log("purchase_failed", parameters: [
-            "plan": plan.analyticsName,
-            "reason": reason.rawValue
+        log(outcome.analyticsEventName, parameters: [
+            "plan": plan.analyticsName
         ])
     }
 

@@ -295,6 +295,11 @@ final class SubscriptionManager {
     /// terminou — o portão usa isso para não abrir direto como venda para
     /// quem pode ser assinante reinstalando o app.
     private(set) var isVerifyingInitialEntitlements = true
+    /// Fica `true` quando a pessoa fecha a folha da App Store sem concluir,
+    /// vindo do portão. Vive separado de `state` porque um refresh de
+    /// entitlements sobrescreve `state` (.expired) e apagaria a segunda
+    /// chance antes de ela aparecer.
+    private(set) var showsGateRecovery = false
 
     @ObservationIgnored private var userDidSelectPlan = false
     @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
@@ -586,7 +591,7 @@ final class SubscriptionManager {
         case .pending:
             return "A compra está pendente de aprovação."
         case .cancelled:
-            return "Compra cancelada. Você pode continuar sem assinatura ativa."
+            return "Compra cancelada. Nada foi cobrado."
         case .active:
             return "Limiar Premium ativo."
         case .expired:
@@ -680,6 +685,25 @@ final class SubscriptionManager {
         guard plan == .yearly, let product = product(for: plan) else { return nil }
         let monthly = product.price / 12
         return monthly.formatted(product.priceFormatStyle)
+    }
+
+    /// "Economize R$ 28,90": diferença entre 12 mensais e o anual, na moeda
+    /// da loja. `nil` quando não há economia ou faltam produtos.
+    func yearlySavingsDisplayPrice() -> String? {
+        guard let yearly = product(for: .yearly),
+              let monthly = product(for: .monthly) else { return nil }
+        let savings = monthly.price * Decimal(12) - yearly.price
+        guard savings > 0 else { return nil }
+        return savings.formatted(yearly.priceFormatStyle)
+    }
+
+    /// "R$ 0,00" na moeda da loja, para a linha "a Apple pede sua
+    /// confirmação · R$ 0,00 hoje".
+    func zeroDisplayPrice() -> String {
+        guard let product = product(for: selectedPlan) ?? products.first else {
+            return "R$ 0,00"
+        }
+        return Decimal(0).formatted(product.priceFormatStyle)
     }
 
     func hasEligibleFreeTrial(for plan: SubscriptionPlan) -> Bool {
@@ -833,7 +857,7 @@ final class SubscriptionManager {
 
         guard let product = product(for: plan) else {
             if origin == .subscriptionGate {
-                LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
+                LimiarAnalytics.trackPurchaseTerminalOutcome(plan: plan, outcome: .failed)
             }
             state = .productsUnavailable
             message = "Não encontramos este plano no StoreKit. Confirme o produto \(plan.productID) no App Store Connect."
@@ -844,6 +868,7 @@ final class SubscriptionManager {
         if origin == .subscriptionGate {
             LimiarAnalytics.trackGatePurchaseStarted(plan)
         }
+        showsGateRecovery = false
         state = .purchasing
         message = ""
 
@@ -858,30 +883,42 @@ final class SubscriptionManager {
                 await refreshEntitlements()
                 state = hasActiveSubscription ? .purchased : .expired
                 message = hasActiveSubscription ? "Assinatura concluída. Limiar Premium ativo." : "A compra terminou, mas a assinatura ainda não apareceu como ativa."
-                if hasActiveSubscription, origin == .subscriptionGate {
-                    // Conversão do portão medida diretamente, sem depender de
-                    // inferência por gate_purchase_started.
-                    LimiarAnalytics.trackGatePurchaseCompleted(plan)
+                if origin == .subscriptionGate {
+                    LimiarAnalytics.trackPurchaseTerminalOutcome(plan: plan, outcome: .completed)
+                    if hasActiveSubscription {
+                        // Conversão do portão medida diretamente, sem depender de
+                        // inferência por gate_purchase_started.
+                        LimiarAnalytics.trackGatePurchaseCompleted(plan)
+                    }
                 }
             case .pending:
+                if origin == .subscriptionGate {
+                    LimiarAnalytics.trackPurchaseTerminalOutcome(plan: plan, outcome: .pending)
+                }
                 state = .pending
                 message = "A compra ficou pendente. Quando a Apple aprovar, o Premium ficará ativo automaticamente."
             case .userCancelled:
+                MetaAppEvents.trackCheckoutCancelled()
                 if origin == .subscriptionGate {
-                    LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .cancelled)
+                    LimiarAnalytics.trackPurchaseTerminalOutcome(plan: plan, outcome: .cancelled)
+                    // Segunda chance calma: a pessoa fechou a folha da Apple e
+                    // precisa ouvir que nada foi cobrado antes de decidir de novo.
+                    showsGateRecovery = true
                 }
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."
             @unknown default:
+                MetaAppEvents.trackCheckoutFailed()
                 if origin == .subscriptionGate {
-                    LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
+                    LimiarAnalytics.trackPurchaseTerminalOutcome(plan: plan, outcome: .failed)
                 }
                 state = .failed("Não foi possível concluir a compra agora.")
                 message = "Não foi possível concluir a compra agora."
             }
         } catch {
+            MetaAppEvents.trackCheckoutFailed()
             if origin == .subscriptionGate {
-                LimiarAnalytics.trackPurchaseFailed(plan: plan, reason: .error)
+                LimiarAnalytics.trackPurchaseTerminalOutcome(plan: plan, outcome: .failed)
             }
             state = .failed(error.localizedDescription)
             message = "Não foi possível concluir a compra: \(error.localizedDescription)"
@@ -1013,7 +1050,18 @@ final class SubscriptionManager {
             SubscriptionKeychainFlags.wasSubscriber.store("true")
         }
         isVerifyingInitialEntitlements = false
+        if hasActiveSubscription {
+            showsGateRecovery = false
+        }
         refreshAccessState()
+
+        // A promessa do portão ("avisamos no dia 5") é cumprida aqui: o
+        // lembrete local segue o entitlement real, não o toque no botão.
+        LimiarNotificationCoordinator.shared.syncTrialReminder(
+            trialEndsAt: hasActiveSubscription && activeEntitlementIsIntroductoryTrial
+                ? currentPeriodEndsAt
+                : nil
+        )
 
         // .pending (Ask to Buy) permanece visível até o listener de
         // transações resolver a compra; um refresh de rotina não pode
@@ -1035,6 +1083,23 @@ final class SubscriptionManager {
 
     /// Registra que o plano atual foi uma escolha explícita da pessoa, para
     /// que o carregamento de produtos não a sobrescreva com o padrão anual.
+#if DEBUG
+    /// `-LimiarForceGateRecovery`: abre a tela "A porta continua aberta" sem
+    /// precisar cancelar uma compra real (QA e capturas).
+    func forceGateRecoveryForDebugging() {
+        showsGateRecovery = true
+    }
+#endif
+
+    /// "Ver todos os planos" na tela de recuperação: volta ao portão normal.
+    func dismissGateRecovery() {
+        showsGateRecovery = false
+        if state == .cancelled {
+            state = .idle
+            message = ""
+        }
+    }
+
     func noteUserSelectedPlan() {
         userDidSelectPlan = true
     }

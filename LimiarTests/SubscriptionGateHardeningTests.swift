@@ -2,6 +2,32 @@ import XCTest
 @testable import Limiar
 
 final class SubscriptionGateHardeningTests: XCTestCase {
+    // MARK: - Telemetria de compra
+
+    func testPurchaseTerminalOutcomesUseExclusiveEvents() {
+        let outcomes = LimiarAnalytics.PurchaseTerminalOutcome.allCases
+        let eventNames = outcomes.map(\.analyticsEventName)
+
+        XCTAssertEqual(Set(eventNames).count, outcomes.count)
+        XCTAssertEqual(
+            LimiarAnalytics.PurchaseTerminalOutcome.cancelled.analyticsEventName,
+            "purchase_cancelled"
+        )
+        XCTAssertEqual(
+            LimiarAnalytics.PurchaseTerminalOutcome.failed.analyticsEventName,
+            "purchase_failed"
+        )
+        XCTAssertNotEqual(
+            LimiarAnalytics.PurchaseTerminalOutcome.cancelled.analyticsEventName,
+            LimiarAnalytics.PurchaseTerminalOutcome.failed.analyticsEventName
+        )
+    }
+
+    func testTrialReminderDoesNotTouchNotificationCenterInUnitTests() {
+        XCTAssertFalse(TrialReminderRuntimePolicy.shouldSync(isRunningUnitTests: true))
+        XCTAssertTrue(TrialReminderRuntimePolicy.shouldSync(isRunningUnitTests: false))
+    }
+
     // MARK: - Banner de reativação
 
     func testWinbackAppearsOnlyForNewActiveSubscriptionWithRenewalOff() {

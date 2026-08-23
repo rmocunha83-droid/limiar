@@ -84,11 +84,16 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
     static let shared = LimiarNotificationCoordinator()
     static let bridgeIdentifier = "shield.bridge"
     nonisolated static let bridgeSource = "shield_bridge"
+    static let trialReminderIdentifier = "trial.reminder"
+    nonisolated static let trialReminderSource = "trial_reminder"
+    /// Dois dias antes do fim do teste de 7 dias = dia 5, como o portão promete.
+    static let trialReminderLeadTime: TimeInterval = 2 * 24 * 60 * 60
     static let prePromptTitle = "Um atalho para sua travessia"
     static let prePromptMessage = "Quando seus apps estiverem em pausa, o Limiar te envia um toque para abrir a leitura na hora. Também usamos isso para o lembrete da sua pausa diária."
 
     private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     private(set) var shieldBridgeRouteID: UUID?
+    private var trialReminderSyncRevision = 0
 
     private override init() {
         super.init()
@@ -131,6 +136,50 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
         } catch {
             await refreshAuthorizationStatus()
             return false
+        }
+    }
+
+    /// Mantém um único lembrete local alinhado ao entitlement de teste: agenda
+    /// quando há teste ativo com data de fim conhecida, remove quando não há.
+    /// Sem permissão de notificação não agenda nada — a Apple ainda envia o
+    /// próprio aviso por e-mail, então a promessa do portão não fica sem
+    /// cobertura.
+    func syncTrialReminder(trialEndsAt: Date?) {
+        guard TrialReminderRuntimePolicy.shouldSyncInCurrentProcess else { return }
+
+        trialReminderSyncRevision += 1
+        let revision = trialReminderSyncRevision
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.trialReminderIdentifier])
+
+        guard let trialEndsAt else { return }
+        let fireDate = trialEndsAt.addingTimeInterval(-Self.trialReminderLeadTime)
+        guard fireDate > Date() else { return }
+
+        Task { @MainActor [weak self] in
+            let settings = await center.notificationSettings()
+            guard let self,
+                  self.trialReminderSyncRevision == revision else { return }
+            guard settings.authorizationStatus == .authorized
+                || settings.authorizationStatus == .provisional else { return }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Seu teste do Limiar termina em 2 dias"
+            content.body = "Se o Limiar está fazendo bem, não precisa fazer nada. Para não ser cobrado, cancele em Ajustes › Assinaturas."
+            content.sound = .default
+            content.userInfo = ["source": Self.trialReminderSource]
+
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute],
+                from: fireDate
+            )
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: Self.trialReminderIdentifier,
+                content: content,
+                trigger: trigger
+            )
+            try? await center.add(request)
         }
     }
 
@@ -187,12 +236,25 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
     }
 }
 
+enum TrialReminderRuntimePolicy {
+    static func shouldSync(isRunningUnitTests: Bool) -> Bool {
+        !isRunningUnitTests
+    }
+
+    static var shouldSyncInCurrentProcess: Bool {
+        shouldSync(isRunningUnitTests: NSClassFromString("XCTestCase") != nil)
+    }
+}
+
 @MainActor
 enum MetaAppEvents {
     private static let completedRegistrationKey = "limiar.meta.completedRegistration"
     private static let startedTrialKey = "limiar.meta.startedTrial"
     private static let pauseConfiguredKey = "limiar.meta.pauseConfigured"
+    private static let checkoutStartedKey = "limiar.meta.checkoutStarted"
     private static let checkoutStartedEvent = AppEvents.Name("LimiarCheckoutStarted")
+    private static let checkoutCancelledEvent = AppEvents.Name("LimiarCheckoutCancelled")
+    private static let checkoutFailedEvent = AppEvents.Name("LimiarCheckoutFailed")
     private static let subscriptionActivatedEvent = AppEvents.Name("LimiarSubscriptionActivated")
     private static let readingCompletedEvent = AppEvents.Name("LimiarReadingCompleted")
     private static let pauseConfiguredEvent = AppEvents.Name("LimiarPauseConfigured")
@@ -236,8 +298,24 @@ enum MetaAppEvents {
         trackAfterAuthorization(event: .viewedContent)
     }
 
+    /// Uma vez por aparelho, como o StartTrial: o funil da Meta compara
+    /// pessoas com pessoas. Sem a chave, cada toque repetido depois de fechar
+    /// a folha da Apple inflava o "checkout iniciado" e escondia o abandono real.
     static func trackCheckoutStarted() {
-        trackAfterAuthorization(event: checkoutStartedEvent)
+        trackAfterAuthorization(event: checkoutStartedEvent, defaultsKey: checkoutStartedKey)
+    }
+
+    /// Fechou a folha da App Store sem concluir. Sem dedupe de propósito: é
+    /// o sinal para o público de remarketing "cancelou o checkout".
+    static func trackCheckoutCancelled() {
+        trackAfterAuthorization(event: checkoutCancelledEvent)
+    }
+
+    /// Erro técnico (StoreKit, rede, produto ausente). Separado do
+    /// cancelamento para o público de remarketing não misturar desistência
+    /// com falha.
+    static func trackCheckoutFailed() {
+        trackAfterAuthorization(event: checkoutFailedEvent)
     }
 
     static func trackSubscriptionActivated(originalTransactionID: UInt64) {
