@@ -962,7 +962,7 @@ struct LimiarBackground: View {
 }
 
 struct SelectableRow: View {
-    @ScaledMetric(relativeTo: .subheadline) private var scaledSubtitleSize: CGFloat = 14
+    @ScaledMetric(relativeTo: .subheadline) private var scaledSubtitleSize: CGFloat = 15
 
     let title: String
     let subtitle: String
@@ -1039,10 +1039,10 @@ struct ChipGrid: View {
                     action(item)
                 } label: {
                     Text(item)
-                        .limiarFont(15, weight: .medium, relativeTo: .body)
+                        .limiarFont(16, weight: .medium, relativeTo: .body)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 11)
                         .background(selected.contains(item) ? Color.sageButton.opacity(0.30) : Color.white.opacity(0.08), in: Capsule())
                         .overlay(Capsule().stroke(selected.contains(item) ? Color.sageButton.opacity(0.95) : Color.white.opacity(0.16), lineWidth: selected.contains(item) ? 1.5 : 1))
                         .foregroundStyle(selected.contains(item) ? Color.sageButton : Color.ivory.opacity(0.92))
@@ -1296,7 +1296,7 @@ struct TestimonialCard: View {
             }
 
             Text("“\(testimonial.quote)”")
-                .conversionFont(16, design: .serif)
+                .conversionFont(17, design: .serif)
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1306,7 +1306,7 @@ struct TestimonialCard: View {
             }
 
             Text(testimonial.name)
-                .conversionFont(13, weight: .medium, relativeTo: .footnote)
+                .conversionFont(14, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(Color.softText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
