@@ -870,97 +870,68 @@ private struct SubscriptionGateRecoveryView: View {
     }
 
     private var welcomeOfferLayout: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 14) {
-                        OnboardingTitle(
-                            eyebrow: "OFERTA DE BOAS-VINDAS",
-                            title: "Fique pelo preço do anual, sem o compromisso do anual."
-                        )
-
-                        Text("Nada foi cobrado. Para você conhecer o Limiar com calma, o mensal fica pelo valor que custaria no plano anual.")
-                            .limiarFont(16, weight: .medium, relativeTo: .body)
-                            .foregroundStyle(Color.softText)
-                            .lineSpacing(4)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    VStack(alignment: .leading, spacing: 14) {
-                        SubscriptionGateRecoveryCheck(text: "\(subscription.zeroDisplayPrice()) hoje — a Apple só confirma, não cobra")
-                        SubscriptionGateRecoveryCheck(text: "Avisamos no dia 5, antes de qualquer cobrança")
-                        SubscriptionGateRecoveryCheck(text: "Cancele em 2 toques em Ajustes › Assinaturas")
-                    }
-
-                    SubscriptionGatePlanRow(
-                        plan: .monthlyWelcome,
-                        isSelected: true,
-                        previousPriceLine: subscription.storeDisplayPrice(for: .monthly),
-                        priceLine: "\(subscription.storeDisplayPrice(for: .monthlyWelcome))/mês",
-                        detailLine: "7 dias grátis primeiro · cancele quando quiser",
-                        badge: .init(text: "Boas-vindas", isAccent: true)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 14) {
+                    OnboardingTitle(
+                        eyebrow: "OFERTA DE BOAS-VINDAS",
+                        title: "Fique pelo preço do anual, sem o compromisso do anual."
                     )
 
-                    Text("Esta oferta aparece uma vez. Se fechar, o plano volta a \(subscription.storeDisplayPrice(for: .monthly)).")
-                        .limiarFont(13, weight: .medium, relativeTo: .footnote)
+                    Text("Nada foi cobrado. Para você conhecer o Limiar com calma, o mensal fica pelo valor que custaria no plano anual.")
+                        .limiarFont(16, weight: .medium, relativeTo: .body)
                         .foregroundStyle(Color.softText)
-                        .lineSpacing(3)
+                        .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 28)
-                .padding(.bottom, 18)
-                .containerRelativeFrame(.horizontal)
-            }
 
-            VStack(spacing: 10) {
-                welcomeOfferActions
-
-                if let statusText {
-                    Text(statusText)
-                        .conversionFont(12, weight: .medium, relativeTo: .footnote)
-                        .foregroundStyle(Color.softText)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: 14) {
+                    SubscriptionGateRecoveryCheck(text: "\(subscription.zeroDisplayPrice()) hoje — a Apple só confirma, não cobra")
+                    SubscriptionGateRecoveryCheck(text: "Avisamos no dia 5, antes de qualquer cobrança")
+                    SubscriptionGateRecoveryCheck(text: "Cancele em 2 toques em Ajustes › Assinaturas")
                 }
 
-                Button {
-                    LimiarHaptics.select()
-                    subscription.declineWelcomeOffer(reason: .annual)
-                } label: {
-                    Text(welcomeAnnualLinkTitle)
-                        .limiarFont(13, weight: .medium, relativeTo: .caption)
-                        .foregroundStyle(Color.softText)
-                        .underline(true, color: Color.softText.opacity(0.5))
-                }
-                .buttonStyle(.plain)
+                SubscriptionGatePlanRow(
+                    plan: .monthlyWelcome,
+                    isSelected: true,
+                    previousPriceLine: subscription.storeDisplayPrice(for: .monthly),
+                    priceLine: "\(subscription.storeDisplayPrice(for: .monthlyWelcome))/mês",
+                    detailLine: "7 dias grátis primeiro · cancele quando quiser",
+                    badge: .init(text: "Boas-vindas", isAccent: true)
+                )
 
-                Button {
-                    LimiarAnalytics.trackGateRecoveryDismissed()
-                    subscription.declineWelcomeOffer(reason: .allPlans)
-                } label: {
-                    Text("Ver todos os planos")
-                        .limiarFont(13, weight: .medium, relativeTo: .caption)
-                        .foregroundStyle(Color.sageButton)
-                }
-                .buttonStyle(.plain)
-
-                Text(welcomeLegalText)
-                    .conversionFont(11, relativeTo: .caption)
-                    .foregroundStyle(Color.softText.opacity(0.85))
-                    .multilineTextAlignment(.center)
+                Text("Esta oferta aparece uma vez. Se fechar, o plano volta a \(subscription.storeDisplayPrice(for: .monthly)).")
+                    .limiarFont(13, weight: .medium, relativeTo: .footnote)
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity)
 
-                SubscriptionGateFooterLinks(termsURL: termsURL, privacyURL: privacyURL)
+                VStack(spacing: 10) {
+                    welcomeOfferActions
+
+                    if let statusText {
+                        Text(statusText)
+                            .conversionFont(12, weight: .medium, relativeTo: .footnote)
+                            .foregroundStyle(Color.softText)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    Text(welcomeLegalText)
+                        .conversionFont(11, relativeTo: .caption)
+                        .foregroundStyle(Color.softText.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+
+                    SubscriptionGateFooterLinks(termsURL: termsURL, privacyURL: privacyURL)
+                }
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
-            .background(Color.deepInk.opacity(0.97))
-            .overlay(alignment: .top) {
-                Divider().overlay(Color.conversionBorder)
-            }
+            .padding(.horizontal, 24)
+            .padding(.top, 28)
+            .padding(.bottom, 30)
+            .containerRelativeFrame(.horizontal)
         }
     }
 
@@ -1063,13 +1034,6 @@ private struct SubscriptionGateRecoveryView: View {
         case .monthlyWelcome:
             return "Prefiro o mensal"
         }
-    }
-
-    private var welcomeAnnualLinkTitle: String {
-        if let equivalent = subscription.monthlyEquivalentDisplayPrice(for: .yearly) {
-            return "Prefiro o anual · \(equivalent)/mês"
-        }
-        return "Prefiro o anual"
     }
 
     private var welcomeLegalText: String {
