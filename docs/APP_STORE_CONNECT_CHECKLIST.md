@@ -87,24 +87,38 @@ Produtos:
 | --- | --- | --- | --- | --- | --- |
 | `limiar_premium_monthly` | `Limiar Premium Monthly` | `Limiar Premium Mensal` | 1 mês | R$ 9,90 | 1 semana grátis no Brasil, sem data final |
 | `limiar_premium_annual_2026` | `Limiar Premium Anual` | `Limiar Premium Anual` | 1 ano | R$ 89,90 | 1 semana grátis no Brasil, sem data final |
+| `limiar_premium_monthly_welcome` | `Limiar Premium Mensal Boas-vindas` | `Limiar Premium Mensal` | 1 mês | **R$ 7,50 confirmado pelo Romeu em 23/08/2026** | 1 semana grátis, somente Brasil, sem data final |
 
 Descrição curta sugerida para os produtos:
 
 - Mensal: `Acesso completo ao Limiar Premium com cobrança mensal.`
 - Anual: `Acesso completo ao Limiar Premium com cobrança anual e economia em relação ao plano mensal.`
 
-Na submissão da nova versão, adicionar a assinatura mensal e a assinatura anual junto com a versão do app.
+Na submissão da nova versão, adicionar os produtos de assinatura usados por ela junto com a versão do app. Para a oferta de boas-vindas, fazer isso somente depois de concluir preço, localização, captura e oferta introdutória — e apenas com autorização explícita do Romeu.
 
 Configuração territorial das assinaturas:
 
-- Disponibilidade: somente Brasil.
+- Disponibilidade dos produtos atuais mensal e anual: somente Brasil.
 - Preço mensal: R$ 9,90.
 - Preço anual: R$ 89,90.
-- Oferta introdutória StoreKit: teste grátis de 1 semana nos dois produtos, Brasil, início em 06/08/2026 e sem data final.
+- Oferta introdutória StoreKit atual: teste grátis de 1 semana nos produtos mensal e anual, Brasil, início em 06/08/2026 e sem data final. O produto separado de boas-vindas também fica restrito ao Brasil.
+
+### Oferta de boas-vindas após cancelamento
+
+- Produto novo e separado: `limiar_premium_monthly_welcome`.
+- Mesmo grupo e mesmo nível de serviço de `limiar_premium_monthly`; período de 1 mês.
+- Produto criado em 23/08/2026 no grupo `Limiar Premium`, Apple ID `6804473230`, no mesmo nível do mensal normal. Status atual: `Preparar para envio`; não foi adicionado para revisão.
+- Localização pt-BR: nome `Limiar Premium Mensal`; descrição salva `Acesso completo ao Limiar. Mensal pelo preço do anual.`. O texto originalmente proposto excedia em 34 caracteres o limite de 55 caracteres do App Store Connect.
+- Preço Brasil: o price point oficial mais próximo de `R$ 89,90 ÷ 12` é **R$ 7,50**, confirmado pelo Romeu em 23/08/2026.
+- Disponibilidade e oferta introdutória do produto de boas-vindas: somente Brasil (1 de 175 territórios), teste grátis na primeira semana com início em 23/08/2026 e sem data final. Isso não altera os dois produtos existentes.
+- O produto não é apresentado em nenhum seletor público do app; só é alcançável pelo código depois do primeiro cancelamento do portão.
+- Captura de revisão: pendente. O simulador iOS 26.5 ficou preso no `00LaunchServicesMigrator` após o reset e não concluiu a instalação. Gerar com `-LimiarForceSubscriptionGate -LimiarGateTrialEligible -LimiarForceGateRecovery -LimiarForceWelcomeOffer` depois que os três produtos carregarem.
+- Notas ao revisor salvas no produto em 23/08/2026: `Esta assinatura é uma oferta única de boas-vindas exibida somente após o usuário cancelar a primeira tentativa de compra no portão. Ela não pode ser aberta pela loja nem pelos seletores normais do aplicativo.`
+- Não alterar os produtos mensal e anual existentes. Não enviar o produto ou a versão para revisão sem confirmação explícita do Romeu.
 
 ## Review notes
 
-Usar este texto em `App Review Notes`:
+Usar este texto em `App Review Notes` (incluindo a oferta somente depois que o novo produto estiver configurado e a submissão tiver sido autorizada):
 
 ```text
 O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pausas escolhidas pelo usuário antes de apps selecionados. As reflexões são para meditação pessoal e não substituem aconselhamento religioso ou profissional.
@@ -112,6 +126,8 @@ O Limiar usa recursos nativos do iOS relacionados ao Tempo de Uso para criar pau
 Depois do onboarding, usuários novos encontram um portão de assinatura sem opção de pular. Clientes elegíveis podem iniciar 7 dias grátis no plano mensal ou anual; durante o teste, o entitlement ativo libera o dashboard. Sem entitlement, usuários novos voltam ao portão. Usuários legados preservam o fluxo anterior, inclusive o Modo Essencial.
 
 Para testar a assinatura, escolha o plano mensal ou anual no portão ou toque em "Restaurar compras".
+
+O produto `limiar_premium_monthly_welcome` é uma oferta única de boas-vindas exibida somente após o usuário cancelar a primeira tentativa de compra no portão. Ele não pode ser aberto pela loja nem pelos seletores normais do aplicativo.
 
 Se o revisor não conseguir conceder Tempo de Uso no dispositivo de teste, ele pode tocar em "Fazer isso depois" no onboarding. O portão de assinatura continuará acessível, e a autorização de Tempo de Uso poderá ser feita depois em Configurações.
 

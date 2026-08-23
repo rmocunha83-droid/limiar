@@ -138,6 +138,7 @@
 		LIMI00000000000000000401 /* LocalReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalReadingSessionTests.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000411 /* SubscriptionGateHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionGateHardeningTests.swift; sourceTree = "<group>"; };
 		LIMI00000000000000000413 /* OnboardingContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContentTests.swift; sourceTree = "<group>"; };
+		LIMI00000000000000000420 /* Limiar.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Limiar.storekit; sourceTree = "<group>"; };
 		LIMI00000000000000000402 /* LimiarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LimiarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -153,6 +154,7 @@
 		LIMI00000000000000000030 = {
 			isa = PBXGroup;
 			children = (
+				LIMI00000000000000000420 /* Limiar.storekit */,
 				LIMI00000000000000000034 /* Limiar */,
 				LIMI00000000000000000403 /* LimiarTests */,
 				LIMI00000000000000000035 /* LimiarShieldConfigurationExtension */,

@@ -3,6 +3,121 @@ import XCTest
 @testable import Limiar
 
 final class SubscriptionGateHardeningTests: XCTestCase {
+    // MARK: - Oferta de boas-vindas
+
+    func testWelcomeOfferIsAvailableOnlyWithEveryEligibilityCondition() {
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: true,
+                productIsAvailable: true,
+                hasEligibleFreeTrial: true,
+                hadSubscriptionBefore: false,
+                wasConsumed: false
+            ),
+            .available
+        )
+
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: false,
+                productIsAvailable: true,
+                hasEligibleFreeTrial: true,
+                hadSubscriptionBefore: false,
+                wasConsumed: false
+            ),
+            .notEligible
+        )
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: true,
+                productIsAvailable: true,
+                hasEligibleFreeTrial: false,
+                hadSubscriptionBefore: false,
+                wasConsumed: false
+            ),
+            .notEligible
+        )
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: true,
+                productIsAvailable: true,
+                hasEligibleFreeTrial: true,
+                hadSubscriptionBefore: true,
+                wasConsumed: false
+            ),
+            .notEligible
+        )
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: true,
+                productIsAvailable: true,
+                hasEligibleFreeTrial: true,
+                hadSubscriptionBefore: false,
+                wasConsumed: false,
+                isEnabled: false
+            ),
+            .notEligible
+        )
+    }
+
+    func testWelcomeOfferConsumptionIsTerminalEvenInDebug() {
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: true,
+                productIsAvailable: true,
+                hasEligibleFreeTrial: false,
+                hadSubscriptionBefore: true,
+                wasConsumed: true,
+                isForcedForDebugging: true
+            ),
+            .consumed
+        )
+    }
+
+    func testForcedWelcomeOfferStillRequiresLoadedProduct() {
+        XCTAssertEqual(
+            WelcomeOfferPolicy.state(
+                showsGateRecovery: true,
+                productIsAvailable: false,
+                hasEligibleFreeTrial: false,
+                hadSubscriptionBefore: false,
+                wasConsumed: false,
+                isForcedForDebugging: true
+            ),
+            .notEligible
+        )
+    }
+
+    func testWelcomeProductNeverAppearsAmongStandardPlans() {
+        XCTAssertTrue(SubscriptionPlan.allCases.contains(.monthlyWelcome))
+        XCTAssertEqual(SubscriptionPlan.standardPlans, [.monthly, .yearly])
+        XCTAssertEqual(SubscriptionPlan.monthlyWelcome.analyticsName, "monthly_welcome")
+    }
+
+    func testWelcomePriceMustBeDiscountedAndMatchYearlyEquivalent() {
+        XCTAssertTrue(
+            WelcomeOfferPolicy.hasValidPriceRelationship(
+                monthlyPrice: 9.90,
+                yearlyPrice: 89.90,
+                welcomePrice: 7.50
+            )
+        )
+        XCTAssertFalse(
+            WelcomeOfferPolicy.hasValidPriceRelationship(
+                monthlyPrice: 9.90,
+                yearlyPrice: 89.90,
+                welcomePrice: 9.90
+            )
+        )
+        XCTAssertFalse(
+            WelcomeOfferPolicy.hasValidPriceRelationship(
+                monthlyPrice: 9.90,
+                yearlyPrice: 89.90,
+                welcomePrice: 6.90
+            )
+        )
+    }
+
     // MARK: - Telemetria de compra
 
     func testPurchaseAttemptOutcomesHaveExclusiveValues() {
