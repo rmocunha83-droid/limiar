@@ -3,6 +3,7 @@ import FamilyControls
 import ManagedSettings
 import StoreKit
 import SwiftUI
+import UIKit
 
 /// Dispara a ação quando o marcador do topo sai de vista (a pessoa rolou até
 /// a leitura). No iOS 17, sem onScrollVisibilityChange, mantém a semântica
@@ -32,6 +33,12 @@ func narrationExplanationSegments(_ parts: [String]) -> [String] {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
     }
+}
+
+func readingNarrationSegments(for item: SpiritualReadingItem) -> [String] {
+    [
+        canonicalPassageNarrationText(reference: item.reference, text: item.text)
+    ] + narrationExplanationSegments([item.homily])
 }
 
 private extension SubscriptionWinbackPhase {
@@ -280,6 +287,7 @@ private struct DashboardView: View {
     @State private var showingPaywall = false
     @State private var showingManageSubscriptions = false
     @State private var showingCompletionScreen = false
+    @State private var selectedRevisitFavorite: FavoritePassageItem?
 
     private static var forceCompletionScreenForDebugging: Bool {
         #if DEBUG
@@ -361,6 +369,8 @@ private struct DashboardView: View {
 
                         blockedAppsStrip
                         winbackBanner
+                        savedPassageRevisit
+                        weeklyPauseSummary
                         readingRequirementHeader
                         essentialModeNotice
                         readingItemsList
@@ -428,6 +438,11 @@ private struct DashboardView: View {
             PaywallView(analyticsOrigin: .dashboard)
         }
         .manageSubscriptionsSheet(isPresented: $showingManageSubscriptions)
+        .sheet(item: $selectedRevisitFavorite) { favorite in
+            NavigationStack {
+                FavoritePassageDetailView(favorite: favorite, isPresentedModally: true)
+            }
+        }
         .familyActivityPicker(
             headerText: "Escolha apps, categorias ou sites que vão ativar o Limiar.",
             footerText: "Você pode alterar isso depois em Preferências.",
@@ -580,6 +595,81 @@ private struct DashboardView: View {
         }
     }
 
+    @ViewBuilder
+    private var savedPassageRevisit: some View {
+        if let suggestion = model.savedPassageRevisitSuggestion {
+            let readingItem = favoriteReadingItem(suggestion.favorite)
+            let segments = readingNarrationSegments(for: readingItem)
+
+            VStack(alignment: .leading, spacing: 13) {
+                Label(suggestion.reason.eyebrow, systemImage: "bookmark.fill")
+                    .limiarFont(12, weight: .bold, relativeTo: .caption)
+                    .tracking(1.1)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(suggestion.favorite.reference)
+                    .limiarFont(25, design: .serif, relativeTo: .title2)
+                    .foregroundStyle(Color.ivory)
+
+                Text(model.favoritePassageText(for: suggestion.favorite))
+                    .limiarFont(15, relativeTo: .body)
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(4)
+                    .lineLimit(3)
+
+                HStack(spacing: 10) {
+                    Button("Revisitar") {
+                        selectedRevisitFavorite = suggestion.favorite
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.sageButton)
+
+                    Button {
+                        if model.isEssentialMode {
+                            showingPaywall = true
+                        } else {
+                            narration.toggle(segments: segments, context: "revisita_inteligente")
+                        }
+                    } label: {
+                        Label(
+                            narration.state(for: segments) == .idle ? "Ouvir novamente" : narration.state(for: segments).title,
+                            systemImage: narration.state(for: segments).systemImage
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.sageButton)
+                    .foregroundStyle(Color.deepInk)
+                }
+                .limiarFont(14, weight: .semibold, relativeTo: .headline)
+            }
+            .padding(18)
+            .limiarPanel()
+            .dynamicTypeSize(...DynamicTypeSize.large)
+        }
+    }
+
+    @ViewBuilder
+    private var weeklyPauseSummary: some View {
+        if let summary = model.weeklyPauseSummaryText {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "sparkles")
+                    .limiarFont(17, weight: .semibold, relativeTo: .headline)
+                    .foregroundStyle(Color.warmGold)
+                Text(summary)
+                    .limiarFont(16, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(Color.ivory)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.sageButton.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.sageButton.opacity(0.22), lineWidth: 1)
+            )
+        }
+    }
+
     private var readingRequirementHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
@@ -590,7 +680,9 @@ private struct DashboardView: View {
 
                 Spacer(minLength: 8)
 
-                ReadingTextScaleMenu()
+                ReadingPreferencesMenu {
+                    narration.applyStoredPreferences()
+                }
             }
 
             Text(model.currentReadingTitle)
@@ -624,9 +716,7 @@ private struct DashboardView: View {
                 }
 
                 ForEach(Array(model.currentSpiritualReadingItems.enumerated()), id: \.element.id) { index, item in
-                    let narrationSegments = [
-                        canonicalPassageNarrationText(reference: item.reference, text: item.text)
-                    ] + narrationExplanationSegments([item.homily, item.practicalConclusion])
+                    let narrationSegments = readingNarrationSegments(for: item)
 
                     SpiritualReadingCard(
                         item: item,
@@ -650,6 +740,9 @@ private struct DashboardView: View {
                             }
                         },
                         narrationState: model.isEssentialMode ? .idle : narration.state(for: narrationSegments),
+                        narrationSegmentIndex: model.isEssentialMode
+                            ? nil
+                            : narration.highlightedSegmentIndex(for: narrationSegments),
                         showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
                         showsNarration: model.canNarrateCurrentReading || model.isEssentialMode,
                         isSaveLocked: model.isEssentialMode,
@@ -684,7 +777,32 @@ private struct DashboardView: View {
                 .padding(.top, model.currentSpiritualReadingItems.count == 1 ? 4 : 0)
             ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
             ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
+            RememberTodayBlock(
+                text: model.currentReflection.conclusion,
+                isSaved: model.currentSpiritualReadingItems.first.map { model.isFavorite($0) } ?? false,
+                saveAction: saveCurrentPassageFromReminder
+            )
         }
+    }
+
+    private func saveCurrentPassageFromReminder() {
+        guard let item = model.currentSpiritualReadingItems.first else { return }
+        if model.isEssentialMode {
+            showingPaywall = true
+        } else if !model.isFavorite(item) {
+            model.toggleFavorite(item)
+        }
+    }
+
+    private func favoriteReadingItem(_ favorite: FavoritePassageItem) -> SpiritualReadingItem {
+        SpiritualReadingItem(
+            id: favorite.passageID,
+            reference: favorite.reference,
+            text: model.favoritePassageText(for: favorite),
+            homily: favorite.homily ?? "",
+            practicalConclusion: favorite.practicalConclusion ?? "",
+            passageID: favorite.passageID
+        )
     }
 
     private var essentialReflectionTeaser: some View {
@@ -848,6 +966,7 @@ private struct DashboardView: View {
 
         return ZStack {
             LimiarBackground()
+            CompletionLightSweep()
 
             VStack(spacing: 24) {
                 Spacer()
@@ -965,7 +1084,7 @@ private struct DashboardView: View {
     private func completeReading() {
         guard !showingCompletionScreen else { return }
 
-        narration.stop()
+        narration.stop(preservingProgress: false)
         model.finishReading()
         requestTrackingPermissionAfterCompletion()
         requestReviewIfEligibleAfterCompletion()
@@ -1011,5 +1130,112 @@ private struct DashboardView: View {
 
             requestReview()
         }
+    }
+}
+
+struct RememberTodayBlock: View {
+    let text: String
+    let isSaved: Bool
+    let saveAction: () -> Void
+
+    @State private var copied = false
+    @AppStorage(
+        ReadingTextScaleStore.key,
+        store: ReadingTextScaleStore.appGroupDefaults
+    ) private var readingTextScale = ReadingTextScalePolicy.defaultValue
+
+    private var cleanedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        if !cleanedText.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("PARA LEMBRAR HOJE", systemImage: "sun.max.fill")
+                    .limiarFont(13, weight: .bold, relativeTo: .caption)
+                    .tracking(1.1)
+                    .foregroundStyle(Color.warmGold)
+
+                Text(cleanedText)
+                    .readingFont(
+                        18,
+                        textScale: readingTextScale,
+                        design: .serif,
+                        relativeTo: .title3
+                    )
+                    .foregroundStyle(Color.ivory)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 10) {
+                    Button(action: saveAction) {
+                        Label(
+                            isSaved ? "Salvo com o trecho" : "Salvar com o trecho",
+                            systemImage: isSaved ? "heart.fill" : "heart"
+                        )
+                    }
+                    .disabled(isSaved)
+
+                    Button {
+                        UIPasteboard.general.string = cleanedText
+                        copied = true
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(1.2))
+                            copied = false
+                        }
+                    } label: {
+                        Label(copied ? "Copiado" : "Copiar", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    }
+                }
+                .limiarFont(13, weight: .semibold, relativeTo: .headline)
+                .buttonStyle(.bordered)
+                .tint(Color.sageButton)
+            }
+            .padding(17)
+            .background(
+                LinearGradient(
+                    colors: [Color.warmGold.opacity(0.12), Color.white.opacity(0.05)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.warmGold.opacity(0.25), lineWidth: 1)
+            )
+            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+        }
+    }
+}
+
+private struct CompletionLightSweep: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lightOffset: CGFloat = -1.2
+
+    var body: some View {
+        GeometryReader { proxy in
+            LinearGradient(
+                colors: [.clear, Color.warmGold.opacity(0.02), Color.warmGold.opacity(0.16), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: proxy.size.width * 0.48, height: proxy.size.height * 1.25)
+            .rotationEffect(.degrees(8))
+            .offset(x: lightOffset * proxy.size.width, y: -proxy.size.height * 0.12)
+            .blendMode(.screen)
+            .allowsHitTesting(false)
+            .onAppear {
+                guard !reduceMotion else {
+                    lightOffset = 0.45
+                    return
+                }
+                withAnimation(.easeInOut(duration: 1.8)) {
+                    lightOffset = 1.5
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }

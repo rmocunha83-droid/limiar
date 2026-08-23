@@ -1,31 +1,139 @@
+import StoreKit
 import XCTest
 @testable import Limiar
 
 final class SubscriptionGateHardeningTests: XCTestCase {
     // MARK: - Telemetria de compra
 
-    func testPurchaseTerminalOutcomesUseExclusiveEvents() {
-        let outcomes = LimiarAnalytics.PurchaseTerminalOutcome.allCases
-        let eventNames = outcomes.map(\.analyticsEventName)
-
-        XCTAssertEqual(Set(eventNames).count, outcomes.count)
-        XCTAssertEqual(
-            LimiarAnalytics.PurchaseTerminalOutcome.cancelled.analyticsEventName,
-            "purchase_cancelled"
-        )
-        XCTAssertEqual(
-            LimiarAnalytics.PurchaseTerminalOutcome.failed.analyticsEventName,
-            "purchase_failed"
-        )
+    func testPurchaseAttemptOutcomesHaveExclusiveValues() {
+        let outcomes = LimiarAnalytics.PurchaseAttemptOutcome.allCases
+        XCTAssertEqual(Set(outcomes.map(\.rawValue)).count, outcomes.count)
         XCTAssertNotEqual(
-            LimiarAnalytics.PurchaseTerminalOutcome.cancelled.analyticsEventName,
-            LimiarAnalytics.PurchaseTerminalOutcome.failed.analyticsEventName
+            LimiarAnalytics.PurchaseAttemptOutcome.userCancelled,
+            .error
         )
+    }
+
+    func testCancellationDoesNotRouteAsTechnicalFailure() {
+        XCTAssertTrue(PurchaseFailureDiagnostics.isUserCancellation(.userCancelled))
+        XCTAssertFalse(PurchaseFailureDiagnostics.isUserCancellation(.networkError))
+        XCTAssertFalse(PurchaseFailureDiagnostics.isUserCancellation(.storeKitError))
     }
 
     func testTrialReminderDoesNotTouchNotificationCenterInUnitTests() {
         XCTAssertFalse(TrialReminderRuntimePolicy.shouldSync(isRunningUnitTests: true))
         XCTAssertTrue(TrialReminderRuntimePolicy.shouldSync(isRunningUnitTests: false))
+    }
+
+    func testTrialReminderFiresFortyEightHoursBeforeTrialEnd() throws {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let trialEnd = now.addingTimeInterval(7 * 24 * 60 * 60)
+        let fireDate = try XCTUnwrap(TrialReminderRuntimePolicy.fireDate(
+            trialEndsAt: trialEnd,
+            leadTime: LimiarNotificationCoordinator.trialReminderLeadTime,
+            now: now
+        ))
+
+        XCTAssertEqual(
+            trialEnd.timeIntervalSince(fireDate),
+            48 * 60 * 60,
+            accuracy: 0.001
+        )
+    }
+
+    // MARK: - Diagnostico seguro de falhas
+
+    func testPurchaseFailureDiagnosticsUsesSafeStableCodes() {
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(for: SubscriptionVerificationError.unverifiedTransaction),
+            .unverifiedTransaction
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(
+                for: NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+            ),
+            .networkError
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(
+                for: NSError(domain: SKErrorDomain, code: SKError.paymentCancelled.rawValue)
+            ),
+            .userCancelled
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(
+                for: NSError(domain: SKErrorDomain, code: SKError.unknown.rawValue)
+            ),
+            .storeKitError
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.code(for: NSError(domain: "LimiarTests", code: 1)),
+            .unknownError
+        )
+    }
+
+    func testPurchaseFailureDiagnosticsMapsTerminalOutcome() {
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.outcome(for: .userCancelled),
+            .userCancelled
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.outcome(for: .unverifiedTransaction),
+            .unverified
+        )
+        XCTAssertEqual(
+            PurchaseFailureDiagnostics.outcome(for: .networkError),
+            .error
+        )
+    }
+
+    func testLocalTrialRoutesOnlyToCustomMetaEvent() {
+        XCTAssertEqual(
+            MetaTrialTrackingPolicy.destination(for: .local),
+            .localCustomEvent
+        )
+    }
+
+    func testStoreKitTrialRoutesOnlyToStandardStartTrial() {
+        XCTAssertEqual(
+            MetaTrialTrackingPolicy.destination(for: .storeKit),
+            .standardStartTrial
+        )
+    }
+
+    func testMetaTrialDedupIsIndependentAndMigratesLegacyKey() {
+        XCTAssertFalse(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .local,
+                legacyWasTracked: true,
+                localWasTracked: false,
+                storeKitWasTracked: false
+            )
+        )
+        XCTAssertTrue(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .storeKit,
+                legacyWasTracked: true,
+                localWasTracked: true,
+                storeKitWasTracked: false
+            )
+        )
+        XCTAssertFalse(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .storeKit,
+                legacyWasTracked: false,
+                localWasTracked: false,
+                storeKitWasTracked: true
+            )
+        )
+        XCTAssertTrue(
+            MetaTrialTrackingPolicy.shouldEmit(
+                source: .local,
+                legacyWasTracked: false,
+                localWasTracked: false,
+                storeKitWasTracked: true
+            )
+        )
     }
 
     // MARK: - Banner de reativação

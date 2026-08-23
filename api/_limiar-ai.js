@@ -10,6 +10,11 @@ const DEFAULT_TTS_SPEED = 0.92;
 // A escolha final do produto é uma voz masculina pt-BR. A variável de ambiente
 // permite trocá-la sem novo deploy.
 const DEFAULT_AZURE_SPEECH_VOICE = "pt-BR-AntonioNeural";
+const ALLOWED_AZURE_SPEECH_VOICES = new Set([
+  "pt-BR-AntonioNeural",
+  "pt-BR-FranciscaNeural",
+  "pt-BR-BrendaNeural"
+]);
 const DEFAULT_AZURE_SPEECH_RATE = "-10%";
 const DEFAULT_AZURE_SPEECH_PITCH = "-3%";
 const DEFAULT_AZURE_SPEECH_BREAK_MS = 500;
@@ -208,8 +213,27 @@ function normalizeProfile(profile = {}) {
     explanationDepth: normalizeDepth(profile.explanationDepth),
     avoidedSections: compactList(profile.avoidedSections, 8),
     avoidedBooks: compactList(profile.avoidedBooks, 40),
-    toneGuidance: trimText(profile.toneGuidance, 500)
+    toneGuidance: trimText(profile.toneGuidance, 500),
+    pauseTurn: normalizePauseTurn(profile.pauseTurn)
   };
+}
+
+function normalizePauseTurn(value) {
+  const normalized = trimText(value, 40).toLowerCase();
+  if (["afternoon", "tarde"].includes(normalized)) return "afternoon";
+  if (["evening", "night", "noite"].includes(normalized)) return "evening";
+  return "morning";
+}
+
+function pauseTurnGuidance(turn) {
+  switch (normalizePauseTurn(turn)) {
+    case "afternoon":
+      return "Turno da tarde: conduza a reflexão como uma recentralização no meio do dia. Ajude a pessoa a recuperar presença e escolher com clareza o restante do dia.";
+    case "evening":
+      return "Turno da noite: conduza a reflexão como exame sereno do dia, entrega do que pesa e preparação para descanso. Evite culpa e cobranças.";
+    default:
+      return "Turno da manhã: conduza a reflexão como direção para o dia que começa. Ajude a pessoa a escolher uma intenção concreta antes das distrações.";
+  }
 }
 
 function normalizeDepth(value) {
@@ -623,6 +647,7 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
     `Diretriz de tom da tradição: ${profile.toneGuidance || "não informado"}`,
     `Profundidade: ${profile.explanationDepth}`,
     depthGuidance(profile.explanationDepth),
+    pauseTurnGuidance(profile.pauseTurn),
     `Temas preferidos: ${profile.favoriteThemes.join(", ") || "não informado"}`,
     "",
     "Regras obrigatórias:",
@@ -630,6 +655,7 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
     "- Em cada item, homily, spiritualMeaning, practicalApplication, conclusion e meditationQuestion devem ser específicos daquele trecho.",
     "- Integre pelo menos um tema preferido quando houver temas informados, de forma natural e coerente.",
     "- A profundidade escolhida define quantos trechos compõem a travessia. Preserve a mesma riqueza editorial em cada trecho, inclusive quando houver apenas um.",
+    "- Faça homily, spiritualMeaning, practicalApplication, conclusion e meditationQuestion avançarem em sequência. Nenhum bloco pode resumir, parafrasear ou repetir a ideia central do bloco anterior.",
     "- Varie aberturas, imagens e perguntas entre os itens e em relação ao histórico recente: nada de fórmulas fixas.",
     "- Evite respostas genéricas que funcionariam igualmente para qualquer tradição, tema ou profundidade."
   ];
@@ -642,7 +668,7 @@ function buildExplanationPrompt({ profile, selectedPassages, recentReflections =
       "- A homily deve resumir o eixo espiritual da leitura.",
       "- O spiritualMeaning deve ser o bloco principal e respeitar claramente a profundidade escolhida.",
       "- A practicalApplication deve nascer dos trechos e dos temas preferidos, com uma ação concreta para o restante do dia.",
-      "- A conclusion deve ser específica, não uma frase fixa reaproveitada.",
+      "- A conclusion deve ser uma frase curta, específica e memorável que funcione sozinha sob o título 'Para lembrar hoje'. Não use frase fixa reaproveitada.",
       "- A meditationQuestion deve ser nova em relação ao histórico recente.",
       "- Na sessão de um único trecho, practicalApplication e meditationQuestion devem avançar a homily do item. Não repita nem parafraseie as mesmas ideias ou frases.",
       "- Na sessão de um único trecho, items[0].homily e reflection.homily devem ter exatamente 2 parágrafos separados por uma linha em branco (\\n\\n).",
@@ -884,8 +910,14 @@ async function callElevenLabsSpeech({ input, voice, speed, debugContext = {} }) 
   }
 }
 
-function azureSpeechVoice() {
-  return trimText(process.env.AZURE_SPEECH_VOICE || DEFAULT_AZURE_SPEECH_VOICE, 160);
+function azureSpeechVoice(requestedVoice) {
+  const requested = trimText(requestedVoice, 160);
+  if (ALLOWED_AZURE_SPEECH_VOICES.has(requested)) return requested;
+
+  const configured = trimText(process.env.AZURE_SPEECH_VOICE || DEFAULT_AZURE_SPEECH_VOICE, 160);
+  return ALLOWED_AZURE_SPEECH_VOICES.has(configured)
+    ? configured
+    : DEFAULT_AZURE_SPEECH_VOICE;
 }
 
 function normalizeAzureProsodyPercent(value, fallback) {
@@ -1030,7 +1062,7 @@ function buildAzureSpeechSSML(input, voice = azureSpeechVoice(), toneOverrides =
   return `<speak version='1.0' xml:lang='pt-BR'><voice name='${escapeXML(voice)}'><prosody rate='${escapeXML(tone.rate)}'${pitchAttribute}>${spokenContent}</prosody></voice></speak>`;
 }
 
-async function callAzureSpeech({ input, speed, tone: toneOverrides = {}, debugContext = {} }) {
+async function callAzureSpeech({ input, voice: requestedVoice, speed, tone: toneOverrides = {}, debugContext = {} }) {
   const apiKey = process.env.AZURE_SPEECH_KEY;
   const region = trimText(process.env.AZURE_SPEECH_REGION || "", 80);
   if (!apiKey || !region) {
@@ -1040,7 +1072,7 @@ async function callAzureSpeech({ input, speed, tone: toneOverrides = {}, debugCo
     throw error;
   }
 
-  const voice = azureSpeechVoice();
+  const voice = azureSpeechVoice(requestedVoice);
   const cleanInput = normalizeSpeechInput(input);
   const tone = azureSpeechTone(toneOverrides);
   const ssml = buildAzureSpeechSSML(cleanInput, voice, tone);
@@ -1324,7 +1356,9 @@ module.exports = {
   normalizeTTSSpeed,
   normalizePassages,
   normalizeProfile,
+  normalizePauseTurn,
   normalizeRecentReflections,
+  pauseTurnGuidance,
   normalizeContentIdentity,
   resolveReadingSessionOptions,
   parseProviderJSON,

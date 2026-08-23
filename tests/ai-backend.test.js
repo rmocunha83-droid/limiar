@@ -18,6 +18,7 @@ const {
   assembleReadingItems,
   assembleReflection,
   azureSpeechCadence,
+  azureSpeechVoice,
   buildExplanationPrompt,
   buildAzureSpeechSSML,
   canonicalPassageNarrationText,
@@ -28,6 +29,7 @@ const {
   normalizeTTSProvider,
   normalizePassages,
   normalizeProfile,
+  pauseTurnGuidance,
   normalizeRecentReflections,
   parseProviderJSON,
   readingSessionExplanationSchema,
@@ -466,11 +468,19 @@ test("priority books rotate via LRU instead of widening when fresh ones run out"
   assert.equal(selection.selected.some((passage) => passage.id === "psalm-91"), true);
 });
 
-test("speech cache key ignores client voice and speed on the Azure path", () => {
+test("speech cache key accepts only allowlisted Azure voices and ignores client speed", () => {
   const speech = require("../api/speech");
   const forged = speech.cacheKey({ text: "Bom dia", voice: "qualquer 0.92 coisa", speed: "9" });
   const legit = speech.cacheKey({ text: "Bom dia" });
   assert.equal(forged, legit);
+  const francisca = speech.cacheKey({ text: "Bom dia", voice: "pt-BR-FranciscaNeural", speed: "1.4" });
+  assert.notEqual(francisca, legit);
+  assert.equal(
+    francisca,
+    speech.cacheKey({ text: "Bom dia", voice: "pt-BR-FranciscaNeural", speed: "0.8" })
+  );
+  assert.equal(azureSpeechVoice("pt-BR-BrendaNeural"), "pt-BR-BrendaNeural");
+  assert.equal(azureSpeechVoice("voz-forjada"), DEFAULT_AZURE_SPEECH_VOICE);
   const otherText = speech.cacheKey({ text: "Boa noite" });
   assert.notEqual(legit, otherText);
 });
@@ -779,6 +789,26 @@ test("normalizes depth synonyms and changes guidance clearly", () => {
   assert.match(depthGuidance("curta"), /não podem repetir ideias nem frases da homily/);
   assert.match(depthGuidance("média"), /1 a 2 parágrafos/);
   assert.match(depthGuidance("grande"), /2 a 3 parágrafos/);
+});
+
+test("adapts reflection guidance to morning, afternoon and evening without changing passages", () => {
+  assert.match(pauseTurnGuidance("morning"), /direção para o dia que começa/);
+  assert.match(pauseTurnGuidance("afternoon"), /recentralização no meio do dia/);
+  assert.match(pauseTurnGuidance("evening"), /exame sereno do dia/);
+
+  const prompt = buildExplanationPrompt({
+    profile: normalizeProfile({
+      tradition: "Católica",
+      explanationDepth: "média",
+      pauseTurn: "evening"
+    }),
+    selectedPassages: [CATALOG[0]],
+    recentReflections: [],
+    includeReflection: true
+  });
+  assert.match(prompt, /preparação para descanso/);
+  assert.match(prompt, /Para lembrar hoje/);
+  assert.match(prompt, /Nenhum bloco pode resumir, parafrasear ou repetir/);
 });
 
 test("uses output budgets sized for one rich short passage", () => {

@@ -27,12 +27,12 @@ const {
 function speechConfig(body) {
   const provider = normalizeTTSProvider();
   if (provider === "azure") {
-    // O app publicado ainda envia uma voz do ElevenLabs. No Azure ela nunca é
-    // reutilizada: somente AZURE_SPEECH_VOICE define a voz efetiva.
+    // O cliente escolhe apenas entre as vozes pt-BR permitidas pelo servidor.
+    // Valores antigos do ElevenLabs ou forjados caem na voz configurada.
     const tone = azureSpeechTone();
     return {
       provider,
-      voice: azureSpeechVoice(),
+      voice: azureSpeechVoice(body.voice),
       cadence: azureSpeechCadence(body.text, tone),
       model: "azure-speech"
     };
@@ -129,7 +129,7 @@ async function handler(req, res) {
     }
 
     const audio = config.provider === "azure"
-      ? await callAzureSpeech({ input: body.text, speed: body.speed, debugContext })
+      ? await callAzureSpeech({ input: body.text, voice: config.voice, speed: body.speed, debugContext })
       : await callElevenLabsSpeech({
         input: body.text,
         voice: config.voice,

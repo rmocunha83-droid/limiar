@@ -461,8 +461,9 @@ struct RemoteAIProfilePayload: Codable {
     let avoidedSections: [String]
     let avoidedBooks: [String]
     let toneGuidance: String
+    let pauseTurn: String
 
-    init(profile: UserFaithProfile) {
+    init(profile: UserFaithProfile, pauseTurn: PauseCycleTurn) {
         tradition = profile.tradition.title
         traditionID = profile.tradition.rawValue
         favoriteSections = profile.favoriteBibleSections.map(\.title)
@@ -477,6 +478,7 @@ struct RemoteAIProfilePayload: Codable {
         avoidedSections = profile.tradition.avoidedSectionTitlesForAI
         avoidedBooks = profile.tradition.avoidedBookTitlesForAI
         toneGuidance = profile.tradition.aiToneGuidance
+        self.pauseTurn = pauseTurn.remoteValue
     }
 }
 
@@ -603,11 +605,12 @@ struct RemoteAIReadingSessionService {
     func readingSession(
         for passages: [ScripturePassage],
         profile: UserFaithProfile,
+        pauseTurn: PauseCycleTurn,
         recentPassageIDs: [String],
         recentReflections: [RecentAIReflectionDigest]
     ) async -> RemoteReadingSessionOutcome {
         let payload = RemoteReadingSessionRequestPayload(
-            profile: RemoteAIProfilePayload(profile: profile),
+            profile: RemoteAIProfilePayload(profile: profile, pauseTurn: pauseTurn),
             passages: passages.map(RemotePassagePayload.init),
             itemCount: profile.explanationDepth.readingItemCount,
             recentPassageIDs: Array(recentPassageIDs.prefix(40)),
@@ -678,17 +681,19 @@ struct RemoteAIReadingSessionService {
 }
 
 struct RemoteAISpeechService {
-    private static let limiarNarrationVoiceID = "21m00Tcm4TlvDq8ikWAM"
     private let client: RemoteAIBackendClient
 
     init(client: RemoteAIBackendClient = RemoteAIBackendClient(timeout: 90)) {
         self.client = client
     }
 
-    func audioData(for text: String) async throws -> Data {
+    func audioData(
+        for text: String,
+        voice: NarrationVoicePreference = .antonio
+    ) async throws -> Data {
         let payload = RemoteSpeechRequestPayload(
             text: text,
-            voice: Self.limiarNarrationVoiceID,
+            voice: voice.rawValue,
             speed: 0.92
         )
 
@@ -716,6 +721,16 @@ private extension ExplanationDepth {
             "Média: 2 parágrafos equilibrados, com sentido espiritual e aplicação prática."
         case .deep:
             "Mais profunda: 3 ou mais parágrafos, com contexto do trecho, ligação com a vida do usuário e aplicação mais elaborada."
+        }
+    }
+}
+
+private extension PauseCycleTurn {
+    var remoteValue: String {
+        switch self {
+        case .morning: "morning"
+        case .afternoon: "afternoon"
+        case .evening: "evening"
         }
     }
 }

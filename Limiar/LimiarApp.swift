@@ -87,7 +87,7 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
     static let trialReminderIdentifier = "trial.reminder"
     nonisolated static let trialReminderSource = "trial_reminder"
     /// Dois dias antes do fim do teste de 7 dias = dia 5, como o portão promete.
-    static let trialReminderLeadTime: TimeInterval = 2 * 24 * 60 * 60
+    nonisolated static let trialReminderLeadTime: TimeInterval = 2 * 24 * 60 * 60
     static let prePromptTitle = "Um atalho para sua travessia"
     static let prePromptMessage = "Quando seus apps estiverem em pausa, o Limiar te envia um toque para abrir a leitura na hora. Também usamos isso para o lembrete da sua pausa diária."
 
@@ -152,9 +152,10 @@ final class LimiarNotificationCoordinator: NSObject, UNUserNotificationCenterDel
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [Self.trialReminderIdentifier])
 
-        guard let trialEndsAt else { return }
-        let fireDate = trialEndsAt.addingTimeInterval(-Self.trialReminderLeadTime)
-        guard fireDate > Date() else { return }
+        guard let fireDate = TrialReminderRuntimePolicy.fireDate(
+            trialEndsAt: trialEndsAt,
+            leadTime: Self.trialReminderLeadTime
+        ) else { return }
 
         Task { @MainActor [weak self] in
             let settings = await center.notificationSettings()
@@ -244,17 +245,63 @@ enum TrialReminderRuntimePolicy {
     static var shouldSyncInCurrentProcess: Bool {
         shouldSync(isRunningUnitTests: NSClassFromString("XCTestCase") != nil)
     }
+
+    static func fireDate(
+        trialEndsAt: Date?,
+        leadTime: TimeInterval,
+        now: Date = Date()
+    ) -> Date? {
+        guard let trialEndsAt else { return nil }
+        let fireDate = trialEndsAt.addingTimeInterval(-leadTime)
+        return fireDate > now ? fireDate : nil
+    }
+}
+
+enum MetaTrialSource: Equatable {
+    case local
+    case storeKit
+}
+
+enum MetaTrialDestination: Equatable {
+    case localCustomEvent
+    case standardStartTrial
+}
+
+enum MetaTrialTrackingPolicy {
+    static func destination(for source: MetaTrialSource) -> MetaTrialDestination {
+        switch source {
+        case .local: .localCustomEvent
+        case .storeKit: .standardStartTrial
+        }
+    }
+
+    static func shouldEmit(
+        source: MetaTrialSource,
+        legacyWasTracked: Bool,
+        localWasTracked: Bool,
+        storeKitWasTracked: Bool
+    ) -> Bool {
+        switch source {
+        case .local:
+            return !legacyWasTracked && !localWasTracked
+        case .storeKit:
+            return !storeKitWasTracked
+        }
+    }
 }
 
 @MainActor
 enum MetaAppEvents {
     private static let completedRegistrationKey = "limiar.meta.completedRegistration"
-    private static let startedTrialKey = "limiar.meta.startedTrial"
+    private static let legacyStartedTrialKey = "limiar.meta.startedTrial"
+    private static let localTrialStartedKey = "limiar.meta.localTrialStarted"
+    private static let storeKitTrialStartedKey = "limiar.meta.storeKitTrialStarted"
     private static let pauseConfiguredKey = "limiar.meta.pauseConfigured"
     private static let checkoutStartedKey = "limiar.meta.checkoutStarted"
     private static let checkoutStartedEvent = AppEvents.Name("LimiarCheckoutStarted")
     private static let checkoutCancelledEvent = AppEvents.Name("LimiarCheckoutCancelled")
     private static let checkoutFailedEvent = AppEvents.Name("LimiarCheckoutFailed")
+    private static let localTrialStartedEvent = AppEvents.Name("LimiarLocalTrialStarted")
     private static let subscriptionActivatedEvent = AppEvents.Name("LimiarSubscriptionActivated")
     private static let readingCompletedEvent = AppEvents.Name("LimiarReadingCompleted")
     private static let pauseConfiguredEvent = AppEvents.Name("LimiarPauseConfigured")
@@ -290,8 +337,12 @@ enum MetaAppEvents {
         trackAfterAuthorization(event: .completedRegistration, defaultsKey: completedRegistrationKey)
     }
 
-    static func trackStartedTrial() {
-        trackAfterAuthorization(event: .startTrial, defaultsKey: startedTrialKey)
+    static func trackLocalTrialStarted() {
+        trackTrialStarted(source: .local)
+    }
+
+    static func trackStoreKitTrialStarted() {
+        trackTrialStarted(source: .storeKit)
     }
 
     static func trackPaywallViewed() {
@@ -331,6 +382,41 @@ enum MetaAppEvents {
 
     static func trackPauseConfigured() {
         trackAfterAuthorization(event: pauseConfiguredEvent, defaultsKey: pauseConfiguredKey)
+    }
+
+    private static func trackTrialStarted(source: MetaTrialSource) {
+        let defaults = UserDefaults.standard
+        let legacyWasTracked = defaults.bool(forKey: legacyStartedTrialKey)
+        let localWasTracked = defaults.bool(forKey: localTrialStartedKey)
+        let storeKitWasTracked = defaults.bool(forKey: storeKitTrialStartedKey)
+
+        guard MetaTrialTrackingPolicy.shouldEmit(
+            source: source,
+            legacyWasTracked: legacyWasTracked,
+            localWasTracked: localWasTracked,
+            storeKitWasTracked: storeKitWasTracked
+        ) else {
+            // A chave antiga pode ter sido consumida por qualquer um dos dois
+            // fluxos. Para a migração, ela bloqueia apenas o evento local; o
+            // StartTrial verificado pelo StoreKit ganha sua própria deduplicação.
+            if source == .local, legacyWasTracked, !localWasTracked {
+                defaults.set(true, forKey: localTrialStartedKey)
+            }
+            return
+        }
+
+        switch MetaTrialTrackingPolicy.destination(for: source) {
+        case .localCustomEvent:
+            trackAfterAuthorization(
+                event: localTrialStartedEvent,
+                defaultsKey: localTrialStartedKey
+            )
+        case .standardStartTrial:
+            trackAfterAuthorization(
+                event: .startTrial,
+                defaultsKey: storeKitTrialStartedKey
+            )
+        }
     }
 
     static func initialize(

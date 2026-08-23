@@ -181,6 +181,7 @@ struct TrialConversionView: View {
                     ConversionPurchaseSection(
                         buttonTitle: "Continuar minha travessia",
                         escapeTitle: endsToday ? "Agora não" : "Decidir amanhã",
+                        analyticsOrigin: .d6,
                         escapeAction: continueTrial
                     )
                 }

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Funil de assinaturas · Limiar</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101812; --panel:#18231b; --sage:#a9c8a8; --ivory:#f5f0e6; --muted:#aeb9ae; --red:#f33825; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:radial-gradient(circle at top,#223528,var(--bg) 42%); color:var(--ivory); }
+    main { width:min(1040px,calc(100% - 32px)); margin:48px auto; }
+    h1 { margin:0 0 6px; font-size:clamp(28px,5vw,44px); }
+    .muted { color:var(--muted); }
+    .toolbar { display:flex; gap:10px; margin:24px 0; }
+    input,button { border:1px solid #3a4c3e; border-radius:10px; padding:12px 14px; font:inherit; }
+    input { flex:1; min-width:0; background:#0d140f; color:var(--ivory); }
+    button { background:var(--sage); color:#102013; font-weight:700; cursor:pointer; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+    .card { background:color-mix(in srgb,var(--panel) 92%,transparent); border:1px solid #304236; border-radius:16px; padding:18px; }
+    .value { display:block; margin-top:8px; font-size:30px; font-weight:750; }
+    .funnel { display:grid; gap:10px; margin-top:22px; }
+    .step { position:relative; overflow:hidden; border:1px solid #34483a; border-radius:12px; padding:14px; background:#111a14; }
+    .fill { position:absolute; inset:0 auto 0 0; background:#55765d55; }
+    .step-content { position:relative; display:flex; justify-content:space-between; gap:12px; }
+    .error { color:#ff9f94; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Funil de assinaturas</h1>
+    <p class="muted">Dados verificados pela Apple · produção · sem identificadores brutos.</p>
+    <div class="toolbar">
+      <input id="token" type="password" autocomplete="current-password" placeholder="Token privado do painel" aria-label="Token privado do painel" />
+      <button id="load">Atualizar</button>
+    </div>
+    <p id="status" class="muted">Informe o token para carregar.</p>
+    <section id="cards" class="grid" aria-live="polite"></section>
+    <section id="funnel" class="funnel"></section>
+  </main>
+  <script>
+    const token = document.querySelector("#token");
+    const status = document.querySelector("#status");
+    const cards = document.querySelector("#cards");
+    const funnel = document.querySelector("#funnel");
+    token.value = sessionStorage.getItem("limiarSubscriptionDashboardToken") || "";
+
+    const number = new Intl.NumberFormat("pt-BR");
+    const percent = new Intl.NumberFormat("pt-BR", { style:"percent", maximumFractionDigits:1 });
+    function card(label, value) {
+      return `<article class="card"><span class="muted">${label}</span><strong class="value">${value}</strong></article>`;
+    }
+    function step(label, value, maximum) {
+      const width = maximum ? Math.max(4, Math.round(value / maximum * 100)) : 4;
+      return `<div class="step"><div class="fill" style="width:${width}%"></div><div class="step-content"><span>${label}</span><strong>${number.format(value)}</strong></div></div>`;
+    }
+    async function load() {
+      status.className = "muted";
+      status.textContent = "Carregando…";
+      sessionStorage.setItem("limiarSubscriptionDashboardToken", token.value);
+      try {
+        const response = await fetch("/api/subscription-funnel", { headers:{ Authorization:`Bearer ${token.value}` } });
+        if (!response.ok) throw new Error(response.status === 401 ? "Token inválido." : "Painel indisponível.");
+        const data = await response.json();
+        cards.innerHTML = [
+          card("Testes iniciados", number.format(data.trials)),
+          card("Convertidos em pagamento", number.format(data.convertedTrials)),
+          card("Conversão do teste", data.trialConversionRate === null ? "—" : percent.format(data.trialConversionRate)),
+          card("Renovação desativada", number.format(data.renewalDisabled)),
+          card("Expirados", number.format(data.expired)),
+          card("Reembolsados", number.format(data.refunded))
+        ].join("");
+        funnel.innerHTML = [
+          step("Teste grátis iniciado", data.trials, data.trials),
+          step("Virou assinatura paga", data.convertedTrials, data.trials)
+        ].join("");
+        const through = data.dataThrough ? new Date(data.dataThrough).toLocaleString("pt-BR") : "sem dados";
+        status.textContent = `Consolidado até ${through}. ${number.format(data.productionNotifications)} notificações verificadas.`;
+      } catch (error) {
+        status.className = "error";
+        status.textContent = error.message;
+        cards.innerHTML = "";
+        funnel.innerHTML = "";
+      }
+    }
+    document.querySelector("#load").addEventListener("click", load);
+    token.addEventListener("keydown", (event) => { if (event.key === "Enter") load(); });
+  </script>
+</body>
+</html>

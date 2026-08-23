@@ -40,6 +40,7 @@ struct PaywallView: View {
                     ConversionPurchaseSection(
                         buttonTitle: "Voltar ao Limiar completo",
                         escapeTitle: "Continuar no Essencial",
+                        analyticsOrigin: analyticsOrigin,
                         escapeAction: {
                             if let continueEssential {
                                 continueEssential()
@@ -62,6 +63,7 @@ struct PaywallView: View {
             MetaAppEvents.trackPaywallViewed()
             LimiarAnalytics.trackPaywallViewed(origin: analyticsOrigin)
             subscription.start()
+            await subscription.prepareProductsIfNeeded()
         }
     }
 }
@@ -146,8 +148,14 @@ struct SubscriptionGateView: View {
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .task {
             MetaAppEvents.trackPaywallViewed()
-            LimiarAnalytics.trackGateViewed()
+            LimiarAnalytics.trackGateViewed(
+                plan: subscription.selectedPlan,
+                offerEligibility: subscription.introductoryOfferEligibility(
+                    for: subscription.selectedPlan
+                )
+            )
             subscription.start()
+            await subscription.prepareProductsIfNeeded()
 #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-LimiarForceGateRecovery") {
                 subscription.forceGateRecoveryForDebugging()
@@ -338,7 +346,7 @@ private struct SubscriptionGateHeroButtonStyle: ButtonStyle {
             .lineLimit(1)
             .minimumScaleFactor(0.62)
             .padding(.horizontal, 14)
-            .frame(minWidth: 132, minHeight: 56)
+            .frame(maxWidth: .infinity, minHeight: 56)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
     }
@@ -356,7 +364,10 @@ private struct SubscriptionGatePlanPicker: View {
                     guard selection != plan else { return }
                     selection = plan
                     subscription.noteUserSelectedPlan()
-                    LimiarAnalytics.trackGatePlanSelected(plan)
+                    LimiarAnalytics.trackGatePlanSelected(
+                        plan,
+                        offerEligibility: subscription.introductoryOfferEligibility(for: plan)
+                    )
                 } label: {
                     SubscriptionGatePlanRow(
                         plan: plan,
@@ -550,9 +561,8 @@ private struct SubscriptionGateAppleReassurance: View {
                 .limiarFont(13, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(Color.softText)
                 .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -588,14 +598,13 @@ private struct SubscriptionGateCompliance: View {
     let forcesTrialEligibilityForDebugging: Bool
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             if showsEligibleTrial {
                 SubscriptionGateAppleReassurance()
             }
 
             HStack(spacing: 8) {
                 SubscriptionGateProgress()
-                Spacer(minLength: 8)
                 Button {
                     Task {
                         await subscription.purchaseSelectedPlan(origin: .subscriptionGate)
@@ -616,6 +625,7 @@ private struct SubscriptionGateCompliance: View {
                 .disabled(!canSubscribe)
                 .opacity(canSubscribe ? 1 : 0.62)
             }
+            .frame(maxWidth: .infinity)
 
             if let statusText {
                 Text(statusText)
@@ -659,7 +669,7 @@ private struct SubscriptionGateCompliance: View {
         .overlay(alignment: .top) {
             Divider().overlay(Color.conversionBorder)
         }
-        .frame(maxWidth: .infinity)
+        .containerRelativeFrame(.horizontal)
     }
 
     private var showsEligibleTrial: Bool {
@@ -774,7 +784,10 @@ private struct SubscriptionGateRecoveryView: View {
                         let plan = alternativePlan
                         subscription.selectedPlan = plan
                         subscription.noteUserSelectedPlan()
-                        LimiarAnalytics.trackGatePlanSelected(plan)
+                        LimiarAnalytics.trackGatePlanSelected(
+                            plan,
+                            offerEligibility: subscription.introductoryOfferEligibility(for: plan)
+                        )
                     } label: {
                         Text(alternativeLinkTitle)
                             .limiarFont(14, weight: .medium, relativeTo: .footnote)
@@ -1129,12 +1142,17 @@ struct ConversionPurchaseSection: View {
     @Environment(SubscriptionManager.self) private var subscription
     let buttonTitle: String
     let escapeTitle: String
+    let analyticsOrigin: LimiarAnalytics.PaywallOrigin
     var escapeAction: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 10) {
             Button {
-                Task { await subscription.purchaseSelectedPlan() }
+                Task {
+                    await subscription.purchaseSelectedPlan(
+                        legacyPaywallOrigin: analyticsOrigin
+                    )
+                }
             } label: {
                 HStack(spacing: 10) {
                     if subscription.state == .purchasing {
