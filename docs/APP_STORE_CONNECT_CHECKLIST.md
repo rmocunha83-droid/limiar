@@ -2,12 +2,11 @@
 
 ## Estado atual
 
-- App compila em Debug.
-- App compila em Release para iOS.
-- Archive foi criado com sucesso.
-- Export para App Store foi concluído com assinatura de distribuição.
-- O App Store Connect contém a versão `1.12 (165)`; a build `1.13` ainda não deve ser enviada.
-- O entitlement `com.apple.developer.family-controls` aparece no pacote exportado de distribuição.
+- Versão publicada conferida no App Store Connect em 23/08/2026: `1.19 (200)`, com status `Pronto para distribuição`.
+- Build mais recente já processada no TestFlight: `1.20 (201)`, com status `Pronta para envio`.
+- Próxima versão preparada no código: `1.21 (202)`.
+- A distribuição deve ser feita exclusivamente pelo Xcode Cloud após o merge em `main`; não criar nem enviar archive local.
+- O entitlement `com.apple.developer.family-controls` deve ser reconferido no artefato processado pela Apple antes da submissão.
 - Conta do Xcode em uso: `Romeu Cunha - L38WCHAWJ9`.
 - Bundle ID principal: `com.romeucunha.Limiar`.
 - App limitado a iPhone (`TARGETED_DEVICE_FAMILY = 1`).
@@ -17,6 +16,7 @@
 ## Distribuição e vendas
 
 - Método de distribuição: pública na App Store.
+- Lançamento da versão 1.21: automático após a aprovação da Apple, conforme autorização do Romeu em 23/08/2026.
 - Países/regiões: selecionar somente `Brasil`.
 - Não marcar a opção para disponibilizar automaticamente em novos países/regiões.
 - O app em si deve continuar gratuito para baixar.
@@ -136,12 +136,12 @@ Recursos Premium: reflexões completas, narração, personalização contínua p
 
 ## App Privacy
 
-Declaração conferida para a versão 1.13:
+Itens que devem ser reconferidos ao preparar a versão 1.21:
 
 - Tracking: sim.
 - Dados usados para rastrear o usuário: `Identifiers`, `Usage Data` e `Advertising Data`; a ficha publicada também marca `Purchase History` para rastreamento.
-- A versão 1.13 não adiciona novas categorias de coleta; confirmar que a ficha preserva essas declarações antes da submissão.
-- A URL da política ainda aparece no App Store Connect como `https://limiar-five.vercel.app/privacy.html`; atualizar para `https://applimiar.com.br/privacy` ao criar a versão 1.13.
+- A versão 1.21 não adiciona dados pessoais aos eventos novos; confirmar que a ficha preserva as declarações publicadas antes da submissão.
+- Conferir ao vivo se a URL da política está salva como `https://applimiar.com.br/privacy`; não reutilizar a URL antiga do domínio temporário da Vercel.
 - Dados sensíveis, saúde, financeiro, localização precisa, contatos, fotos, áudio, conteúdo do usuário e histórico de navegação: não declarar, salvo se algum recurso futuro passar a coletar isso.
 
 O app usa UserDefaults/local storage para preferências, histórico local e estado de assinatura. As seleções de apps via Screen Time permanecem no dispositivo e não são usadas para publicidade ou medição.
@@ -182,11 +182,11 @@ Sem isso, o app pode até ser preparado, mas não fica livre para vender assinat
 
 ## Próximos passos no App Store Connect
 
-1. Depois da autorização de release, aguardar a build `1.13` do Xcode Cloud terminar o processamento no App Store Connect.
-2. Selecionar a build `23` na versão iOS `1.0`.
-3. Conferir distribuição pública somente para Brasil.
-4. Conferir disponibilidade das assinaturas somente para Brasil.
-5. Aceitar Paid Apps Agreement e preencher banco/impostos como pessoa física.
-6. Testar assinatura mensal no Sandbox/TestFlight.
-7. Conferir App Privacy, classificação etária, export compliance e review notes.
-8. Enviar app e assinaturas juntos para revisão.
+1. Após o merge autorizado em `main`, acompanhar a build `1.21 (202)` no Xcode Cloud e aguardar o processamento no App Store Connect.
+2. Criar/preencher a versão iOS `1.21` e salvar o texto de novidades em pt-BR.
+3. Com confirmação imediata do Romeu, associar a build `202` à versão e, se necessário, distribuí-la ao grupo interno do TestFlight.
+4. Conferir distribuição pública somente para Brasil e lançamento automático após a aprovação.
+5. Conferir disponibilidade das três assinaturas somente para Brasil.
+6. Testar o fluxo mensal, anual e a oferta de boas-vindas no Sandbox/TestFlight.
+7. Anexar a captura de revisão da oferta e conferir App Privacy, classificação etária, export compliance e review notes.
+8. Somente após nova confirmação explícita do Romeu, adicionar o app e a assinatura de boas-vindas à revisão da Apple.
