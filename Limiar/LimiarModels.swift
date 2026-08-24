@@ -1138,10 +1138,13 @@ final class LimiarAppModel {
         LimiarAIDiagnostics.log("preferences_saved", values: values)
     }
 
-    func selectTradition(_ tradition: FaithTradition) {
+    func selectTradition(_ tradition: FaithTradition, userInitiated: Bool = true) {
         let didChangeTradition = faithProfile.tradition != tradition
         faithProfile.tradition = tradition
         if didChangeTradition {
+            if userInitiated {
+                LimiarHaptics.select()
+            }
             // Nova tradição, novo ponto de partida: defaults dela, sem afinação.
             faithProfile.selectedReadingCategoryIDs = tradition.readingConfig.defaultCategoryIDs
             faithProfile.refinedBooks = nil
@@ -1158,6 +1161,7 @@ final class LimiarAppModel {
 
     func toggleReadingCategory(_ id: String) {
         faithProfile.toggleReadingCategory(id)
+        LimiarHaptics.select()
         saveProfile()
     }
 
@@ -1175,11 +1179,14 @@ final class LimiarAppModel {
         }
         faithProfile.normalizeReadingPreferencesForTradition()
         faithProfile.normalizeStandaloneThemesForCurrentTradition()
+        LimiarHaptics.select()
         saveProfile()
     }
 
     func selectExplanationDepth(_ depth: ExplanationDepth) {
+        guard faithProfile.explanationDepth != depth else { return }
         faithProfile.explanationDepth = depth
+        LimiarHaptics.select()
         saveProfile()
         LimiarAnalytics.setDepthPreference(depth)
     }
@@ -1187,6 +1194,7 @@ final class LimiarAppModel {
     func selectPauseCycleTurn(_ turn: PauseCycleTurn) {
         guard pauseCycleTurn != turn else { return }
         pauseCycleTurn = turn
+        LimiarHaptics.select()
         policyStore.saveSelectedCycleTurn(turn)
         // O monitor acompanha o novo horário, mas a conclusão e o shield do
         // ciclo corrente permanecem intactos até a próxima janela.
@@ -1586,6 +1594,7 @@ final class LimiarAppModel {
         )
         prewarmSessionIfNeeded(dayKey: nextCycleDayKey)
         LimiarPrewarmCoordinator.shared.schedule(now: completedAt)
+        LimiarHaptics.complete()
         MetaAppEvents.trackReadingCompleted()
         LimiarAnalytics.trackTraversalCompleted(
             turn: pauseCycleTurn,

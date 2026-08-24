@@ -1,0 +1,125 @@
+{
+  "identifier" : "B4A8C3C8-36F1-4FB5-BC45-6D1A188F5E43",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "pt_BR",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "BRA",
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "FB25F17D-DF70-45F8-9502-9666F1225650",
+      "localizations" : [
+        {
+          "description" : "Acesso completo ao Limiar.",
+          "displayName" : "Limiar Premium",
+          "locale" : "pt_BR"
+        }
+      ],
+      "name" : "Limiar Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.90",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "2FF78A16-B7F2-42D3-AF77-D8A823A883E1",
+          "introductoryOffer" : {
+            "internalID" : "F6026A3A-4C91-4D7C-B6B2-F20F6D737817",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Acesso completo ao Limiar.",
+              "displayName" : "Limiar Premium Mensal",
+              "locale" : "pt_BR"
+            }
+          ],
+          "productID" : "limiar_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Limiar Premium Mensal",
+          "subscriptionGroupID" : "FB25F17D-DF70-45F8-9502-9666F1225650",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "89.90",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "F9F00A1E-A595-437D-8BAD-74A5B619A54C",
+          "introductoryOffer" : {
+            "internalID" : "269E614A-9322-4FEF-B7CC-D57FB16454D5",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Acesso completo ao Limiar.",
+              "displayName" : "Limiar Premium Anual",
+              "locale" : "pt_BR"
+            }
+          ],
+          "productID" : "limiar_premium_annual_2026",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Limiar Premium Anual",
+          "subscriptionGroupID" : "FB25F17D-DF70-45F8-9502-9666F1225650",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.50",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "F15BE5D6-C9B2-4E64-8103-DB5AC872D3E9",
+          "introductoryOffer" : {
+            "internalID" : "7DA9447F-B6E4-460D-AEA0-DDA034911049",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Acesso completo ao Limiar. Oferta de boas-vindas: mensal pelo valor equivalente do anual.",
+              "displayName" : "Limiar Premium Mensal",
+              "locale" : "pt_BR"
+            }
+          ],
+          "productID" : "limiar_premium_monthly_welcome",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Limiar Premium Mensal Boas-vindas",
+          "subscriptionGroupID" : "FB25F17D-DF70-45F8-9502-9666F1225650",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

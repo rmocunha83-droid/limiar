@@ -6,6 +6,11 @@ import StoreKit
 enum SubscriptionPlan: String, CaseIterable, Identifiable {
     case monthly = "limiar_premium_monthly"
     case yearly = "limiar_premium_annual_2026"
+    case monthlyWelcome = "limiar_premium_monthly_welcome"
+
+    /// Planos que podem aparecer nos seletores normais. A oferta de
+    /// boas-vindas só existe na recuperação após cancelamento.
+    static let standardPlans: [SubscriptionPlan] = [.monthly, .yearly]
 
     var id: String { rawValue }
 
@@ -13,7 +18,7 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .monthly: "Mensal"
+        case .monthly, .monthlyWelcome: "Mensal"
         case .yearly: "Anual"
         }
     }
@@ -22,6 +27,7 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
         switch self {
         case .yearly: 0
         case .monthly: 1
+        case .monthlyWelcome: 2
         }
     }
 
@@ -29,6 +35,15 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
         switch self {
         case .monthly: nil
         case .yearly: "Melhor oferta"
+        case .monthlyWelcome: "Boas-vindas"
+        }
+    }
+
+    var analyticsName: String {
+        switch self {
+        case .monthly: "monthly"
+        case .yearly: "yearly"
+        case .monthlyWelcome: "monthly_welcome"
         }
     }
 }
@@ -130,6 +145,66 @@ enum SubscriptionOfferPolicy {
         @unknown default:
             false
         }
+    }
+}
+
+enum WelcomeOfferState: Equatable {
+    case notEligible
+    case available
+    case consumed
+}
+
+enum WelcomeOfferDeclineReason: String {
+    case annual
+    case allPlans = "all_plans"
+    case background
+}
+
+enum WelcomeOfferPolicy {
+    /// Interruptor operacional da oferta. Mudar para `false` remove a variante
+    /// sem alterar produtos, entitlements ou o portão comum.
+    static let isEnabled = true
+
+    static func state(
+        showsGateRecovery: Bool,
+        productIsAvailable: Bool,
+        hasEligibleFreeTrial: Bool,
+        hadSubscriptionBefore: Bool,
+        wasConsumed: Bool,
+        isEnabled: Bool = isEnabled,
+        isForcedForDebugging: Bool = false
+    ) -> WelcomeOfferState {
+        if wasConsumed { return .consumed }
+        guard showsGateRecovery, productIsAvailable else { return .notEligible }
+        if isForcedForDebugging { return .available }
+        guard isEnabled,
+              hasEligibleFreeTrial,
+              !hadSubscriptionBefore else {
+            return .notEligible
+        }
+        return .available
+    }
+
+    /// Garante que a promessa "preço do anual" seja verdadeira com os
+    /// valores devolvidos pelo StoreKit. A tolerância absorve apenas o
+    /// arredondamento entre preço anual / 12 e o price point mensal.
+    static func hasValidPriceRelationship(
+        monthlyPrice: Decimal,
+        yearlyPrice: Decimal,
+        welcomePrice: Decimal
+    ) -> Bool {
+        guard monthlyPrice > 0,
+              yearlyPrice > 0,
+              welcomePrice > 0,
+              welcomePrice < monthlyPrice else {
+            return false
+        }
+
+        let yearlyEquivalent = yearlyPrice / Decimal(12)
+        let difference = welcomePrice >= yearlyEquivalent
+            ? welcomePrice - yearlyEquivalent
+            : yearlyEquivalent - welcomePrice
+        return difference <= Decimal(string: "0.05")!
     }
 }
 
@@ -315,6 +390,7 @@ final class SubscriptionManager {
         static let entitlementCacheKey = "limiar.subscription.hasActiveSubscription"
         static let firebaseLifecycleMonitoringStartedAtKey = "limiar.analytics.subscriptionLifecycleStartedAt"
         static let cohortDecisionKey = "limiar.subscription.cohortDecision"
+        static let welcomeOfferConsumedKey = "limiar.offer.welcome.consumed"
         static let reviewRequestDefaultsKeyPrefix = "limiar.review.requested"
         static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
         static let reviewRequestMinimumTrialDuration: TimeInterval = 3 * 24 * 60 * 60
@@ -352,12 +428,21 @@ final class SubscriptionManager {
     /// entitlements sobrescreve `state` (.expired) e apagaria a segunda
     /// chance antes de ela aparecer.
     private(set) var showsGateRecovery = false
+    private(set) var welcomeOfferState: WelcomeOfferState = .notEligible
 
     @ObservationIgnored private var userDidSelectPlan = false
     @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
     @ObservationIgnored private var hasStarted = false
     @ObservationIgnored private var productLoadingTask: Task<Void, Never>?
     @ObservationIgnored private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+
+    private var forcesWelcomeOfferForDebugging: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-LimiarForceWelcomeOffer")
+#else
+        false
+#endif
+    }
 
     init() {
         #if DEBUG
@@ -391,6 +476,17 @@ final class SubscriptionManager {
         }
         hasActiveSubscription = defaults.bool(forKey: Constants.entitlementCacheKey)
         hadSubscriptionBefore = SubscriptionKeychainFlags.wasSubscriber.rawStoredValue != nil
+        let welcomeOfferWasConsumed = defaults.bool(forKey: Constants.welcomeOfferConsumedKey)
+            || SubscriptionKeychainFlags.welcomeOfferConsumed.rawStoredValue != nil
+        if welcomeOfferWasConsumed {
+            // O app group mantém o estado observável e o Keychain garante a
+            // promessa "uma vez por aparelho" mesmo depois de reinstalação.
+            defaults.set(true, forKey: Constants.welcomeOfferConsumedKey)
+            SubscriptionKeychainFlags.welcomeOfferConsumed.store("true")
+        }
+        welcomeOfferState = welcomeOfferWasConsumed
+            ? .consumed
+            : .notEligible
         trialStartedAt = legacyTrialStartedAt
         if defaults.object(forKey: Constants.firebaseLifecycleMonitoringStartedAtKey) == nil {
             defaults.set(Date(), forKey: Constants.firebaseLifecycleMonitoringStartedAtKey)
@@ -783,7 +879,10 @@ final class SubscriptionManager {
         // Mantemos a comunicação do Limiar em reais nesses ambientes para que
         // o paywall não misture dólar com a oferta brasileira.
         if Self.isTestEnvironment, !product.displayPrice.contains("R$") {
-            return fallbackBrazilianPrice(for: plan)
+            return fallbackBrazilianPrice(
+                for: plan,
+                storeDisplayPrice: product.displayPrice
+            )
         }
 
         return product.displayPrice
@@ -804,12 +903,19 @@ final class SubscriptionManager {
         return dailyPrice.formatted(product.priceFormatStyle)
     }
 
-    private func fallbackBrazilianPrice(for plan: SubscriptionPlan) -> String {
+    private func fallbackBrazilianPrice(
+        for plan: SubscriptionPlan,
+        storeDisplayPrice: String
+    ) -> String {
         switch plan {
         case .monthly:
             return "R$ 9,90"
         case .yearly:
             return "R$ 89,90"
+        case .monthlyWelcome:
+            // A oferta nunca ganha um preço fixo no app: até em Debug, a
+            // fonte permanece o produto retornado pelo StoreKit.
+            return storeDisplayPrice
         }
     }
 
@@ -845,7 +951,7 @@ final class SubscriptionManager {
         }
 
         switch plan {
-        case .monthly:
+        case .monthly, .monthlyWelcome:
             return "Renovação mensal. Cancele quando quiser."
         case .yearly:
             return yearlySavingsText() ?? "Renovação anual. Cancele quando quiser."
@@ -858,7 +964,13 @@ final class SubscriptionManager {
         }
 
         let price = displayPrice(for: plan)
-        let period = plan == .yearly ? "por ano" : "por mês"
+        let period: String
+        switch plan {
+        case .monthly, .monthlyWelcome:
+            period = "por mês"
+        case .yearly:
+            period = "por ano"
+        }
         if hasConfirmedFreeTrial(for: plan) {
             return "\(trialText(for: plan)). Depois, \(price) \(period). Cancele quando quiser."
         }
@@ -873,7 +985,7 @@ final class SubscriptionManager {
     }
 
     private func availablePlanPrices() -> [String] {
-        SubscriptionPlan.allCases
+        SubscriptionPlan.standardPlans
             .sorted { $0.sortOrder < $1.sortOrder }
             .compactMap { plan in
                 guard product(for: plan) != nil else { return nil }
@@ -908,6 +1020,12 @@ final class SubscriptionManager {
         origin: SubscriptionPurchaseOrigin = .legacyPaywall,
         legacyPaywallOrigin: LimiarAnalytics.PaywallOrigin? = nil
     ) async {
+        // CTAs públicos nunca podem alcançar o SKU oculto, mesmo se uma
+        // tentativa anterior da oferta terminou pendente ou com erro.
+        if !SubscriptionPlan.standardPlans.contains(selectedPlan) {
+            selectedPlan = .monthly
+            userDidSelectPlan = false
+        }
         await purchase(
             selectedPlan,
             origin: origin,
@@ -920,6 +1038,13 @@ final class SubscriptionManager {
         origin: SubscriptionPurchaseOrigin = .legacyPaywall,
         legacyPaywallOrigin: LimiarAnalytics.PaywallOrigin? = nil
     ) async {
+        defer {
+            if plan == .monthlyWelcome {
+                selectedPlan = .monthly
+                userDidSelectPlan = false
+            }
+        }
+
         if products.isEmpty {
             await loadProducts()
         }
@@ -957,6 +1082,7 @@ final class SubscriptionManager {
             offerEligibility: offerEligibility
         )
         showsGateRecovery = false
+        refreshWelcomeOfferState()
         state = .purchasing
         message = ""
 
@@ -1016,11 +1142,7 @@ final class SubscriptionManager {
                     offerEligibility: offerEligibility
                 )
                 MetaAppEvents.trackCheckoutCancelled()
-                if origin == .subscriptionGate {
-                    // Segunda chance calma: a pessoa fechou a folha da Apple e
-                    // precisa ouvir que nada foi cobrado antes de decidir de novo.
-                    showsGateRecovery = true
-                }
+                showGateRecoveryAfterCancellation(of: plan, origin: origin)
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."
             @unknown default:
@@ -1058,9 +1180,7 @@ final class SubscriptionManager {
                     offerEligibility: offerEligibility
                 )
                 MetaAppEvents.trackCheckoutCancelled()
-                if origin == .subscriptionGate {
-                    showsGateRecovery = true
-                }
+                showGateRecoveryAfterCancellation(of: plan, origin: origin)
                 state = .cancelled
                 message = "Compra cancelada. Sua assinatura não foi ativada."
             } else {
@@ -1146,12 +1266,14 @@ final class SubscriptionManager {
             state = products.isEmpty ? .productsUnavailable : .idle
             if products.isEmpty {
                 message = "Os produtos de assinatura ainda não foram retornados pelo StoreKit."
+                refreshWelcomeOfferState()
             } else {
                 await refreshIntroductoryOfferEligibility()
             }
         } catch {
             state = .failed(error.localizedDescription)
             message = "Não foi possível carregar os planos: \(error.localizedDescription)"
+            refreshWelcomeOfferState()
         }
     }
 
@@ -1222,6 +1344,7 @@ final class SubscriptionManager {
         if hasActiveSubscription {
             showsGateRecovery = false
         }
+        refreshWelcomeOfferState()
         refreshAccessState()
 
         // A promessa do portão ("avisamos no dia 5") é cumprida aqui: o
@@ -1257,12 +1380,14 @@ final class SubscriptionManager {
     /// precisar cancelar uma compra real (QA e capturas).
     func forceGateRecoveryForDebugging() {
         showsGateRecovery = true
+        refreshWelcomeOfferState()
     }
 #endif
 
     /// "Ver todos os planos" na tela de recuperação: volta ao portão normal.
     func dismissGateRecovery() {
         showsGateRecovery = false
+        refreshWelcomeOfferState()
         if state == .cancelled {
             state = .idle
             message = ""
@@ -1271,6 +1396,77 @@ final class SubscriptionManager {
 
     func noteUserSelectedPlan() {
         userDidSelectPlan = true
+    }
+
+    func acceptWelcomeOffer() async {
+        guard welcomeOfferState == .available,
+              product(for: .monthlyWelcome) != nil else { return }
+        selectedPlan = .monthlyWelcome
+        noteUserSelectedPlan()
+        consumeWelcomeOffer()
+        LimiarAnalytics.trackGateOfferAccepted()
+        await purchase(.monthlyWelcome, origin: .subscriptionGate)
+    }
+
+    func declineWelcomeOffer(reason: WelcomeOfferDeclineReason) {
+        guard welcomeOfferState == .available else { return }
+        consumeWelcomeOffer()
+        LimiarAnalytics.trackGateOfferDeclined(reason: reason)
+
+        switch reason {
+        case .annual:
+            selectedPlan = .yearly
+            noteUserSelectedPlan()
+        case .allPlans:
+            dismissGateRecovery()
+        case .background:
+            selectedPlan = .monthly
+            noteUserSelectedPlan()
+        }
+    }
+
+    private func consumeWelcomeOffer() {
+        defaults.set(true, forKey: Constants.welcomeOfferConsumedKey)
+        SubscriptionKeychainFlags.welcomeOfferConsumed.store("true")
+        welcomeOfferState = .consumed
+    }
+
+    private func showGateRecoveryAfterCancellation(
+        of plan: SubscriptionPlan,
+        origin: SubscriptionPurchaseOrigin
+    ) {
+        guard origin == .subscriptionGate else { return }
+        // Uma segunda desistência da oferta nunca reabre a oferta: volta ao
+        // mensal normal e mostra a recuperação comum.
+        if plan == .monthlyWelcome {
+            selectedPlan = .monthly
+        }
+        showsGateRecovery = true
+        refreshWelcomeOfferState()
+    }
+
+    private func refreshWelcomeOfferState() {
+        welcomeOfferState = WelcomeOfferPolicy.state(
+            showsGateRecovery: showsGateRecovery,
+            productIsAvailable: hasValidWelcomeOfferProducts,
+            hasEligibleFreeTrial: hasEligibleFreeTrial(for: .monthlyWelcome),
+            hadSubscriptionBefore: hadSubscriptionBefore,
+            wasConsumed: defaults.bool(forKey: Constants.welcomeOfferConsumedKey),
+            isForcedForDebugging: forcesWelcomeOfferForDebugging
+        )
+    }
+
+    private var hasValidWelcomeOfferProducts: Bool {
+        guard let monthly = product(for: .monthly),
+              let yearly = product(for: .yearly),
+              let welcome = product(for: .monthlyWelcome) else {
+            return false
+        }
+        return WelcomeOfferPolicy.hasValidPriceRelationship(
+            monthlyPrice: monthly.price,
+            yearlyPrice: yearly.price,
+            welcomePrice: welcome.price
+        )
     }
 
     private func listenForTransactions() -> Task<Void, Never> {
@@ -1384,6 +1580,7 @@ final class SubscriptionManager {
         }
 
         introductoryOfferEligibility = eligibility
+        refreshWelcomeOfferState()
     }
 
     private func trackPurchaseLifecycle(for transaction: Transaction) {
@@ -1499,6 +1696,7 @@ enum SubscriptionVerificationError: LocalizedError {
 enum SubscriptionKeychainFlags: String {
     case legacyCohort = "cohortDecision"
     case wasSubscriber = "wasSubscriber"
+    case welcomeOfferConsumed = "welcomeOfferConsumed"
 
     private static let service = "com.romeucunha.Limiar.subscription"
 

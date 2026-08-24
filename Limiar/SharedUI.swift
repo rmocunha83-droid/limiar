@@ -4,6 +4,30 @@ import ManagedSettings
 import SwiftUI
 import UIKit
 
+/// No Limiar, o háptico é respiração, não recompensa: confirma apenas os
+/// momentos essenciais e nunca acompanha a leitura ou seus gestos.
+@MainActor
+enum LimiarHaptics {
+    private static let tapGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let selectionGenerator = UISelectionFeedbackGenerator()
+    private static let completionGenerator = UINotificationFeedbackGenerator()
+
+    static func tap() {
+        tapGenerator.prepare()
+        tapGenerator.impactOccurred()
+    }
+
+    static func select() {
+        selectionGenerator.prepare()
+        selectionGenerator.selectionChanged()
+    }
+
+    static func complete() {
+        completionGenerator.prepare()
+        completionGenerator.notificationOccurred(.success)
+    }
+}
+
 private struct LimiarScaledFontModifier: ViewModifier {
     @ScaledMetric private var scaledSize: CGFloat
 
@@ -533,7 +557,7 @@ private struct ReadingTextScaleGestureModifier: ViewModifier {
         guard next != current else { return }
 
         storedValue = next
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        LimiarHaptics.tap()
         LimiarAnalytics.trackReadingTextScaleChanged(value: next, method: .pinch)
         showIndicator(next)
     }
@@ -938,7 +962,7 @@ struct LimiarBackground: View {
 }
 
 struct SelectableRow: View {
-    @ScaledMetric(relativeTo: .subheadline) private var scaledSubtitleSize: CGFloat = 14
+    @ScaledMetric(relativeTo: .subheadline) private var scaledSubtitleSize: CGFloat = 15
 
     let title: String
     let subtitle: String
@@ -1015,10 +1039,10 @@ struct ChipGrid: View {
                     action(item)
                 } label: {
                     Text(item)
-                        .limiarFont(15, weight: .medium, relativeTo: .body)
+                        .limiarFont(16, weight: .medium, relativeTo: .body)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 11)
                         .background(selected.contains(item) ? Color.sageButton.opacity(0.30) : Color.white.opacity(0.08), in: Capsule())
                         .overlay(Capsule().stroke(selected.contains(item) ? Color.sageButton.opacity(0.95) : Color.white.opacity(0.16), lineWidth: selected.contains(item) ? 1.5 : 1))
                         .foregroundStyle(selected.contains(item) ? Color.sageButton : Color.ivory.opacity(0.92))
@@ -1079,6 +1103,11 @@ struct LimiarPrimaryButtonStyle: ButtonStyle {
             .frame(minWidth: 132, minHeight: 58)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    LimiarHaptics.tap()
+                }
+            }
     }
 }
 
@@ -1092,6 +1121,11 @@ struct LimiarHeroButtonStyle: ButtonStyle {
             .frame(minWidth: 142, minHeight: 62)
             .background(Color.sageButton.opacity(configuration.isPressed ? 0.76 : 1), in: RoundedRectangle(cornerRadius: 24))
             .foregroundStyle(Color.deepInk)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    LimiarHaptics.tap()
+                }
+            }
     }
 }
 
@@ -1262,7 +1296,7 @@ struct TestimonialCard: View {
             }
 
             Text("“\(testimonial.quote)”")
-                .conversionFont(16, design: .serif)
+                .conversionFont(17, design: .serif)
                 .foregroundStyle(Color.ivory)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1272,7 +1306,7 @@ struct TestimonialCard: View {
             }
 
             Text(testimonial.name)
-                .conversionFont(13, weight: .medium, relativeTo: .footnote)
+                .conversionFont(14, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(Color.softText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

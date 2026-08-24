@@ -296,7 +296,7 @@ struct OnboardingView: View {
                 }
                 if !themeSelectionMessage.isEmpty {
                     Label(themeSelectionMessage, systemImage: "info.circle")
-                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
+                        .limiarFont(15, weight: .medium, relativeTo: .subheadline)
                         .foregroundStyle(Color.warmGold)
                 }
             }
@@ -315,7 +315,7 @@ struct OnboardingView: View {
                 OnboardingTitle(eyebrow: "LEITURAS", title: config.question)
 
                 Text(config.subtitle)
-                    .limiarFont(15, weight: .medium, relativeTo: .body)
+                    .limiarFont(17, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
@@ -335,14 +335,14 @@ struct OnboardingView: View {
                 Text(selectedCount == 1
                     ? "1 leitura selecionada"
                     : "\(selectedCount) leituras selecionadas")
-                    .limiarFont(13, weight: .medium, relativeTo: .footnote)
+                    .limiarFont(14, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.warmGold)
 
                 if selectedCount == 3 {
                     Text("Dica: escolher mais estilos traz mais variedade às suas manhãs.")
-                        .limiarFont(14, weight: .medium, relativeTo: .subheadline)
-                        .foregroundStyle(Color.softText.opacity(0.86))
-                        .lineSpacing(4)
+                        .limiarFont(15, weight: .medium, relativeTo: .subheadline)
+                        .foregroundStyle(Color.softText)
+                        .lineSpacing(5)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -379,9 +379,9 @@ struct OnboardingView: View {
                 }
 
                 Text("Você pode mudar isso depois em Configurações.")
-                    .limiarFont(14, weight: .medium, relativeTo: .subheadline)
-                    .foregroundStyle(Color.softText.opacity(0.86))
-                    .lineSpacing(4)
+                    .limiarFont(15, weight: .medium, relativeTo: .subheadline)
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -399,7 +399,7 @@ struct OnboardingView: View {
                 )
 
                 Text("Escolha o turno em que o Limiar deve preparar sua pausa diária.")
-                    .limiarFont(15, weight: .medium, relativeTo: .body)
+                    .limiarFont(17, relativeTo: .body)
                     .foregroundStyle(Color.softText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -415,9 +415,9 @@ struct OnboardingView: View {
                 }
 
                 Text("Você poderá mudar depois em Configurações. A mudança valerá no ciclo seguinte.")
-                    .limiarFont(14, weight: .medium, relativeTo: .subheadline)
-                    .foregroundStyle(Color.softText.opacity(0.86))
-                    .lineSpacing(4)
+                    .limiarFont(15, weight: .medium, relativeTo: .subheadline)
+                    .foregroundStyle(Color.softText)
+                    .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -436,7 +436,7 @@ struct OnboardingView: View {
                     )
 
                     Text("Avaliações de quem usa o Limiar todos os dias.")
-                        .limiarFont(15, weight: .medium, relativeTo: .body)
+                        .limiarFont(16, weight: .medium, relativeTo: .body)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(5)
                         .fixedSize(horizontal: false, vertical: true)
@@ -502,7 +502,7 @@ struct OnboardingView: View {
                         .padding(.top, 1)
 
                     Text(status.isEmpty ? "O iOS pedirá permissão antes de ativar as pausas." : status)
-                        .limiarFont(15, weight: .medium, relativeTo: .body)
+                        .limiarFont(16, weight: .medium, relativeTo: .body)
                         .foregroundStyle(Color.softText)
                         .lineSpacing(4)
                 }
@@ -546,7 +546,7 @@ struct OnboardingView: View {
         else {
             return
         }
-        model.selectTradition(tradition)
+        model.selectTradition(tradition, userInitiated: false)
         #endif
     }
 
@@ -1099,12 +1099,12 @@ struct ReadingStyleChip: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(category.label)
-                        .limiarFont(16, weight: .semibold, relativeTo: .headline)
+                        .limiarFont(17, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(isSelected ? Color.deepInk : Color.ivory)
                         .multilineTextAlignment(.leading)
 
                     Text(category.hint)
-                        .limiarFont(13, weight: .medium, relativeTo: .footnote)
+                        .limiarFont(15, relativeTo: .footnote)
                         .foregroundStyle(isSelected ? Color.deepInk.opacity(0.72) : Color.softText)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1146,11 +1146,11 @@ struct OptionalBooksRefinement: View {
             } label: {
                 HStack(spacing: 10) {
                     Text("Afinar por livros específicos (opcional)")
-                        .limiarFont(15, weight: .semibold, relativeTo: .headline)
+                        .limiarFont(16, weight: .semibold, relativeTo: .headline)
                         .foregroundStyle(Color.ivory)
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
-                        .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
+                        .limiarFont(15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundStyle(Color.softText)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
@@ -1172,7 +1172,7 @@ struct OptionalBooksRefinement: View {
             if isExpanded {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Estes livros terão prioridade nas suas leituras diárias — os demais livros das suas escolhas continuam aparecendo para variar.")
-                        .limiarFont(13, weight: .medium, relativeTo: .footnote)
+                        .limiarFont(14, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(Color.softText)
 
                     FlowLayout(spacing: 10) {
@@ -1187,7 +1187,7 @@ struct OptionalBooksRefinement: View {
                                                 .limiarFont(12, weight: .bold, relativeTo: .caption)
                                         }
                                         Text(config.bookDisplayTitle(book, tradition: model.faithProfile.tradition))
-                                            .limiarFont(14, weight: .semibold, relativeTo: .subheadline)
+                                            .limiarFont(15, weight: .semibold, relativeTo: .subheadline)
                                     }
                                     .foregroundStyle(isSelected ? Color.deepInk : Color.ivory)
                                     .padding(.horizontal, 14)

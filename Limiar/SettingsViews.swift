@@ -153,7 +153,13 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(!subscription.hasPremiumAccess)
-                    Picker("Explicação", selection: $model.faithProfile.explanationDepth) {
+                    Picker(
+                        "Explicação",
+                        selection: Binding(
+                            get: { model.faithProfile.explanationDepth },
+                            set: { model.selectExplanationDepth($0) }
+                        )
+                    ) {
                         ForEach(ExplanationDepth.allCases) { depth in
                             Text(depth.title).tag(depth)
                         }

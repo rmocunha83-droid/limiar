@@ -185,6 +185,20 @@ enum LimiarAnalytics {
         log("gate_recovery_dismissed")
     }
 
+    static func trackGateOfferViewed() {
+        log("gate_offer_viewed")
+    }
+
+    static func trackGateOfferAccepted() {
+        log("gate_offer_accepted")
+    }
+
+    static func trackGateOfferDeclined(reason: WelcomeOfferDeclineReason) {
+        log("gate_offer_declined", parameters: [
+            "reason": reason.rawValue
+        ])
+    }
+
     static func trackTrialStarted(
         plan: SubscriptionPlan,
         originalTransactionID: UInt64,
@@ -469,15 +483,6 @@ enum LimiarAnalytics {
     private static func setUserProperty(_ value: String?, name: String) {
         guard isConfigured else { return }
         Analytics.setUserProperty(value, forName: name)
-    }
-}
-
-private extension SubscriptionPlan {
-    var analyticsName: String {
-        switch self {
-        case .monthly: "monthly"
-        case .yearly: "yearly"
-        }
     }
 }
 
