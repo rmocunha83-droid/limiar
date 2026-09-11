@@ -19,6 +19,7 @@ const {
   assembleReflection,
   azureSpeechCadence,
   azureSpeechVoice,
+  azureSpeechTone,
   buildExplanationPrompt,
   buildAzureSpeechSSML,
   canonicalPassageNarrationText,
@@ -31,6 +32,8 @@ const {
   normalizeProfile,
   pauseTurnGuidance,
   normalizeRecentReflections,
+  safeAIDetails,
+  logAIError,
   parseProviderJSON,
   readingSessionExplanationSchema,
   resolveReadingSessionOptions,
@@ -39,6 +42,85 @@ const {
   validateExplanationFields,
   validateExplanationItems
 } = require("../api/_limiar-ai");
+
+test("AI diagnostics discard religious content and personal identifiers", () => {
+  assert.deepEqual(safeAIDetails({ endpoint: "reading-session", durationMs: 100,
+    outcome: "success", items: 2, tradition: "Católica", favoriteBooks: "Salmos",
+    promptPreview: "conteúdo privado", clientID: "identificador", requestID: "id",
+    message: "segredo", summary: "reflexão", statusCode: 200 }),
+  { endpoint: "reading-session", durationMs: 100, outcome: "success", items: 2, statusCode: 200 });
+  const previous = console.error;
+  let output;
+  console.error = (...args) => { output = JSON.stringify(args); };
+  try { logAIError("reading-session", { code: "segredo", message: "privado" }, { clientID: "pessoa" }); }
+  finally { console.error = previous; }
+  assert.ok(!/segredo|privado|pessoa/.test(output));
+});
+
+test("explanation diversity is opt-in, bounded and keeps legacy prompts intact", () => {
+  const history = normalizeRecentReflections([{ reference: "Salmo 23", summary: "Resumo",
+    openings: ["Abertura anterior", "x".repeat(300)], applications: ["Aplicação anterior"] }]);
+  assert.equal(history[0].openings[1].length, 180);
+  const args = { profile: normalizeProfile({}), selectedPassages: [{ reference: "Salmo 1", text: "Texto" }], recentReflections: history, includeReflection: true };
+  const legacy = buildExplanationPrompt(args);
+  const enhanced = buildExplanationPrompt({ ...args, diversityVersion: 1, seed: "teste" });
+  assert.ok(!legacy.includes("Abertura anterior"));
+  assert.ok(enhanced.includes("Abertura anterior"));
+  assert.ok(enhanced.includes("Aplicação anterior"));
+  assert.ok(enhanced.includes("Não copie aberturas"));
+  assert.ok(enhanced.includes("Texto: Texto"));
+  assert.equal(buildExplanationPrompt({ ...args, diversityVersion: 0 }), legacy);
+});
+
+test("reading endpoint preserves old and new contracts with one provider call", async () => {
+  const handler = require("../api/reading-session");
+  const previousFetch = global.fetch;
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousSecret = process.env.LIMIAR_APP_SECRET;
+  const previousInfo = console.info;
+  const previousError = console.error;
+  process.env.OPENAI_API_KEY = "unit-test-key";
+  delete process.env.LIMIAR_APP_SECRET;
+  const logs = [];
+  console.info = (...args) => logs.push(args);
+  console.error = (...args) => logs.push(args);
+  const fields = { homily: "Explicação", spiritualMeaning: "Sentido", practicalApplication: "Aplicação", conclusion: "Conclusão", meditationQuestion: "Pergunta?" };
+  let calls = 0;
+  let fail = false;
+  global.fetch = async () => {
+    calls += 1;
+    return fail ? { ok: false, status: 503, json: async () => ({ error: { message: "privado" } }) }
+      : { ok: true, json: async () => ({ output_text: JSON.stringify({ items: [fields], reflection: fields }) }) };
+  };
+  try {
+    for (const version of [undefined, 1]) {
+      let response;
+      const res = { setHeader() {}, end(value) { response = JSON.parse(value); } };
+      await handler({ method: "POST", headers: { "x-limiar-client-id": `compat-${version}-${Date.now()}` }, body: {
+        profile: { tradition: "Católica" }, passages: [{ id: "test", reference: "Salmo 1", text: "Canônico" }],
+        itemCount: 1, explanationDiversityVersion: version } }, res);
+      assert.equal(res.statusCode, 200);
+      assert.equal(response.items[0].passageID, "test");
+      assert.equal(response.items[0].passageText, "Canônico");
+    }
+    assert.equal(calls, 2);
+    fail = true;
+    const res = { setHeader() {}, end() {} };
+    await handler({ method: "POST", headers: {}, body: { passages: [{ id: "test", reference: "Salmo 1", text: "Canônico" }], itemCount: 1 } }, res);
+    assert.equal(res.statusCode, 503);
+    assert.equal(calls, 3);
+    const deliveries = logs.filter(([event]) => event === "limiar_reading_delivery").map(([, data]) => data);
+    assert.deepEqual(deliveries.map((entry) => entry.outcome), ["success", "success", "failure"]);
+    assert.ok(!JSON.stringify(logs).includes("privado"));
+    assert.ok(!JSON.stringify(logs).includes("Católica"));
+  } finally {
+    global.fetch = previousFetch;
+    console.info = previousInfo;
+    console.error = previousError;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
+    if (previousSecret === undefined) delete process.env.LIMIAR_APP_SECRET; else process.env.LIMIAR_APP_SECRET = previousSecret;
+  }
+});
 
 const CATALOG = normalizePassages([
   { id: "psalm-23", reference: "Salmo 23", text: "O Senhor é meu pastor.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
@@ -99,6 +181,34 @@ test("proclaims every reference format used by the catalog and preserves unknown
     "Tehillim, Salmo 46, versículo 10"
   );
   assert.equal(spokenReference("Referência livre sem padrão"), "Referência livre sem padrão");
+});
+
+test("narrates every new catalog reference without attribution and with the verse pause", () => {
+  const catalog = require("../Limiar/Resources/passages.json");
+  for (const passage of catalog.filter(p => p.id.startsWith("blivre-2018-"))) {
+    const text = canonicalPassageNarrationText(passage.reference, passage.text);
+    const ssml = buildAzureSpeechSSML(text, "pt-BR-AntonioNeural", { breakMs: 500 });
+    assert.doesNotMatch(ssml, /BLIVRE/);
+    assert.match(ssml, /versículo/);
+    assert.match(ssml, /<break time='500ms'\/>/);
+    assert.match(azureSpeechCadence(text), /\|blivre-reference:v1$/);
+    assert.ok(text.includes("BLIVRE"), "canonical input and visible attribution stay intact");
+  }
+  assert.equal(spokenReference("Referência livre · BLIVRE"), "Referência livre · BLIVRE");
+  assert.equal(spokenReference("Salmo 23 · BLIVRE"), "Salmo 23");
+  assert.match(azureSpeechCadence("Salmo 23 · BLIVRE.\nTexto"), /chapter-break-fix:v1\|blivre-reference:v1$/);
+});
+
+test("keeps canonical inputs, speech and cadence identical for all 977 legacy passages", () => {
+  const catalog = require("../Limiar/Resources/passages.json");
+  const tone = azureSpeechTone({ rate: "-10%", pitch: "-3%", breakMs: 500, referenceSpeechVersion: "v1" });
+  const rows = catalog.filter(p => !p.id.startsWith("blivre-2018-")).map(p => {
+    const text = canonicalPassageNarrationText(p.reference, p.text);
+    return [text, buildAzureSpeechSSML(text, "pt-BR-AntonioNeural", tone), azureSpeechCadence(text, tone)];
+  });
+  assert.equal(rows.length, 977);
+  const digest = require("node:crypto").createHash("sha256").update(JSON.stringify(rows)).digest("hex");
+  assert.equal(digest, "581be128c91641bfda9c01495dda1fbbe21c11b0549bdfff500bfd6540f7b9b6");
 });
 
 test("selects only preferred books when there are enough fresh passages", () => {

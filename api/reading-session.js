@@ -8,6 +8,7 @@ const {
   enforceAIRateLimit,
   logAIDiagnostic,
   logAIError,
+  logReadingDelivery,
   normalizePassages,
   normalizeProfile,
   normalizeRecentReflections,
@@ -27,6 +28,9 @@ module.exports = async function handler(req, res) {
   const rateLimit = enforceAIRateLimit(req, res, "reading-session");
   if (!rateLimit.allowed) return;
 
+  const startedAt = Date.now();
+  let deliveredItems = 0;
+  let outcome = "failure";
   try {
     const body = parseBody(req);
     const profile = normalizeProfile(body.profile);
@@ -85,7 +89,9 @@ module.exports = async function handler(req, res) {
       profile: generationProfile,
       selectedPassages: selection.selected,
       recentReflections,
-      includeReflection: true
+      includeReflection: true,
+      diversityVersion: body.explanationDiversityVersion === 1 ? 1 : 0,
+      seed: selectionSeed(rateLimit.context)
     });
 
     const result = await callTextModel({
@@ -109,6 +115,8 @@ module.exports = async function handler(req, res) {
     const reflection = validateExplanationFields(result.reflection, "reflection");
 
     res.statusCode = 200;
+    deliveredItems = itemCount;
+    outcome = "success";
     res.end(JSON.stringify({
       items: assembleReadingItems(selection.selected, explanations),
       reflection: assembleReflection(selection.selected, reflection)
@@ -117,5 +125,9 @@ module.exports = async function handler(req, res) {
     logAIError("reading-session", error, rateLimit.context);
     res.statusCode = error.statusCode || 502;
     res.end(JSON.stringify({ error: "ai_reading_session_failed" }));
+  } finally {
+    logReadingDelivery({ endpoint: "reading-session", outcome,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      statusCode: res.statusCode, items: deliveredItems });
   }
 };

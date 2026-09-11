@@ -186,6 +186,8 @@ struct SpiritualReadingCard: View {
     var showsNarration = true
     var isSaveLocked = false
     var isNarrationLocked = false
+    var feedback: ReadingFeedback? = nil
+    var feedbackAction: ((ReadingFeedback?) -> Void)? = nil
     @AppStorage(
         ReadingTextScaleStore.key,
         store: ReadingTextScaleStore.appGroupDefaults
@@ -323,6 +325,27 @@ struct SpiritualReadingCard: View {
                 .buttonStyle(ReadingActionButtonStyle(isHighlighted: narrationState.isHighlighted))
                 .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                 .accessibilityLabel(isNarrationLocked ? "Ouvir este trecho é um recurso Premium" : narrationButtonTitle)
+            }
+
+            if let feedbackAction {
+                Menu {
+                    Button { feedbackAction(.helpful) } label: {
+                        Label("Essa reflexão me ajudou", systemImage: feedback == .helpful ? "checkmark" : "hand.thumbsup")
+                    }
+                    Button { feedbackAction(.preferAnother) } label: {
+                        Label("Preferir outros trechos", systemImage: feedback == .preferAnother ? "checkmark" : "arrow.triangle.2.circlepath")
+                    }
+                    if feedback != nil {
+                        Button("Remover minha opinião", role: .destructive) { feedbackAction(nil) }
+                    }
+                } label: {
+                    Label(feedback == .helpful ? "Me ajudou" : feedback == .preferAnother ? "Outros trechos nas próximas leituras" : "Sobre esta leitura",
+                          systemImage: feedback == .helpful ? "hand.thumbsup.fill" : "ellipsis.bubble")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.sageButton)
+                        .frame(minHeight: 44)
+                }
+                .accessibilityHint("Sua opinião fica apenas neste aparelho e não troca a leitura atual.")
             }
         }
         .padding(18)

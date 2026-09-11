@@ -358,12 +358,14 @@ struct ScreenTimePolicyStore {
         defaults.set(value, forKey: Key.screenTimeAuthorized)
     }
 
-    func loadRecentPassageIDs() -> [String] {
-        load([String].self, key: Key.recentPassageIDs) ?? []
+    func loadRecentPassageIDs(from storage: UserDefaults? = nil) -> [String] {
+        guard let data = (storage ?? defaults).data(forKey: Key.recentPassageIDs) else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
     }
 
-    func saveRecentPassageIDs(_ ids: [String]) {
-        save(ids, key: Key.recentPassageIDs)
+    func saveRecentPassageIDs(_ ids: [String], to storage: UserDefaults? = nil) {
+        guard let data = try? JSONEncoder().encode(ids) else { return }
+        (storage ?? defaults).set(data, forKey: Key.recentPassageIDs)
     }
 
     func loadRecentAIReflections() -> [RecentAIReflectionDigest] {
@@ -372,6 +374,16 @@ struct ScreenTimePolicyStore {
 
     func saveRecentAIReflections(_ reflections: [RecentAIReflectionDigest]) {
         save(reflections, key: Key.recentAIReflections)
+    }
+
+    func loadReadingFeedback(from storage: UserDefaults? = nil) -> [String: ReadingFeedback] {
+        guard let data = (storage ?? defaults).data(forKey: "readingFeedback.v1") else { return [:] }
+        return (try? JSONDecoder().decode([String: ReadingFeedback].self, from: data)) ?? [:]
+    }
+
+    func saveReadingFeedback(_ feedback: [String: ReadingFeedback], to storage: UserDefaults? = nil) {
+        guard let data = try? JSONEncoder().encode(feedback) else { return }
+        (storage ?? defaults).set(data, forKey: "readingFeedback.v1")
     }
 
     func loadValueDemoSeen() -> Bool {

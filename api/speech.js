@@ -70,12 +70,13 @@ function blobEnabled() {
 }
 
 async function findCachedAudio(pathname, debugContext) {
+  const { head, BlobNotFoundError } = require("@vercel/blob");
   try {
-    const { head } = require("@vercel/blob");
     const existing = await head(pathname);
     return existing?.url || null;
   } catch (error) {
-    if (error?.name === "BlobNotFoundError") return null;
+    if (error instanceof BlobNotFoundError || error?.name === "BlobNotFoundError") return null;
+    if (debugContext?.throwOnLookupError) throw error;
     // console.warn: precisa aparecer em produção — cache degradado dobra o
     // custo de síntese em silêncio se o aviso ficar restrito ao modo debug.
     console.warn("limiar_tts_cache_lookup_failed", { ...debugContext, error: String(error?.message || error) });

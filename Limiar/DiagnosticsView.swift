@@ -50,6 +50,16 @@ struct DiagnosticsView: View {
                     }
                 }
 
+                Section("Entrega de leituras · registros locais") {
+                    let summary = ReadingDeliverySummary(entries: entries)
+                    LabeledContent("Solicitações", value: "\(summary.requests)")
+                    LabeledContent("Falhas", value: "\(summary.failures)")
+                    LabeledContent("Sessões locais exibidas", value: "\(summary.localSessions)")
+                    if let duration = summary.p95Milliseconds {
+                        LabeledContent("Tempo de resposta · P95", value: "\(duration) ms")
+                    }
+                }
+
                 Section {
                     Button("Copiar eventos") {
                         UIPasteboard.general.string = entries
