@@ -19,8 +19,12 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Testes do backend de IA
         run: npm run test:ai-backend
+      - name: Regressões do cache de narração
+        run: node --test tests/narration-prewarm.test.js
       - name: Validação do catálogo de trechos
         run: python3 scripts/validate_passages.py
+      - name: Regressões da expansão do catálogo
+        run: python3 -m unittest discover -s scripts -p 'test_catalog_expansion.py'
 
   ios:
     name: iOS (build em simulador)

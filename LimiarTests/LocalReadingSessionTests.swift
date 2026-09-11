@@ -273,10 +273,216 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
     }
 
-    func testStarterProfileSelectsTheFirstEightStandaloneThemes() {
+    func testExpandedCatalogDecodesFromAppBundleAndSupportsDefaultReadingPools() throws {
+        let catalog = PassageCatalog.shared
+        XCTAssertEqual(catalog.count, 1800)
+        XCTAssertEqual(Set(catalog.map(\.id)).count, 1800)
+        let service = PassageRecommendationService(passages: catalog)
+        for tradition in FaithTradition.allCases {
+            XCTAssertEqual(catalog.filter { $0.tradition == tradition }.count, 450)
+            var profile = UserFaithProfile.starter
+            profile.tradition = tradition
+            profile.selectedReadingCategoryIDs = tradition.readingConfig.defaultCategoryIDs
+            profile.normalizeReadingPreferencesForTradition()
+            profile.normalizeStandaloneThemesForCurrentTradition()
+            let original = profile
+            let plan = service.readingPlan(for: profile, history: [], minimumCount: 180)
+            XCTAssertEqual(plan.count, 180, tradition.rawValue)
+            XCTAssertEqual(Set(plan.map(\.id)).count, 180)
+            XCTAssertTrue(plan.allSatisfy { $0.tradition == tradition && profile.favoriteBooks.contains($0.book) && profile.favoriteBibleSections.contains($0.section) })
+            XCTAssertEqual(profile, original)
+            // A retained history from before the update must still resolve.
+            let oldIDs = catalog.filter { !$0.id.hasPrefix("blivre-2018-") }.map(\.id)
+            let fresh = service.readingPlan(for: profile, history: [], recentlyShownPassageIDs: oldIDs, minimumCount: 3)
+            XCTAssertEqual(fresh.count, 3)
+            XCTAssertTrue(fresh.allSatisfy { $0.id.hasPrefix("blivre-2018-") })
+        }
+    }
+
+    func testLegacyFavoriteRemainsReadableAndMatchesNewSessionIdentity() throws {
+        let favorite = FavoritePassageItem(id: UUID(), passageID: "old-session", passageTitle: "Salmo", reference: "Salmo 1", text: "Texto", savedAt: Date())
+        let data = try JSONEncoder().encode(favorite)
+        let decoded = try JSONDecoder().decode(FavoritePassageItem.self, from: data)
+        let item = SpiritualReadingItem(id: "new-session", reference: "Salmo 1", text: "Texto", homily: "Reflexão", practicalConclusion: "Aplicação", passageID: "canonical")
+        XCTAssertTrue(decoded.matches(item, tradition: .catholic))
+        XCTAssertNil(decoded.homily)
+        XCTAssertNil(decoded.canonicalPassageID)
+    }
+
+    func testFavoriteStoresReflectionAndKeepsTraditionsSeparate() throws {
+        let favorite = FavoritePassageItem(id: UUID(), passageID: "session", passageTitle: "Salmo", reference: "Salmo 1", text: "Texto", homily: "Reflexão salva", practicalConclusion: "Aplicação salva", savedAt: Date(), canonicalPassageID: "canonical", tradition: .catholic, meditationQuestion: "Pergunta?")
+        let decoded = try JSONDecoder().decode(FavoritePassageItem.self, from: JSONEncoder().encode(favorite))
+        XCTAssertEqual(decoded, favorite)
+        let item = SpiritualReadingItem(id: "other-session", reference: "Salmo 1", text: "Texto", homily: "Nova reflexão", practicalConclusion: "Outra aplicação", passageID: "canonical")
+        XCTAssertTrue(decoded.matches(item, tradition: .catholic))
+        XCTAssertFalse(decoded.matches(item, tradition: .jewish))
+        XCTAssertEqual(decoded.homily, "Reflexão salva")
+    }
+
+    func testLegacyReflectionDigestDecodesWithoutNewFields() throws {
+        let old = RecentAIReflectionDigest(reference: "Salmo", summary: "Resumo", meditationQuestion: "Pergunta?", createdAt: Date())
+        let decoded = try JSONDecoder().decode(RecentAIReflectionDigest.self, from: JSONEncoder().encode(old))
+        XCTAssertNil(decoded.openings)
+        XCTAssertNil(decoded.applications)
+        XCTAssertNil(RemoteAIReflectionDigestPayload(decoded).openings)
+    }
+
+    func testFeedbackPersistsLocallyAndDoesNotRewriteOtherPreferences() throws {
+        let suite = "LimiarFeedbackTests.\(UUID().uuidString)"
+        let storage = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { storage.removePersistentDomain(forName: suite) }
+        storage.set("perfil original", forKey: "faithProfile")
+        ScreenTimePolicyStore().saveReadingFeedback(["a": .helpful, "b": .preferAnother], to: storage)
+        let reopened = try XCTUnwrap(UserDefaults(suiteName: suite))
+        XCTAssertEqual(ScreenTimePolicyStore().loadReadingFeedback(from: reopened), ["a": .helpful, "b": .preferAnother])
+        XCTAssertEqual(reopened.string(forKey: "faithProfile"), "perfil original")
+        ScreenTimePolicyStore().saveReadingFeedback([:], to: reopened)
+        XCTAssertTrue(ScreenTimePolicyStore().loadReadingFeedback(from: reopened).isEmpty)
+    }
+
+    func testAIDeliveryDiagnosticsStripSensitiveDetailsAndSummarize() {
+        let suite = "LimiarDiagnosticsTests.\(UUID().uuidString)"
+        defer { LimiarEventLog.clear(appGroupIdentifier: suite) }
+        let log = LimiarEventLog(source: "ai", appGroupIdentifier: suite)
+        log.log("reading_delivery", ["outcome": "remote", "durationMs": "150", "items": "2", "tradition": "Católica", "reference": "Salmo 1", "requestKey": "segredo"])
+        log.log("reading_delivery", ["outcome": "failed", "durationMs": "300"])
+        log.log("ai_local_session_shown", ["items": "2"])
+        let entries = LimiarEventLog.recentEntries(appGroupIdentifier: suite)
+        XCTAssertTrue(entries.allSatisfy { $0.details["tradition"] == nil && $0.details["reference"] == nil && $0.details["requestKey"] == nil })
+        let summary = ReadingDeliverySummary(entries: entries)
+        XCTAssertEqual(summary.requests, 2)
+        XCTAssertEqual(summary.failures, 1)
+        XCTAssertEqual(summary.localSessions, 1)
+        XCTAssertEqual(summary.p95Milliseconds, 300)
+        XCTAssertNil(ReadingDeliverySummary(entries: []).p95Milliseconds)
+    }
+
+    func testFeedbackNeverOverridesPreferredThemesOrLeastRecentOrder() {
+        let a = selectionPassage("a")
+        let b = selectionPassage("b", theme: .faith)
+        let service = PassageRecommendationService(passages: [a, b])
+        XCTAssertEqual(service.readingPlan(for: selectionProfile, history: [], minimumCount: 1, feedback: ["b": .helpful]).first?.id, "a")
+        let shown = PassagePresentationHistory.recording([a, b], in: [])
+        XCTAssertEqual(service.readingPlan(for: selectionProfile, history: [], recentlyShownPassageIDs: shown, minimumCount: 1, feedback: ["a": .preferAnother, "b": .helpful]).first?.id, "a")
+    }
+
+    private func selectionPassage(_ id: String, theme: SpiritualTheme = .hope, book: BibleBook = .psalms, section: BibleSection = .psalms, tradition: FaithTradition = .catholic) -> ScripturePassage {
+        ScripturePassage(id: id, tradition: tradition, title: id, reference: "Ref \(id)", text: "Texto \(id)", estimatedMinutes: 5, theme: theme, section: section, book: book)
+    }
+
+    private var selectionProfile: UserFaithProfile {
+        var profile = UserFaithProfile.starter
+        profile.favoriteBooks = [.psalms]
+        profile.favoriteBibleSections = [.psalms]
+        profile.favoriteThemes = [.hope]
+        profile.refinedBooks = nil
+        return profile
+    }
+
+    func testSelectionExhaustsPreferredThemesBeforeExpandingAndRepeating() {
+        let preferred = selectionPassage("preferred")
+        let sameThemeUnseen = selectionPassage("unseen")
+        let expanded = selectionPassage("expanded", theme: .faith)
+        let service = PassageRecommendationService(passages: [expanded, preferred, sameThemeUnseen])
+        let profile = selectionProfile
+        let original = profile
+        var shown = PassagePresentationHistory.recording([preferred], in: [])
+        XCTAssertEqual(service.readingPlan(for: profile, history: [], recentlyShownPassageIDs: shown, minimumCount: 3).map(\.id), ["unseen", "expanded", "preferred"])
+        shown = PassagePresentationHistory.recording([sameThemeUnseen], in: shown)
+        XCTAssertEqual(service.readingPlan(for: profile, history: [], recentlyShownPassageIDs: shown, minimumCount: 1).first?.id, "expanded")
+        shown = PassagePresentationHistory.recording([expanded], in: shown)
+        XCTAssertEqual(service.readingPlan(for: profile, history: [], recentlyShownPassageIDs: shown, minimumCount: 3).map(\.id), ["preferred", "unseen", "expanded"])
+        XCTAssertEqual(profile, original)
+    }
+
+    func testSelectionNeverExpandsBooksSectionsOrTraditionToFillSession() {
+        let eligible = selectionPassage("eligible", theme: .faith)
+        let service = PassageRecommendationService(passages: [eligible,
+            selectionPassage("other-book", book: .john),
+            selectionPassage("other-section", section: .gospels),
+            selectionPassage("other-tradition", tradition: .jewish)])
+        XCTAssertEqual(service.readingPlan(for: selectionProfile, history: [], minimumCount: 3).map(\.id), ["eligible"])
+        let empty = PassageRecommendationService(passages: [selectionPassage("wrong", book: .john)])
+        XCTAssertTrue(empty.readingPlan(for: selectionProfile, history: []).isEmpty)
+    }
+
+    func testUnseenPreferredThemePrecedesRefinedBookAndDepthIsPreserved() {
+        var profile = selectionProfile
+        profile.favoriteBooks.append(.john)
+        profile.favoriteBibleSections.append(.gospels)
+        profile.refinedBooks = [.john]
+        let service = PassageRecommendationService(passages: [selectionPassage("preferred"), selectionPassage("refined", theme: .faith, book: .john, section: .gospels)])
+        for depth in [ExplanationDepth.short, .medium, .deep] {
+            profile.explanationDepth = depth
+            let plan = service.readingPlan(for: profile, history: [])
+            XCTAssertEqual(plan.first?.id, "preferred")
+            XCTAssertEqual(plan.count, min(2, depth.readingItemCount))
+        }
+    }
+
+    func testPersistentHistorySurvivesReopeningBeyondOldRecentWindow() throws {
+        let suite = "LimiarSelectionTests.\(UUID().uuidString)"
+        let storage = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { storage.removePersistentDomain(forName: suite) }
+        let passages = (0..<100).map { selectionPassage("p\($0)") }
+        var shown: [String] = []
+        for passage in passages { shown = PassagePresentationHistory.recording([passage], in: shown) }
+        ScreenTimePolicyStore().saveRecentPassageIDs(shown, to: storage)
+        let reopened = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let loaded = ScreenTimePolicyStore().loadRecentPassageIDs(from: reopened)
+        XCTAssertEqual(loaded, shown)
+        XCTAssertEqual(loaded.count, 200)
+        let expanded = selectionPassage("new-theme", theme: .faith)
+        let service = PassageRecommendationService(passages: passages + [expanded])
+        XCTAssertEqual(service.readingPlan(for: selectionProfile, history: [], recentlyShownPassageIDs: loaded, minimumCount: 1).first?.id, "new-theme")
+        let exhausted = PassageRecommendationService(passages: passages)
+        XCTAssertEqual(exhausted.readingPlan(for: selectionProfile, history: [], recentlyShownPassageIDs: loaded, minimumCount: 1).first?.id, "p0")
+    }
+
+    func testLegacyHistoryMigrationAndAvoidingCurrentUseExactIDs() {
+        let completed = ReadingHistoryItem(id: UUID(), passageID: "a+b", passageTitle: "", reference: "", completedAt: Date())
+        let merged = PassagePresentationHistory.merging(["b", "b"], completed: [completed])
+        XCTAssertEqual(merged, ["b", "a"])
+        let service = PassageRecommendationService(passages: [selectionPassage("a"), selectionPassage("ab"), selectionPassage("b")])
+        XCTAssertEqual(service.readingPlan(for: selectionProfile, history: [completed], avoiding: "ab", recentlyShownPassageIDs: merged, minimumCount: 3).map(\.id), ["a", "b", "ab"])
+    }
+
+    func testRemoteResponseCannotChangeSelectionOrOrder() throws {
+        let selected = [selectionPassage("a"), selectionPassage("b")]
+        let items = LocalReadingSessionFactory.items(from: selected, itemCount: 2)
+        XCTAssertEqual(try RemoteAIReadingSessionService.orderedItems(Array(items.reversed()), for: selected).map(\.passageID), ["a", "b"])
+        XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems([items[0], items[0]], for: selected))
+        XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems([items[0]], for: selected))
+    }
+
+    func testExhaustedPoolRotatesWithoutConsecutiveRepeats() throws {
+        let passages = [selectionPassage("a"), selectionPassage("b", theme: .faith)]
+        let service = PassageRecommendationService(passages: passages)
+        var shown = PassagePresentationHistory.recording(passages, in: [])
+        var result: [String] = []
+        for _ in 0..<6 {
+            let next = try XCTUnwrap(service.readingPlan(for: selectionProfile, history: [], recentlyShownPassageIDs: shown, minimumCount: 1).first)
+            result.append(next.id)
+            shown = PassagePresentationHistory.recording([next], in: shown)
+        }
+        XCTAssertEqual(result, ["a", "b", "a", "b", "a", "b"])
+    }
+
+    func testUnseenThemesVaryWithoutTreatingRecentThemeAsExhausted() {
+        var profile = selectionProfile
+        profile.favoriteThemes = [.hope, .faith]
+        let a = selectionPassage("a")
+        let b = selectionPassage("b")
+        let c = selectionPassage("c", theme: .faith)
+        let service = PassageRecommendationService(passages: [a, b, c])
+        let shown = PassagePresentationHistory.recording([a], in: [])
+        XCTAssertEqual(service.readingPlan(for: profile, history: [], recentlyShownPassageIDs: shown, minimumCount: 3).map(\.id), ["c", "b", "a"])
+    }
+
+    func testStarterProfilePreservesCurrentTraditionDefaultThemes() {
         XCTAssertEqual(
             UserFaithProfile.starter.favoriteThemes,
-            Array(SpiritualTheme.standaloneOptions.prefix(8))
+            SpiritualTheme.defaultOnboardingThemes(for: .catholic)
         )
     }
 

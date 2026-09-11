@@ -595,6 +595,13 @@ struct RecentAIReflectionDigest: Codable, Hashable {
     let summary: String
     let meditationQuestion: String
     let createdAt: Date
+    var openings: [String]? = nil
+    var applications: [String]? = nil
+}
+
+enum ReadingFeedback: String, Codable {
+    case helpful
+    case preferAnother
 }
 
 struct SpiritualReadingItem: Identifiable, Codable, Equatable {
@@ -606,6 +613,7 @@ struct SpiritualReadingItem: Identifiable, Codable, Equatable {
     // ID do trecho no catálogo local, quando o backend informa. Permite
     // recuperar livro/seção/tema reais em vez de metadados sintéticos.
     var passageID: String? = nil
+    var meditationQuestion: String? = nil
 
     var hasExplanationContent: Bool {
         !homily.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -635,6 +643,16 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
     /// à leitura atual. Favoritos antigos decodificam com nil normalmente.
     let theme: SpiritualTheme?
     let savedAt: Date
+    var canonicalPassageID: String? = nil
+    var tradition: FaithTradition? = nil
+    var meditationQuestion: String? = nil
+
+    func matches(_ item: SpiritualReadingItem, tradition currentTradition: FaithTradition) -> Bool {
+        guard tradition == nil || tradition == currentTradition else { return false }
+        return passageID == item.id || passageID == item.passageID
+            || (canonicalPassageID != nil && canonicalPassageID == item.passageID)
+            || (reference == item.reference && text == item.text)
+    }
 
     init(
         id: UUID,
@@ -646,7 +664,10 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
         practicalConclusion: String? = nil,
         rememberToday: String? = nil,
         theme: SpiritualTheme? = nil,
-        savedAt: Date
+        savedAt: Date,
+        canonicalPassageID: String? = nil,
+        tradition: FaithTradition? = nil,
+        meditationQuestion: String? = nil
     ) {
         self.id = id
         self.passageID = passageID
@@ -658,6 +679,9 @@ struct FavoritePassageItem: Identifiable, Codable, Equatable {
         self.rememberToday = rememberToday
         self.theme = theme
         self.savedAt = savedAt
+        self.canonicalPassageID = canonicalPassageID
+        self.tradition = tradition
+        self.meditationQuestion = meditationQuestion
     }
 }
 
@@ -855,6 +879,7 @@ final class LimiarAppModel {
     var hasAuthorizedScreenTime = false
     var recentPassageIDs: [String] = []
     var recentAIReflections: [RecentAIReflectionDigest] = []
+    var readingFeedback: [String: ReadingFeedback] = [:]
     var aiContentState = AIContentState.localReady
     var isRetryingLocalSession = false
     var readingTopResetID = UUID()
@@ -907,14 +932,17 @@ final class LimiarAppModel {
         history = policyStore.loadHistory()
         favoritePassages = policyStore.loadFavorites()
         hasAuthorizedScreenTime = policyStore.loadScreenTimeAuthorized()
-        recentPassageIDs = policyStore.loadRecentPassageIDs()
+        recentPassageIDs = PassagePresentationHistory.merging(policyStore.loadRecentPassageIDs(), completed: history)
+        policyStore.saveRecentPassageIDs(recentPassageIDs)
         recentAIReflections = policyStore.loadRecentAIReflections()
+        readingFeedback = policyStore.loadReadingFeedback()
 
         setReadingPlan(
             recommender.readingPlan(
                 for: savedProfile,
                 history: history,
-                recentlyShownPassageIDs: recentPassageIDs
+                recentlyShownPassageIDs: recentPassageIDs,
+                feedback: readingFeedback
             ),
             profile: savedProfile
         )
@@ -1214,7 +1242,8 @@ final class LimiarAppModel {
             history: history,
             avoiding: avoidingCurrent ? currentPassage.id : nil,
             recentlyShownPassageIDs: recentPassageIDs,
-            minimumCount: hasPauseAccess ? 36 : targetItemCount
+            minimumCount: hasPauseAccess ? 36 : targetItemCount,
+            feedback: readingFeedback
         )
         setReadingPlan(
             Array(candidates.prefix(targetItemCount)),
@@ -1256,7 +1285,8 @@ final class LimiarAppModel {
             for: profile,
             history: history,
             recentlyShownPassageIDs: recentPassageIDs,
-            minimumCount: 36
+            minimumCount: 36,
+            feedback: readingFeedback
         )
         let recents = recentPassageIDs
         let reflections = recentAIReflections
@@ -1465,9 +1495,25 @@ final class LimiarAppModel {
     }
 
     func isFavorite(_ item: SpiritualReadingItem) -> Bool {
-        favoritePassages.contains {
-            $0.passageID == item.id || $0.passageID == item.passageID
-        }
+        favoritePassages.contains { $0.matches(item, tradition: faithProfile.tradition) }
+    }
+
+    func feedback(for item: SpiritualReadingItem) -> ReadingFeedback? {
+        guard let id = item.passageID else { return nil }
+        return readingFeedback[id]
+    }
+
+    func setFeedback(_ feedback: ReadingFeedback?, for item: SpiritualReadingItem) {
+        guard let id = item.passageID, recommender.passage(withID: id) != nil else { return }
+        readingFeedback[id] = feedback
+        policyStore.saveReadingFeedback(readingFeedback)
+        // Future selections only: never cancel a session or trigger another
+        // provider request because someone gives feedback.
+    }
+
+    func removeFavorite(_ item: FavoritePassageItem) {
+        favoritePassages.removeAll { $0.id == item.id }
+        policyStore.saveFavorites(favoritePassages)
     }
 
     func favoritePassageText(for item: FavoritePassageItem) -> String {
@@ -1511,9 +1557,7 @@ final class LimiarAppModel {
 
     func toggleFavorite(_ item: SpiritualReadingItem) {
         if isFavorite(item) {
-            favoritePassages.removeAll {
-                $0.passageID == item.id || $0.passageID == item.passageID
-            }
+            favoritePassages.removeAll { $0.matches(item, tradition: faithProfile.tradition) }
         } else {
             let resolvedTheme = currentReadingPlan.first(where: {
                 $0.id == item.passageID || $0.reference == item.reference
@@ -1529,7 +1573,10 @@ final class LimiarAppModel {
                     practicalConclusion: item.practicalConclusion,
                     rememberToday: currentReflection.conclusion,
                     theme: resolvedTheme,
-                    savedAt: Date()
+                    savedAt: Date(),
+                    canonicalPassageID: item.passageID,
+                    tradition: faithProfile.tradition,
+                    meditationQuestion: item.meditationQuestion
                 ),
                 at: 0
             )
@@ -1577,9 +1624,8 @@ final class LimiarAppModel {
         )
         history = Array(history.prefix(365))
         policyStore.saveHistory(history)
-        // Leitura concluída: agora sim os trechos entram no histórico de
-        // recentes (anti-repetição). A sessão de hoje permanece salva — ela é
-        // o conteúdo concluído do dia; regenerar aqui só queimaria trechos.
+        // Atualiza a recência ao concluir, sem apagar apresentações anteriores.
+        // A sessão de hoje permanece salva para reabertura da mesma leitura.
         rememberShownPassages(currentReadingPlan)
         policyStore.saveMorningPauseCompletedAt(completedAt)
         screenTimeController.clearShield()
@@ -1681,7 +1727,15 @@ final class LimiarAppModel {
         profile: UserFaithProfile,
         remoteCandidatePool: [ScripturePassage]? = nil
     ) {
-        let resolvedPlan = plan.isEmpty ? [currentPassage] : plan
+        guard !plan.isEmpty else {
+            aiGenerationTask?.cancel()
+            currentReadingPlan = []
+            currentSpiritualReadingItems = []
+            currentReflection = emptyReflection()
+            aiContentState = .fallback
+            return
+        }
+        let resolvedPlan = plan
         let candidatePool = remoteCandidatePool?.isEmpty == false ? remoteCandidatePool! : resolvedPlan
         aiGenerationTask?.cancel()
         isRetryingLocalSession = false
@@ -1783,6 +1837,10 @@ final class LimiarAppModel {
         currentSpiritualReadingItems = items
         let selectedPassages = scripturePassages(from: items, profile: profile)
         currentReadingPlan = selectedPassages
+        rememberShownPassages(selectedPassages)
+        if items.contains(where: \.hasExplanationContent) {
+            rememberReflection(reference: items.map(\.reference).joined(separator: " + "), reflection: reflection)
+        }
         if let first = selectedPassages.first {
             currentPassage = first
         }
@@ -1815,12 +1873,7 @@ final class LimiarAppModel {
     }
 
     private func rememberShownPassages(_ passages: [ScripturePassage]) {
-        let ids = passages.flatMap { passage in
-            [passage.id, passage.reference]
-        }
-        recentPassageIDs.removeAll { ids.contains($0) }
-        recentPassageIDs.insert(contentsOf: ids, at: 0)
-        recentPassageIDs = Array(recentPassageIDs.prefix(60))
+        recentPassageIDs = PassagePresentationHistory.recording(passages, in: recentPassageIDs)
         policyStore.saveRecentPassageIDs(recentPassageIDs)
     }
 
@@ -1851,9 +1904,8 @@ final class LimiarAppModel {
                 switch outcome {
                 case .success(let session):
                     applyGeneratedSession(items: session.items, reflection: session.reflection, profile: profile)
-                    // Persiste a sessão do dia. Os trechos só entram no
-                    // histórico de recentes quando a leitura for concluída
-                    // (finishReading) — gerar não é ler.
+                    // A sessão exibida já foi registrada acima; a pré-geração
+                    // em background não consome o histórico de apresentação.
                     dailySessionStore.save(
                         DailyReadingSessionSnapshot(
                             dayKey: DailyReadingSessionStore.todayKey(),
@@ -1863,7 +1915,6 @@ final class LimiarAppModel {
                             source: .remote
                         )
                     )
-                    rememberReflection(reference: currentReadingReference, reflection: session.reflection)
                     localSessionFailureReason = nil
                     aiContentState = isEssentialMode ? .essentialMode : .remoteReady
                 case .failure(let reason):
@@ -1892,12 +1943,9 @@ final class LimiarAppModel {
 
         let profile = faithProfile
         let profileKey = sessionProfileKey(for: profile)
-        let candidates = recommender.readingPlan(
-            for: profile,
-            history: history,
-            recentlyShownPassageIDs: recentPassageIDs,
-            minimumCount: 36
-        )
+        // Upgrade explains the already-presented local session instead of
+        // consuming another selection whenever connectivity returns.
+        let candidates = currentReadingPlan
         let recents = recentPassageIDs
         let reflections = recentAIReflections
         let pauseTurn = pauseCycleTurn
@@ -1951,7 +1999,6 @@ final class LimiarAppModel {
                             source: .remote
                         )
                     )
-                    rememberReflection(reference: currentReadingReference, reflection: session.reflection)
                     localSessionFailureReason = nil
                     aiContentState = isEssentialMode ? .essentialMode : .remoteReady
                     LimiarAIDiagnostics.log(
@@ -2082,7 +2129,9 @@ final class LimiarAppModel {
             reference: reference,
             summary: reflection.summary,
             meditationQuestion: reflection.meditationQuestion,
-            createdAt: Date()
+            createdAt: Date(),
+            openings: currentSpiritualReadingItems.map { String($0.homily.prefix(180)) }.filter { !$0.isEmpty },
+            applications: currentSpiritualReadingItems.map { String($0.practicalConclusion.prefix(180)) }.filter { !$0.isEmpty }
         )
         recentAIReflections.removeAll {
             $0.reference == digest.reference

@@ -746,7 +746,9 @@ private struct DashboardView: View {
                         showsReflection: (model.hasPremiumAccess || model.isEssentialMode) && item.hasExplanationContent,
                         showsNarration: model.canNarrateCurrentReading || model.isEssentialMode,
                         isSaveLocked: model.isEssentialMode,
-                        isNarrationLocked: model.isEssentialMode
+                        isNarrationLocked: model.isEssentialMode,
+                        feedback: model.feedback(for: item),
+                        feedbackAction: { model.setFeedback($0, for: item) }
                     )
                     .id(index == 1 ? "essentialMiddle" : "reading-\(item.id)")
 

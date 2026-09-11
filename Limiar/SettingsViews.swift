@@ -460,20 +460,30 @@ struct FavoritePassagesView: View {
     @Environment(LimiarAppModel.self) private var model
     @Environment(SubscriptionManager.self) private var subscription
     @State private var showingPaywall = false
+    @State private var query = ""
+
+    private var filteredFavorites: [FavoritePassageItem] {
+        let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !term.isEmpty else { return model.favoritePassages }
+        return model.favoritePassages.filter { item in
+            [item.reference, item.passageTitle, model.favoritePassageText(for: item), item.homily ?? ""]
+                .contains { $0.localizedStandardContains(term) }
+        }
+    }
 
     var body: some View {
         List {
             if model.favoritePassages.isEmpty {
-                Text("Nenhum trecho salvo ainda.")
-                    .foregroundStyle(.secondary)
+                Text("Nenhum trecho salvo ainda.").foregroundStyle(.secondary)
+            } else if filteredFavorites.isEmpty {
+                Text("Nenhum trecho encontrado.").foregroundStyle(.secondary)
             } else {
-                ForEach(model.favoritePassages) { item in
+                ForEach(filteredFavorites) { item in
                     NavigationLink {
                         FavoritePassageDetailView(favorite: item)
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(item.passageTitle)
-                                .font(.headline)
+                            Text(item.passageTitle).font(.headline)
                             let passageText = model.favoritePassageText(for: item)
                             if !passageText.isEmpty {
                                 Text(passageText)
@@ -491,6 +501,7 @@ struct FavoritePassagesView: View {
             }
         }
         .navigationTitle("Trechos salvos")
+        .searchable(text: $query, prompt: "Buscar nos trechos salvos")
         .scrollContentBackground(.hidden)
         .background(LimiarBackground())
         .sheet(isPresented: $showingPaywall) {
@@ -503,7 +514,8 @@ struct FavoritePassagesView: View {
         if model.isEssentialMode {
             showingPaywall = true
         } else {
-            model.removeFavorites(at: offsets)
+            let items = offsets.compactMap { filteredFavorites.indices.contains($0) ? filteredFavorites[$0] : nil }
+            for item in items { model.removeFavorite(item) }
         }
     }
 }

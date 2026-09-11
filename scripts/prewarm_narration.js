@@ -1,24 +1,30 @@
 #!/usr/bin/env node
 
 const passages = require("../Limiar/Resources/passages.json");
+const { parseArgs } = require("node:util");
 const {
   callAzureSpeech,
   canonicalPassageNarrationText
 } = require("../api/_limiar-ai");
 const {
+  blobEnabled,
   cacheKey,
   findCachedAudio,
   speechConfig,
   storeCachedAudio
 } = require("../api/speech");
 
-const REQUIRED_ENV = ["AZURE_SPEECH_KEY", "AZURE_SPEECH_REGION", "BLOB_READ_WRITE_TOKEN"];
+const REQUIRED_ENV = ["AZURE_SPEECH_KEY", "AZURE_SPEECH_REGION"];
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 function requireConfiguration() {
   const missing = REQUIRED_ENV.filter((name) => !String(process.env[name] || "").trim());
+  if (!blobEnabled()) missing.push("BLOB_READ_WRITE_TOKEN ou BLOB_STORE_ID");
   if (missing.length) {
     throw new Error(`Pré-aquecimento exige as variáveis: ${missing.join(", ")}`);
+  }
+  if (String(process.env.TTS_PROVIDER || "azure").trim().toLowerCase() !== "azure") {
+    throw new Error("Pré-aquecimento Azure exige TTS_PROVIDER=azure.");
   }
 }
 
@@ -32,14 +38,19 @@ function isTransient(error) {
   return statusCode === 408 || statusCode === 429 || statusCode >= 500 || error?.name === "AbortError";
 }
 
-async function prewarmPassage(passage, stats) {
+async function prewarmPassage(passage, stats, checkOnly = false) {
   const text = canonicalPassageNarrationText(passage.reference, passage.text);
   const config = speechConfig({ text });
   const pathname = cacheKey({ text }, config);
-  const debugContext = { endpoint: "prewarm_narration", passageID: passage.id };
+  const debugContext = { endpoint: "prewarm_narration", throwOnLookupError: true };
 
   if (await findCachedAudio(pathname, debugContext)) {
     stats.existing += 1;
+    return;
+  }
+  if (checkOnly) {
+    stats.missing += 1;
+    stats.missingCharacters += text.length;
     return;
   }
 
@@ -61,22 +72,44 @@ async function prewarmPassage(passage, stats) {
 }
 
 async function main() {
+  const { values } = parseArgs({ options: {
+    "new-only": { type: "boolean", default: false },
+    "check-only": { type: "boolean", default: false }
+  } });
   requireConfiguration();
-  const stats = { total: passages.length, existing: 0, generated: 0, failures: [] };
+  const selected = values["new-only"] ? passages.filter(p => p.id.startsWith("blivre-2018-")) : passages;
+  // Traditions can share identical canonical audio. Queue each cache key once.
+  const unique = [...new Map(selected.map(p => {
+    const text = canonicalPassageNarrationText(p.reference, p.text);
+    return [cacheKey({ text }), p];
+  })).values()];
+  const stats = { total: selected.length, existing: 0, generated: 0, missing: 0, missingCharacters: 0, failures: [] };
   const concurrency = prewarmConcurrency();
   let cursor = 0;
+  let fatalError;
 
   async function worker() {
-    while (cursor < passages.length) {
-      const passage = passages[cursor++];
-      await prewarmPassage(passage, stats);
+    while (!fatalError && cursor < unique.length) {
+      const passage = unique[cursor++];
+      try {
+        await prewarmPassage(passage, stats, values["check-only"]);
+      } catch (error) {
+        // Failed cache authentication must not launch more paid synthesis.
+        fatalError = error;
+        return;
+      }
       await delay(120);
     }
   }
 
   await Promise.all(Array.from({ length: concurrency }, worker));
+  if (fatalError) throw fatalError;
   console.log(JSON.stringify({
     total: stats.total,
+    uniqueAudio: unique.length,
+    checkOnly: values["check-only"],
+    missing: stats.missing,
+    missingCharacters: stats.missingCharacters,
     alreadyExisting: stats.existing,
     generated: stats.generated,
     failures: stats.failures.length,

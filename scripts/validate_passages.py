@@ -9,6 +9,7 @@ import json
 import sys
 import collections
 from pathlib import Path
+from expand_passages import validate_expansion
 
 CATALOG = Path(__file__).resolve().parent.parent / "Limiar" / "Resources" / "passages.json"
 
@@ -89,6 +90,13 @@ def main() -> int:
 
     if not isinstance(entries, list) or not entries:
         print("ERRO: o catálogo deve ser uma lista não vazia")
+        return 1
+
+    try:
+        validated = validate_expansion(entries)
+        print(f"Expansão: {validated} trechos conferidos com a fonte BLIVRE fixada")
+    except (ValueError, KeyError, OSError) as exc:
+        print(f"ERRO: expansão divergente da fonte: {exc}")
         return 1
 
     seen_ids = set()

@@ -9,6 +9,7 @@ enum LimiarAIDiagnostics {
         values: [String: String],
         persistForDiagnostics: Bool = false
     ) {
+        let values = safeValues(values)
         let detailText = values
             .sorted { $0.key < $1.key }
             .map { "\($0.key)=\($0.value)" }
@@ -20,13 +21,11 @@ enum LimiarAIDiagnostics {
     }
 
     static func profileSnapshot(_ profile: UserFaithProfile) -> [String: String] {
-        [
-            "tradition": profile.tradition.rawValue,
-            "depth": profile.explanationDepth.rawValue,
-            "sections": profile.favoriteBibleSections.map(\.rawValue).sorted().joined(separator: ","),
-            "books": profile.favoriteBooks.map(\.rawValue).sorted().joined(separator: ","),
-            "themes": profile.favoriteThemes.map(\.rawValue).sorted().joined(separator: ",")
-        ]
+        [:]
+    }
+
+    static func safeValues(_ values: [String: String]) -> [String: String] {
+        LimiarEventLog.safeAIDetails(values)
     }
 }
 
@@ -85,9 +84,8 @@ struct PassageRecommendationService {
         for profile: UserFaithProfile,
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil
-    ) -> ScripturePassage {
+    ) -> ScripturePassage? {
         readingPlan(for: profile, history: history, avoiding: currentPassageID).first
-            ?? passages[0]
     }
 
     func readingPlan(
@@ -95,14 +93,17 @@ struct PassageRecommendationService {
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil,
         recentlyShownPassageIDs: [String] = [],
-        minimumCount: Int? = nil
+        minimumCount: Int? = nil,
+        feedback: [String: ReadingFeedback] = [:]
     ) -> [ScripturePassage] {
         let minimumCount = minimumCount ?? profile.explanationDepth.readingItemCount
+        guard minimumCount > 0 else { return [] }
         let ranked = rankedPassages(
             for: profile,
             history: history,
             avoiding: currentPassageID,
-            recentlyShownPassageIDs: recentlyShownPassageIDs
+            recentlyShownPassageIDs: recentlyShownPassageIDs,
+            feedback: feedback
         )
         var plan: [ScripturePassage] = []
 
@@ -112,18 +113,6 @@ struct PassageRecommendationService {
             if plan.count >= minimumCount { break }
         }
 
-        if plan.count < minimumCount {
-            for passage in passages where passage.tradition == profile.tradition && !plan.contains(where: { $0.id == passage.id }) {
-                plan.append(passage)
-                if plan.count >= minimumCount { break }
-            }
-        }
-
-        if plan.isEmpty {
-            let fallback = passages.filter { $0.tradition == profile.tradition }
-            return Array((fallback.isEmpty ? passages : fallback).shuffled().prefix(minimumCount))
-        }
-
         return plan
     }
 
@@ -131,46 +120,56 @@ struct PassageRecommendationService {
         for profile: UserFaithProfile,
         history: [ReadingHistoryItem],
         avoiding currentPassageID: String? = nil,
-        recentlyShownPassageIDs: [String] = []
+        recentlyShownPassageIDs: [String] = [],
+        feedback: [String: ReadingFeedback] = [:]
     ) -> [ScripturePassage] {
-        let lastID = history.first?.passageID
-        let completedIDs = history.prefix(8).flatMap { item in
-            item.passageID.split(separator: "+").map(String.init)
+        let presented = PassagePresentationHistory.merging(recentlyShownPassageIDs, completed: history)
+        let ranks = Dictionary(presented.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: min)
+        func rank(_ passage: ScripturePassage) -> Int? {
+            if passage.id == currentPassageID { return -1 }
+            return [ranks[passage.id], ranks[passage.reference]].compactMap { $0 }.min()
         }
-        let recentIDs = Set(completedIDs + recentlyShownPassageIDs.prefix(36))
-        let traditionMatches = passages.filter { $0.tradition == profile.tradition }
-        let scored: [(passage: ScripturePassage, score: Int)] = traditionMatches.map { passage in
-            var score = 0
-            if profile.favoriteBooks.contains(passage.book) { score += 4 }
-            if profile.refinedBooks?.contains(passage.book) == true { score += 8 }
-            if profile.favoriteBibleSections.contains(passage.section) { score += 3 }
-            if profile.favoriteThemes.contains(passage.theme) { score += 5 }
-            if lastID?.contains(passage.id) == true { score -= 10 }
-            if recentIDs.contains(passage.id) { score -= 12 }
-            if passage.id == currentPassageID { score -= 8 }
-            return (passage, score)
+        // Only themes may expand. Refined books remain a preference within the
+        // eligible books, never a reason to skip an unseen preferred theme.
+        var remaining = passages.filter { passage in
+            passage.tradition == profile.tradition
+                && (profile.favoriteBooks.isEmpty || profile.favoriteBooks.contains(passage.book))
+                && (profile.favoriteBibleSections.isEmpty || profile.favoriteBibleSections.contains(passage.section))
         }
-        let rankedMatches = scored.sorted { lhs, rhs in
-            if lhs.score == rhs.score {
-                return lhs.passage.id < rhs.passage.id
+        func tier(_ passage: ScripturePassage) -> Int {
+            if rank(passage) != nil { return 2 }
+            return profile.favoriteThemes.isEmpty || profile.favoriteThemes.contains(passage.theme) ? 0 : 1
+        }
+        var ordered: [ScripturePassage] = []
+        let helpfulThemes = Set(passages.filter { feedback[$0.id] == .helpful }.map(\.theme))
+        var previousTheme = presented.compactMap { passagesByID[$0]?.theme }.first
+        remaining.sort { lhs, rhs in
+            let leftTier = tier(lhs), rightTier = tier(rhs)
+            if leftTier != rightTier { return leftTier < rightTier }
+            if leftTier == 2, rank(lhs) != rank(rhs) {
+                return (rank(lhs) ?? -1) > (rank(rhs) ?? -1)
             }
-            return lhs.score > rhs.score
+            if (feedback[lhs.id] == .preferAnother) != (feedback[rhs.id] == .preferAnother) {
+                return feedback[lhs.id] != .preferAnother
+            }
+            let leftPriority = profile.refinedBooks?.contains(lhs.book) == true
+            let rightPriority = profile.refinedBooks?.contains(rhs.book) == true
+            if leftPriority != rightPriority { return leftPriority }
+            if helpfulThemes.contains(lhs.theme) != helpfulThemes.contains(rhs.theme) {
+                return helpfulThemes.contains(lhs.theme)
+            }
+            return lhs.id < rhs.id
         }
-        let freshMatches = rankedMatches.filter { entry in
-            !recentIDs.contains(entry.passage.id) && entry.passage.id != currentPassageID
+        while let first = remaining.first {
+            // Variety breaks ties only, never precedence or least-recent order.
+            let nextIndex = remaining.firstIndex {
+                tier($0) == tier(first) && rank($0) == rank(first) && $0.theme != previousTheme
+            } ?? 0
+            let next = remaining.remove(at: nextIndex)
+            ordered.append(next)
+            previousTheme = next.theme
         }
-        let olderMatches = rankedMatches.filter { entry in
-            recentIDs.contains(entry.passage.id) || entry.passage.id == currentPassageID
-        }
-
-        // Variedade sem perder personalização: embaralha apenas dentro de cada
-        // faixa de pontuação, preservando a ordem ditada pelas preferências.
-        let freshOrdered = Dictionary(grouping: freshMatches, by: \.score)
-            .sorted { $0.key > $1.key }
-            .flatMap { $0.value.shuffled() }
-            .map(\.passage)
-
-        return freshOrdered + olderMatches.shuffled().map(\.passage)
+        return ordered
     }
 
     func passage(withID id: String) -> ScripturePassage? {
@@ -191,6 +190,22 @@ struct PassageRecommendationService {
             .folding(options: [.diacriticInsensitive], locale: Locale(identifier: "pt_BR"))
             .replacingOccurrences(of: ":", with: ",")
             .replacingOccurrences(of: " ", with: "")
+    }
+}
+
+enum PassagePresentationHistory {
+    // Most recent first. Recover every surviving legacy completion, not just
+    // the recent window; already-discarded history cannot be reconstructed.
+    static func merging(_ ids: [String], completed: [ReadingHistoryItem]) -> [String] {
+        var seen = Set<String>()
+        return (ids + completed.sorted { $0.completedAt > $1.completedAt }.flatMap {
+            $0.passageID.split(separator: "+").reversed().map(String.init)
+        }).filter { seen.insert($0).inserted }
+    }
+
+    static func recording(_ passages: [ScripturePassage], in ids: [String]) -> [String] {
+        let shown = passages.reversed().flatMap { [$0.id, $0.reference] }
+        return merging(shown + ids, completed: [])
     }
 }
 
@@ -486,15 +501,20 @@ struct RemoteAIReflectionDigestPayload: Codable {
     let reference: String
     let summary: String
     let meditationQuestion: String
+    let openings: [String]?
+    let applications: [String]?
 
     init(_ digest: RecentAIReflectionDigest) {
         reference = digest.reference
         summary = digest.summary
         meditationQuestion = digest.meditationQuestion
+        openings = digest.openings
+        applications = digest.applications
     }
 }
 
 struct RemoteReadingSessionRequestPayload: Codable {
+    var explanationDiversityVersion: Int? = 1
     let profile: RemoteAIProfilePayload
     let passages: [RemotePassagePayload]
     let itemCount: Int
@@ -539,7 +559,8 @@ struct RemoteSpiritualReadingItemResponse: Codable {
             text: cleanText,
             homily: cleanHomily,
             practicalConclusion: practicalText,
-            passageID: passageID?.trimmedForAI
+            passageID: passageID?.trimmedForAI,
+            meditationQuestion: meditationQuestion?.trimmedForAI
         )
     }
 }
@@ -609,10 +630,23 @@ struct RemoteAIReadingSessionService {
         recentPassageIDs: [String],
         recentReflections: [RecentAIReflectionDigest]
     ) async -> RemoteReadingSessionOutcome {
+        let startedAt = Date()
+        var deliveryOutcome = "failed"
+        var deliveredCount = 0
+        defer {
+            LimiarAIDiagnostics.log("reading_delivery", values: [
+                "outcome": deliveryOutcome,
+                "durationMs": String(max(0, Int(Date().timeIntervalSince(startedAt) * 1000))),
+                "items": String(deliveredCount)
+            ], persistForDiagnostics: true)
+        }
+        // The complete persistent history is evaluated locally. Send only the
+        // final selection so a server-side recent window cannot reselect it.
+        let selected = Array(passages.prefix(profile.explanationDepth.readingItemCount))
         let payload = RemoteReadingSessionRequestPayload(
             profile: RemoteAIProfilePayload(profile: profile, pauseTurn: pauseTurn),
-            passages: passages.map(RemotePassagePayload.init),
-            itemCount: profile.explanationDepth.readingItemCount,
+            passages: selected.map(RemotePassagePayload.init),
+            itemCount: selected.count,
             recentPassageIDs: Array(recentPassageIDs.prefix(40)),
             recentReflections: recentReflections.prefix(8).map(RemoteAIReflectionDigestPayload.init)
         )
@@ -623,9 +657,10 @@ struct RemoteAIReadingSessionService {
                 body: payload,
                 responseType: RemoteReadingSessionResponse.self
             )
-            let items = try response.items.enumerated().map { index, item in
+            let receivedItems = try response.items.enumerated().map { index, item in
                 try item.validatedItem(cacheKey: "session", index: index)
             }
+            let items = try Self.orderedItems(receivedItems, for: selected)
             let expectedItemCount = min(profile.explanationDepth.readingItemCount, max(1, passages.count))
             guard items.count >= expectedItemCount else {
                 LimiarAIDiagnostics.log("ai_fallback", values: [
@@ -636,6 +671,8 @@ struct RemoteAIReadingSessionService {
                 return .failure(reason: "unexpected_item_count")
             }
             let reflection = try response.reflection.validatedReflection()
+            deliveryOutcome = "remote"
+            deliveredCount = items.count
             var values = LimiarAIDiagnostics.profileSnapshot(profile)
             values["source"] = "remote"
             values["endpoint"] = "reading-session"
@@ -648,12 +685,28 @@ struct RemoteAIReadingSessionService {
                 )
             )
         } catch {
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                deliveryOutcome = "cancelled"
+            }
             let reason = diagnosticReason(for: error)
             LimiarAIDiagnostics.log("ai_fallback", values: [
                 "endpoint": "reading-session",
                 "reason": reason
             ])
             return .failure(reason: reason)
+        }
+    }
+
+    static func orderedItems(_ items: [SpiritualReadingItem], for selected: [ScripturePassage]) throws -> [SpiritualReadingItem] {
+        guard items.count == selected.count else { throw URLError(.cannotParseResponse) }
+        return try selected.map { passage in
+            let matches = items.filter {
+                $0.passageID == passage.id
+                    && $0.reference == passage.reference
+                    && $0.text == passage.text
+            }
+            guard matches.count == 1 else { throw URLError(.cannotParseResponse) }
+            return matches[0]
         }
     }
 
