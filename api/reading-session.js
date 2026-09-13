@@ -51,16 +51,27 @@ module.exports = async function handler(req, res) {
     );
     const itemCount = sessionOptions.itemCount;
 
-    // Seleção determinística: o servidor fixa os trechos respeitando as
-    // preferências e rotacionando contra o histórico. Sem itemCount, mantém o
-    // contrato publicado de três itens e da profundidade antiga.
-    const selection = selectSessionPassages({
-      profile,
-      passages,
-      recentPassageIDs,
-      count: itemCount,
-      seed: selectionSeed(rateLimit.context)
-    });
+    // Builds atuais enviam somente a seleção final. A posição dos trechos
+    // também faz parte do contrato da reflexão conjunta. Builds antigas que
+    // enviam um pool maior (ou omitem itemCount) seguem no seletor legado.
+    const finalClientSelection = sessionOptions.hasItemCount && passages.length === itemCount;
+    const selection = finalClientSelection
+      ? {
+          selected: passages,
+          selectionTier: "client-final",
+          reusedRecentCount: 0,
+          priorityCount: 0,
+          favoriteThemeCount: 0,
+          freshCount: 0,
+          candidateCount: passages.length
+        }
+      : selectSessionPassages({
+          profile,
+          passages,
+          recentPassageIDs,
+          count: itemCount,
+          seed: selectionSeed(rateLimit.context)
+        });
 
     logAIDiagnostic("reading_session_passages_selected", {
       endpoint: "reading-session",

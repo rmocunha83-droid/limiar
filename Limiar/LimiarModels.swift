@@ -1217,6 +1217,9 @@ final class LimiarAppModel {
         LimiarHaptics.select()
         saveProfile()
         LimiarAnalytics.setDepthPreference(depth)
+        if hasCompletedOnboarding && !isReadingSessionActive {
+            beginNewReading()
+        }
     }
 
     func selectPauseCycleTurn(_ turn: PauseCycleTurn) {
@@ -1346,7 +1349,7 @@ final class LimiarAppModel {
                 clearPrewarmRequest(requestID)
                 return .profileChanged
             }
-            dailySessionStore.save(
+            let saved = dailySessionStore.saveIfAbsent(
                 DailyReadingSessionSnapshot(
                     dayKey: dayKey,
                     profileKey: profileKey,
@@ -1354,15 +1357,18 @@ final class LimiarAppModel {
                     reflection: session.reflection,
                     source: source,
                     failureReason: failureReason
-                )
+                ),
+                expectedItemCount: profile.explanationDepth.readingItemCount
             )
-            LimiarAIDiagnostics.log("prewarm_saved", values: [
-                "dayKey": dayKey,
-                "items": "\(session.items.count)",
-                "source": source.rawValue
-            ])
+            if saved {
+                LimiarAIDiagnostics.log("prewarm_saved", values: [
+                    "dayKey": dayKey,
+                    "items": "\(session.items.count)",
+                    "source": source.rawValue
+                ])
+            }
             clearPrewarmRequest(requestID)
-            return source == .remote ? .generated : .localFallback
+            return saved ? (source == .remote ? .generated : .localFallback) : .alreadyAvailable
         }
         prewarmTask = task
         return task

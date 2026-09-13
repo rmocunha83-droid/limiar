@@ -448,11 +448,16 @@ final class LocalReadingSessionTests: XCTestCase {
     }
 
     func testRemoteResponseCannotChangeSelectionOrOrder() throws {
-        let selected = [selectionPassage("a"), selectionPassage("b")]
-        let items = LocalReadingSessionFactory.items(from: selected, itemCount: 2)
-        XCTAssertEqual(try RemoteAIReadingSessionService.orderedItems(Array(items.reversed()), for: selected).map(\.passageID), ["a", "b"])
-        XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems([items[0], items[0]], for: selected))
-        XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems([items[0]], for: selected))
+        for count in 1...3 {
+            let selected = (0..<count).map { selectionPassage("p\($0)") }
+            let items = LocalReadingSessionFactory.items(from: selected, itemCount: count)
+            XCTAssertEqual(try RemoteAIReadingSessionService.orderedItems(items, for: selected).map(\.passageID), selected.map { $0.id })
+            XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems(Array(items.dropLast()), for: selected))
+            if count > 1 {
+                XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems(Array(items.reversed()), for: selected))
+                XCTAssertThrowsError(try RemoteAIReadingSessionService.orderedItems([items[0], items[0]] + Array(items.dropFirst(2)), for: selected))
+            }
+        }
     }
 
     func testExhaustedPoolRotatesWithoutConsecutiveRepeats() throws {
@@ -576,6 +581,52 @@ final class LocalReadingSessionTests: XCTestCase {
 
         XCTAssertEqual(decoded.source, .remote)
         XCTAssertNil(decoded.failureReason)
+    }
+
+    func testLegacyJointReflectionMigrationKeepsTheSamePassages() throws {
+        let suite = "LocalReadingSessionTests.ReflectionOrder.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let dayKey = DailyReadingSessionStore.todayKey()
+        let store = DailyReadingSessionStore(defaults: defaults)
+
+        for count in 1...3 {
+            store.clearAll()
+            let passages = (0..<count).map { selectionPassage("p\($0)") }
+            let items = LocalReadingSessionFactory.items(from: passages, itemCount: count)
+            let old = DailyReadingSessionSnapshot(
+                dayKey: dayKey, profileKey: "profile", items: items,
+                reflection: AIReflection(summary: "Resumo", spiritualMeaning: "Sentido antigo", practicalApplication: "Aplicação", conclusion: "Conclusão", meditationQuestion: "Pergunta")
+            )
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as? [String: Any])
+            object.removeValue(forKey: "reflectionOrderVersion")
+            defaults.set(try JSONSerialization.data(withJSONObject: [object]), forKey: "limiar.dailyReadingSession.v2")
+
+            let migrated = try XCTUnwrap(store.load(profileKey: "profile", dayKey: dayKey, expectedItemCount: count))
+            XCTAssertEqual(migrated.items.map(\.passageID), passages.map { Optional($0.id) })
+            XCTAssertEqual(migrated.reflectionOrderVersion, 1)
+            XCTAssertEqual(migrated.source, count == 1 ? .remote : .local)
+            XCTAssertEqual(migrated.reflection.spiritualMeaning, count == 1 ? "Sentido antigo" : "")
+            XCTAssertEqual(store.load(profileKey: "profile", dayKey: dayKey, expectedItemCount: count)?.reflectionOrderVersion, 1)
+        }
+    }
+
+    func testLatePrewarmDoesNotReplaceVisibleSession() throws {
+        let suite = "LocalReadingSessionTests.PrewarmOrder.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let dayKey = DailyReadingSessionStore.todayKey()
+        let store = DailyReadingSessionStore(defaults: defaults)
+
+        for count in 1...3 {
+            store.clearAll()
+            let items = LocalReadingSessionFactory.items(from: (0..<count).map { selectionPassage("visible\($0)") }, itemCount: count)
+            let visible = DailyReadingSessionSnapshot(dayKey: dayKey, profileKey: "profile", items: items, reflection: emptyReflection)
+            store.save(visible)
+            let late = DailyReadingSessionSnapshot(dayKey: dayKey, profileKey: "profile", items: [], reflection: emptyReflection, source: .local)
+            XCTAssertFalse(store.saveIfAbsent(late, expectedItemCount: count))
+            XCTAssertEqual(store.load(profileKey: "profile", dayKey: dayKey, expectedItemCount: count)?.items.map(\.passageID), items.map(\.passageID))
+        }
     }
 
     func testUpgradeOnlyRunsBeforeTraversalAndCycleCompletion() {

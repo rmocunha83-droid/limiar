@@ -122,6 +122,52 @@ test("reading endpoint preserves old and new contracts with one provider call", 
   }
 });
 
+test("reading endpoint keeps final client order for one, two and three passages", async () => {
+  const handler = require("../api/reading-session");
+  const previousFetch = global.fetch;
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousInfo = console.info;
+  const previousSecret = process.env.LIMIAR_APP_SECRET;
+  process.env.OPENAI_API_KEY = "unit-test-key";
+  delete process.env.LIMIAR_APP_SECRET;
+  console.info = () => {};
+  const fields = { homily: "Explicação", spiritualMeaning: "Sentido", practicalApplication: "Aplicação", conclusion: "Conclusão", meditationQuestion: "Pergunta?" };
+  let count = 0;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ output_text: JSON.stringify({ items: Array.from({ length: count }, () => fields), reflection: fields }) })
+  });
+  try {
+    const passages = [
+      { id: "matthew", reference: "Mateus 6, 33", text: "Primeiro", book: "Mateus" },
+      { id: "psalm", reference: "Salmo 23", text: "Segundo", book: "Salmos" },
+      { id: "proverbs", reference: "Provérbios 3", text: "Terceiro", book: "Provérbios" }
+    ];
+    for (count of [1, 2, 3]) {
+      let result;
+      const res = { setHeader() {}, end(value) { result = JSON.parse(value); } };
+      await handler({ method: "POST", headers: { "x-limiar-client-id": `final-order-${count}-${Date.now()}` }, body: {
+        profile: { tradition: "Católica", favoriteBooks: ["Salmos"] },
+        passages: passages.slice(0, count), itemCount: count
+      } }, res);
+      assert.deepEqual(result.items.map(item => item.passageID), passages.slice(0, count).map(item => item.id));
+      assert.equal(result.reflection.reference, passages.slice(0, count).map(item => item.reference).join(" + "));
+    }
+    count = 3;
+    let legacy;
+    const res = { setHeader() {}, end(value) { legacy = JSON.parse(value); } };
+    await handler({ method: "POST", headers: { "x-limiar-client-id": `legacy-order-${Date.now()}` }, body: {
+      profile: { tradition: "Católica", favoriteBooks: ["Salmos"] }, passages
+    } }, res);
+    assert.equal(legacy.items[0].passageID, "psalm");
+  } finally {
+    global.fetch = previousFetch;
+    console.info = previousInfo;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
+    if (previousSecret === undefined) delete process.env.LIMIAR_APP_SECRET; else process.env.LIMIAR_APP_SECRET = previousSecret;
+  }
+});
+
 const CATALOG = normalizePassages([
   { id: "psalm-23", reference: "Salmo 23", text: "O Senhor é meu pastor.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
   { id: "psalm-121", reference: "Salmo 121", text: "O Senhor te guarda.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },

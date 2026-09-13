@@ -221,6 +221,7 @@ struct DailyReadingSessionSnapshot: Codable {
     let reflection: AIReflection
     let source: DailyReadingSessionSource
     let failureReason: String?
+    let reflectionOrderVersion: Int
 
     init(
         dayKey: String,
@@ -236,6 +237,7 @@ struct DailyReadingSessionSnapshot: Codable {
         self.reflection = reflection
         self.source = source
         self.failureReason = failureReason
+        self.reflectionOrderVersion = 1
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -245,6 +247,7 @@ struct DailyReadingSessionSnapshot: Codable {
         case reflection
         case source
         case failureReason
+        case reflectionOrderVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -255,6 +258,7 @@ struct DailyReadingSessionSnapshot: Codable {
         reflection = try container.decode(AIReflection.self, forKey: .reflection)
         source = try container.decodeIfPresent(DailyReadingSessionSource.self, forKey: .source) ?? .remote
         failureReason = try container.decodeIfPresent(String.self, forKey: .failureReason)
+        reflectionOrderVersion = try container.decodeIfPresent(Int.self, forKey: .reflectionOrderVersion) ?? 0
     }
 }
 
@@ -288,9 +292,13 @@ enum LocalSessionUpgradePolicy {
 /// (criada em background após a travessia ser concluída). Assim o próximo
 /// ciclo abre instantaneamente mesmo em cold start.
 struct DailyReadingSessionStore {
-    private let defaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard
+    private let defaults: UserDefaults
     private let key = "limiar.dailyReadingSession.v2"
     private let legacyKey = "limiar.dailyReadingSession.v1"
+
+    init(defaults: UserDefaults = UserDefaults(suiteName: ScreenTimePolicyStore.appGroupIdentifier) ?? .standard) {
+        self.defaults = defaults
+    }
 
     static func todayKey(_ date: Date = Date()) -> String {
         ScreenTimePolicyStore.cycleDayKey(now: date)
@@ -301,17 +309,47 @@ struct DailyReadingSessionStore {
         dayKey: String = DailyReadingSessionStore.todayKey(),
         expectedItemCount: Int
     ) -> DailyReadingSessionSnapshot? {
-        allSnapshots().first { snapshot in
+        guard let snapshot = allSnapshots().first(where: { snapshot in
             snapshot.dayKey == dayKey
                 && snapshot.profileKey == profileKey
                 && snapshot.items.count >= expectedItemCount
-        }
+        }) else { return nil }
+        guard snapshot.reflectionOrderVersion == 0 else { return snapshot }
+
+        // O formato antigo salvava os cards reordenados pelo iOS, mas a reflexão
+        // podia continuar numerada segundo a ordem do servidor. Mantém os
+        // mesmos versículos e suas homilias, oculta só a reflexão conjunta e
+        // permite explicá-los novamente antes de iniciar a travessia.
+        let needsNewReflection = snapshot.source == .remote && snapshot.items.count > 1
+        let reflection = needsNewReflection
+            ? AIReflection(summary: "", spiritualMeaning: "", practicalApplication: "", conclusion: "", meditationQuestion: "")
+            : snapshot.reflection
+        let migrated = DailyReadingSessionSnapshot(
+            dayKey: snapshot.dayKey,
+            profileKey: snapshot.profileKey,
+            items: snapshot.items,
+            reflection: reflection,
+            source: needsNewReflection ? .local : snapshot.source,
+            failureReason: needsNewReflection ? "legacy_reflection_order" : snapshot.failureReason
+        )
+        save(migrated)
+        return migrated
     }
 
     func save(_ snapshot: DailyReadingSessionSnapshot) {
         var snapshots = allSnapshots().filter { $0.dayKey != snapshot.dayKey }
         snapshots.append(snapshot)
         persist(snapshots)
+    }
+
+    /// A resposta tardia do prewarm nunca substitui a sessão já apresentada.
+    @discardableResult
+    func saveIfAbsent(_ snapshot: DailyReadingSessionSnapshot, expectedItemCount: Int) -> Bool {
+        guard load(profileKey: snapshot.profileKey, dayKey: snapshot.dayKey, expectedItemCount: expectedItemCount) == nil else {
+            return false
+        }
+        save(snapshot)
+        return true
     }
 
     func clear(dayKey: String = DailyReadingSessionStore.todayKey()) {
@@ -699,15 +737,14 @@ struct RemoteAIReadingSessionService {
 
     static func orderedItems(_ items: [SpiritualReadingItem], for selected: [ScripturePassage]) throws -> [SpiritualReadingItem] {
         guard items.count == selected.count else { throw URLError(.cannotParseResponse) }
-        return try selected.map { passage in
-            let matches = items.filter {
-                $0.passageID == passage.id
-                    && $0.reference == passage.reference
-                    && $0.text == passage.text
+        for (item, passage) in zip(items, selected) {
+            guard item.passageID == passage.id,
+                  item.reference == passage.reference,
+                  item.text == passage.text else {
+                throw URLError(.cannotParseResponse)
             }
-            guard matches.count == 1 else { throw URLError(.cannotParseResponse) }
-            return matches[0]
         }
+        return items
     }
 
     private func diagnosticReason(for error: Error) -> String {
