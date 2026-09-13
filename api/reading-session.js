@@ -51,16 +51,25 @@ module.exports = async function handler(req, res) {
     );
     const itemCount = sessionOptions.itemCount;
 
-    // Seleção determinística: o servidor fixa os trechos respeitando as
-    // preferências e rotacionando contra o histórico. Sem itemCount, mantém o
-    // contrato publicado de três itens e da profundidade antiga.
+    // Seleções finais do app mantêm a ordem recebida antes de gerar itens e
+    // reflexão. Pools maiores e clientes sem itemCount mantêm a seleção
+    // legada, incluindo filtros, preferências e rotação contra o histórico.
     const selection = selectSessionPassages({
       profile,
       passages,
       recentPassageIDs,
       count: itemCount,
+      preserveInputOrder: sessionOptions.hasItemCount && passages.length === sessionOptions.requestedItemCount,
       seed: selectionSeed(rateLimit.context)
     });
+
+    // The client expects the full requested session. Do not spend a provider
+    // call on a shorter prompt or return a partial successful response.
+    if (selection.selected.length !== itemCount) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: "insufficient_eligible_passages" }));
+      return;
+    }
 
     logAIDiagnostic("reading_session_passages_selected", {
       endpoint: "reading-session",

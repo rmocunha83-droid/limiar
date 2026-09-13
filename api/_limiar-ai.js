@@ -426,6 +426,24 @@ function stableHash(value) {
   return hash;
 }
 
+function passageMatchesTradition(profile, passage) {
+  const tradition = normalizeContentIdentity(profile.traditionID || profile.tradition);
+  const jewish = ["jewish", "judaica"].includes(tradition);
+  const protestant = ["protestant", "evangelical", "evangelica"].includes(tradition);
+  if (!jewish && !protestant) return true;
+
+  // Check both metadata and reference: older clients may omit book/section.
+  const deuterocanonical = ["tobias", "tobit", "judite", "judith", "sabedoria", "wisdom", "eclesiastico", "sirach", "baruque", "baruch", "macabeus", "maccabees"];
+  const newTestament = ["mateus", "matthew", "marcos", "mark", "lucas", "luke", "joao", "john", "atos", "acts", "romanos", "romans", "corintios", "corinthians", "galatas", "galatians", "efesios", "ephesians", "filipenses", "philippians", "colossenses", "colossians", "tessalonicenses", "thessalonians", "timoteo", "timothy", "tito", "titus", "filemom", "philemon", "hebreus", "hebrews", "tiago", "james", "pedro", "peter", "judas", "jude", "apocalipse", "revelation"];
+  const forbiddenBooks = jewish ? [...deuterocanonical, ...newTestament] : deuterocanonical;
+  const forbiddenSections = ["deuterocanonicos", "deuterocanonical", ...(jewish ? ["evangelhos", "gospels", "cartas de paulo", "paulineletters", "sermao da montanha", "sermononmount", "parabolas de jesus", "parablesofjesus"] : [])];
+  if (forbiddenSections.includes(normalizeContentIdentity(passage.section))) return false;
+  return ![passage.book, passage.reference].some(value => {
+    const book = normalizeContentIdentity(value).replace(/^(?:[123]|i{1,3})\s+/, "");
+    return forbiddenBooks.some(name => book === name || book.startsWith(`${name} `));
+  });
+}
+
 // Seleção determinística dos trechos da sessão. A IA não participa desta etapa:
 // 1. Filtro forte: livros preferidos primeiro; amplia para seções preferidas e
 //    depois para todo o pool apenas quando não há trechos suficientes.
@@ -433,7 +451,7 @@ function stableHash(value) {
 //    nesse caso, entra primeiro o menos recentemente usado (rotação LRU).
 // 3. Desempate estável por semente (dia + cliente) para variar entre dias sem
 //    perder determinismo dentro da mesma requisição.
-function selectSessionPassages({ profile, passages, recentPassageIDs = [], count = SESSION_ITEM_COUNT, seed = "" }) {
+function selectSessionPassages({ profile, passages, recentPassageIDs = [], count = SESSION_ITEM_COUNT, seed = "", preserveInputOrder = false }) {
   const recent = recentIdentitySet(recentPassageIDs);
   const recencyRank = new Map();
   compactList(recentPassageIDs, 80).forEach((value, index) => {
@@ -450,6 +468,7 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
 
   const candidates = passages
     .filter((passage) => {
+      if (!passageMatchesTradition(profile, passage)) return false;
       const book = normalizeContentIdentity(passage.book);
       const section = normalizeContentIdentity(passage.section);
       if (book && avoidedBooks.has(book)) return false;
@@ -607,6 +626,13 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
       selectedIndexes.add(themeCandidate.index);
       favoriteThemeCount = 1;
     }
+  }
+
+  // Clientes que enviam a seleção final já definiram a ordem dos cards.
+  // Reordene somente após os filtros e apenas para um conjunto completo;
+  // pools legados continuam usando a ordem produzida pelo seletor.
+  if (preserveInputOrder && passages.length === count && selected.length === count) {
+    selected.sort((lhs, rhs) => lhs.index - rhs.index);
   }
 
   return {

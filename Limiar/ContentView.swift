@@ -607,7 +607,7 @@ private struct DashboardView: View {
                     .tracking(1.1)
                     .foregroundStyle(Color.warmGold)
 
-                Text(suggestion.favorite.reference)
+                Text(readingDisplayReference(suggestion.favorite.reference))
                     .limiarFont(25, design: .serif, relativeTo: .title2)
                     .foregroundStyle(Color.ivory)
 

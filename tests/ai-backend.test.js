@@ -38,6 +38,7 @@ const {
   readingSessionExplanationSchema,
   resolveReadingSessionOptions,
   selectSessionPassages,
+  selectionSeed,
   spokenReference,
   validateExplanationFields,
   validateExplanationItems
@@ -122,6 +123,52 @@ test("reading endpoint preserves old and new contracts with one provider call", 
   }
 });
 
+test("reading endpoint keeps final client order for one, two and three passages", async () => {
+  const handler = require("../api/reading-session");
+  const previousFetch = global.fetch;
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousInfo = console.info;
+  const previousSecret = process.env.LIMIAR_APP_SECRET;
+  process.env.OPENAI_API_KEY = "unit-test-key";
+  delete process.env.LIMIAR_APP_SECRET;
+  console.info = () => {};
+  const fields = { homily: "Explicação", spiritualMeaning: "Sentido", practicalApplication: "Aplicação", conclusion: "Conclusão", meditationQuestion: "Pergunta?" };
+  let count = 0;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ output_text: JSON.stringify({ items: Array.from({ length: count }, () => fields), reflection: fields }) })
+  });
+  try {
+    const passages = [
+      { id: "matthew", reference: "Mateus 6, 33", text: "Primeiro", book: "Mateus" },
+      { id: "psalm", reference: "Salmo 23", text: "Segundo", book: "Salmos" },
+      { id: "proverbs", reference: "Provérbios 3", text: "Terceiro", book: "Provérbios" }
+    ];
+    for (count of [1, 2, 3]) {
+      let result;
+      const res = { setHeader() {}, end(value) { result = JSON.parse(value); } };
+      await handler({ method: "POST", headers: { "x-limiar-client-id": `final-order-${count}-${Date.now()}` }, body: {
+        profile: { tradition: "Católica", favoriteBooks: ["Salmos"] },
+        passages: passages.slice(0, count), itemCount: count
+      } }, res);
+      assert.deepEqual(result.items.map(item => item.passageID), passages.slice(0, count).map(item => item.id));
+      assert.equal(result.reflection.reference, passages.slice(0, count).map(item => item.reference).join(" + "));
+    }
+    count = 3;
+    let legacy;
+    const res = { setHeader() {}, end(value) { legacy = JSON.parse(value); } };
+    await handler({ method: "POST", headers: { "x-limiar-client-id": `legacy-order-${Date.now()}` }, body: {
+      profile: { tradition: "Católica", favoriteBooks: ["Salmos"] }, passages
+    } }, res);
+    assert.equal(legacy.items[0].passageID, "psalm");
+  } finally {
+    global.fetch = previousFetch;
+    console.info = previousInfo;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
+    if (previousSecret === undefined) delete process.env.LIMIAR_APP_SECRET; else process.env.LIMIAR_APP_SECRET = previousSecret;
+  }
+});
+
 const CATALOG = normalizePassages([
   { id: "psalm-23", reference: "Salmo 23", text: "O Senhor é meu pastor.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
   { id: "psalm-121", reference: "Salmo 121", text: "O Senhor te guarda.", book: "Salmos", section: "Salmos e Orações", theme: "Esperança" },
@@ -142,9 +189,202 @@ const PROFILE_WITH_BOOKS = normalizeProfile({
   explanationDepth: "média"
 });
 
+test("reading handler keeps final selections, ordinal reflection and cards in one order", async (t) => {
+  const handler = require("../api/reading-session");
+  const savedEnvironment = Object.fromEntries(["OPENAI_API_KEY", "LIMIAR_APP_SECRET"].map(key => [key, process.env[key]]));
+  process.env.OPENAI_API_KEY = "unit-test-key";
+  delete process.env.LIMIAR_APP_SECRET;
+  t.after(() => {
+    for (const [key, value] of Object.entries(savedEnvironment)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  });
+  t.mock.method(console, "info", () => {});
+  t.mock.method(console, "error", () => {});
+  const fields = value => ({ homily: value, spiritualMeaning: value,
+    practicalApplication: value, conclusion: value, meditationQuestion: `${value}?` });
+  let prompt;
+  let providerCalls = 0;
+  t.mock.method(global, "fetch", async (_url, options) => {
+    providerCalls += 1;
+    prompt = JSON.parse(options.body).input;
+    // The fake model follows the real numbered prompt, not the request array.
+    // This makes a server reorder visible in both item homilies and reflection.
+    const references = [...prompt.matchAll(/^Trecho \d+\nReferência: (.+)$/gm)].map(match => match[1]);
+    const ordinalMeaning = references.map((ref, index) => `Trecho ${index + 1}: ${ref}`).join(" | ");
+    return { ok: true, json: async () => ({ output_text: JSON.stringify({
+      items: references.map(ref => fields(`Explicação de ${ref}`)),
+      reflection: fields(ordinalMeaning)
+    }) }) };
+  });
+  let requests = 0;
+  async function request(body, expectedPassages) {
+    const clientID = `order-regression-${++requests}`;
+    let response;
+    const res = { setHeader() {}, end(value) { response = JSON.parse(value); } };
+    const expected = typeof expectedPassages === "function" ? expectedPassages(clientID) : expectedPassages;
+    await handler({ method: "POST", headers: { "x-limiar-client-id": clientID }, body }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(providerCalls, requests, "one provider call per request");
+    assert.deepEqual(response.items.map(item => item.passageID), expected.map(p => p.id));
+    assert.deepEqual(response.items.map(item => item.passageText), expected.map(p => p.text));
+    assert.deepEqual(response.items.map(item => item.homily), expected.map(p => `Explicação de ${p.reference}`));
+    assert.equal(response.reflection.reference, expected.map(p => p.reference).join(" + "));
+    assert.equal(response.reflection.passageText, expected.map(p => `${p.reference}: ${p.text}`).join("\n\n"));
+    assert.equal(response.reflection.spiritualMeaning, expected.map((p, i) => `Trecho ${i + 1}: ${p.reference}`).join(" | "));
+  }
+  function permutations(values) {
+    if (values.length === 1) return [values];
+    return values.flatMap((value, index) => permutations(values.filter((_, i) => i !== index)).map(rest => [value, ...rest]));
+  }
+  const finalPassages = [CATALOG[0], CATALOG[2], CATALOG[4]];
+  for (const [tradition, traditionID] of [["Católica", "catholic"], ["Evangélica", "evangelical"], ["Judaica", "jewish"], ["Cristã ampla", "broadChristian"]]) {
+    for (const itemCount of [1, 2, 3]) {
+      for (const passages of permutations(finalPassages.slice(0, itemCount))) {
+        for (const withHistory of [false, true]) {
+          const profile = { tradition, traditionID, favoriteBooks: ["Salmos", "Provérbios", "Isaías"],
+            priorityBooks: ["Isaías"], favoriteSections: ["Profetas"], favoriteThemes: ["Sabedoria"],
+            avoidedBooks: ["João"], avoidedSections: ["Evangelhos"] };
+          await request({ profile, passages, itemCount,
+            recentPassageIDs: withHistory ? [passages[0].id, passages.at(-1).reference] : [],
+            recentReflections: [{ reference: "Salmo anterior", summary: "Reflexão anterior" }],
+            explanationDiversityVersion: withHistory ? 1 : undefined }, passages);
+          assert.ok(prompt.includes(`Tradição: ${tradition} [${traditionID}]`));
+          assert.ok(prompt.includes("Reflexão anterior"));
+        }
+      }
+    }
+  }
+  // Explicit counts with pools and pre-itemCount clients keep server selection.
+  for (const itemCount of [undefined, 1, 2, 3]) {
+    for (const withHistory of [false, true]) {
+      const profile = { ...PROFILE_WITH_BOOKS, priorityBooks: ["Isaías"], avoidedBooks: ["João"], avoidedSections: ["Evangelhos"] };
+      const recentPassageIDs = withHistory ? CATALOG.slice(0, 3).map(p => p.id) : [];
+      await request({ profile, passages: CATALOG, recentPassageIDs,
+        ...(itemCount === undefined ? {} : { itemCount }) }, clientID => selectSessionPassages({
+          profile: normalizeProfile(profile), passages: CATALOG, recentPassageIDs,
+          count: itemCount ?? 3, seed: selectionSeed({ clientID })
+        }).selected);
+      assert.ok(!prompt.includes("Referência: João 14"));
+      assert.ok(!prompt.includes("Referência: Mateus 6"));
+    }
+  }
+  // A legacy exact-size pool has not opted into client ordering either.
+  await request({ profile: PROFILE_WITH_BOOKS, passages: finalPassages }, clientID => selectSessionPassages({
+    profile: PROFILE_WITH_BOOKS, passages: finalPassages, count: 3, seed: selectionSeed({ clientID })
+  }).selected);
+  for (const exclusions of [{ avoidedBooks: ["Salmos"] }, { avoidedSections: ["Salmos e Orações"] }]) {
+    let response;
+    const res = { setHeader() {}, end(value) { response = JSON.parse(value); } };
+    const callsBefore = providerCalls;
+    await handler({ method: "POST", headers: { "x-limiar-client-id": `order-excluded-${++requests}` },
+      body: { profile: exclusions, passages: finalPassages, itemCount: 3 } }, res);
+    assert.equal(providerCalls, callsBefore, "reject incomplete sessions before calling AI");
+    assert.equal(res.statusCode, 400);
+    assert.equal(response.error, "insufficient_eligible_passages");
+  }
+});
+
+test("preserving a final selection order never restores excluded books or sections", () => {
+  for (const exclusions of [{ avoidedBooks: ["Salmos"] }, { avoidedSections: ["Salmos e Orações"] }]) {
+    const selection = selectSessionPassages({ profile: normalizeProfile(exclusions),
+      passages: [CATALOG[0], CATALOG[2], CATALOG[4]], count: 3, preserveInputOrder: true });
+    assert.equal(selection.selected.length, 2);
+    assert.ok(selection.selected.every(p => p.id !== "psalm-23"));
+  }
+});
+
 test("keeps GPT-5.4 mini as the default commercial text model", () => {
   assert.equal(DEFAULT_MODEL, "gpt-5.4-mini");
   assert.equal(DEFAULT_REASONING_EFFORT, "none");
+});
+
+test("tradition restrictions do not depend on client exclusion lists", () => {
+  const references = ["Mateus 6", "Marcos 1", "Lucas 10", "João 14", "Atos 2", "Romanos 8",
+    "1 Coríntios 13", "Gálatas 5", "Efésios 6", "Filipenses 4", "Colossenses 3",
+    "2 Tessalonicenses 3", "I Timóteo 4", "Tito 2", "Filemom 1", "Hebreus 11",
+    "Tiago 1", "2 Pedro 1", "III João 1", "Judas 1", "Apocalipse 21",
+    "Tobias 4", "Judite 8", "Sabedoria 7", "Eclesiástico 2", "Baruque 3", "1 Macabeus 2"];
+  for (const profile of [{ traditionID: "jewish" }, { tradition: "Judaica" }]) {
+    for (const reference of references) {
+      const passage = { id: reference, reference, text: "Texto" };
+      for (const metadata of [{}, { book: "Salmos", section: "Salmos" }]) {
+        assert.equal(selectSessionPassages({ profile: normalizeProfile(profile),
+          passages: normalizePassages([{ ...passage, ...metadata }]), count: 1,
+          preserveInputOrder: true }).selected.length, 0, reference);
+      }
+    }
+  }
+  for (const profile of [{ traditionID: "protestant" }, { tradition: "Evangélica" }]) {
+    for (const reference of references.slice(-6)) {
+      assert.equal(selectSessionPassages({ profile: normalizeProfile(profile),
+        passages: normalizePassages([{ reference, text: "Texto" }]), count: 1 }).selected.length, 0);
+    }
+    assert.equal(selectSessionPassages({ profile: normalizeProfile(profile),
+      passages: [CATALOG[6]], count: 1 }).selected.length, 1);
+  }
+  // Current catalog entries from each tradition remain eligible, including
+  // bilingual Jewish references and all Catholic deuterocanonical passages.
+  const catalog = require("../Limiar/Resources/passages.json");
+  for (const passage of catalog) {
+    const selection = selectSessionPassages({ profile: normalizeProfile({ traditionID: passage.tradition }),
+      passages: normalizePassages([passage]), count: 1 });
+    assert.equal(selection.selected.length, 1, passage.id);
+  }
+});
+
+test("handler filters canon before AI and rejects incomplete sessions without provider calls", async (t) => {
+  const handler = require("../api/reading-session");
+  const saved = Object.fromEntries(["OPENAI_API_KEY", "LIMIAR_APP_SECRET"].map(key => [key, process.env[key]]));
+  process.env.OPENAI_API_KEY = "unit-test-key";
+  delete process.env.LIMIAR_APP_SECRET;
+  t.after(() => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  });
+  t.mock.method(console, "info", () => {});
+  let calls = 0;
+  let references;
+  t.mock.method(global, "fetch", async (_, options) => {
+    calls++;
+    const prompt = JSON.parse(options.body).input;
+    references = [...prompt.matchAll(/^Trecho \d+\nReferência: (.+)$/gm)].map(match => match[1]);
+    const fields = { homily: "H", spiritualMeaning: "S", practicalApplication: "P", conclusion: "C", meditationQuestion: "Q" };
+    return { ok: true, json: async () => ({ output_text: JSON.stringify({
+      items: references.map(() => fields), reflection: fields }) }) };
+  });
+  let requestNumber = 0;
+  async function request(body) {
+    let response;
+    const res = { setHeader() {}, end(value) { response = JSON.parse(value); } };
+    await handler({ method: "POST", headers: { "x-limiar-client-id": `canon-count-${++requestNumber}` }, body }, res);
+    return { status: res.statusCode, response };
+  }
+  const allowed = [CATALOG[0], CATALOG[2], CATALOG[4]];
+  const forbidden = [CATALOG[6], { id: "tobias", reference: "Tobias 4", text: "Texto", book: "Tobias" }];
+  for (const profile of [{ traditionID: "jewish" }, { tradition: "Judaica" },
+    { traditionID: "protestant" }, { tradition: "Evangélica" }]) {
+    const badPassage = profile.traditionID === "jewish" || profile.tradition === "Judaica" ? forbidden[0] : forbidden[1];
+    for (const itemCount of [undefined, 1, 2, 3]) {
+      const count = itemCount ?? 3;
+      const countBody = itemCount === undefined ? {} : { itemCount };
+      const before = calls;
+      const invalid = await request({ profile, ...countBody, passages: [badPassage, ...allowed.slice(0, count - 1)] });
+      assert.equal(invalid.status, 400);
+      assert.equal(invalid.response.error, "insufficient_eligible_passages");
+      assert.equal(calls, before);
+      const valid = await request({ profile, ...countBody, passages: [badPassage, ...allowed] });
+      assert.equal(valid.status, 200);
+      assert.equal(calls, before + 1);
+      assert.equal(valid.response.items.length, count);
+      assert.deepEqual(valid.response.items.map(item => item.reference), references);
+      assert.ok(!references.includes(badPassage.reference));
+    }
+  }
+  const excludedAll = await request({ itemCount: 2, profile: { avoidedBooks: ["Salmos"] }, passages: CATALOG.slice(0, 2) });
+  assert.equal(excludedAll.status, 400);
+  assert.equal(excludedAll.response.error, "insufficient_eligible_passages");
 });
 
 test("keeps ElevenLabs Flash as the economical default voice model", () => {

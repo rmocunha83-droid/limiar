@@ -1217,6 +1217,9 @@ final class LimiarAppModel {
         LimiarHaptics.select()
         saveProfile()
         LimiarAnalytics.setDepthPreference(depth)
+        if hasCompletedOnboarding && !isReadingSessionActive {
+            beginNewReading()
+        }
     }
 
     func selectPauseCycleTurn(_ turn: PauseCycleTurn) {
@@ -1274,7 +1277,7 @@ final class LimiarAppModel {
         guard dailySessionStore.load(
             profileKey: profileKey,
             dayKey: dayKey,
-            expectedItemCount: profile.explanationDepth.readingItemCount
+            expectedItemCount: recommender.expectedReadingItemCount(for: profile)
         ) == nil else { return nil }
         // Há uma única geração especulativa por modelo. Além de economizar rede,
         // isso impede que foreground, conclusão e BGAppRefresh consumam trechos
@@ -1346,7 +1349,7 @@ final class LimiarAppModel {
                 clearPrewarmRequest(requestID)
                 return .profileChanged
             }
-            dailySessionStore.save(
+            let saved = dailySessionStore.saveIfAbsent(
                 DailyReadingSessionSnapshot(
                     dayKey: dayKey,
                     profileKey: profileKey,
@@ -1354,15 +1357,18 @@ final class LimiarAppModel {
                     reflection: session.reflection,
                     source: source,
                     failureReason: failureReason
-                )
+                ),
+                expectedItemCount: recommender.expectedReadingItemCount(for: profile)
             )
-            LimiarAIDiagnostics.log("prewarm_saved", values: [
-                "dayKey": dayKey,
-                "items": "\(session.items.count)",
-                "source": source.rawValue
-            ])
+            if saved {
+                LimiarAIDiagnostics.log("prewarm_saved", values: [
+                    "dayKey": dayKey,
+                    "items": "\(session.items.count)",
+                    "source": source.rawValue
+                ])
+            }
             clearPrewarmRequest(requestID)
-            return source == .remote ? .generated : .localFallback
+            return saved ? (source == .remote ? .generated : .localFallback) : .alreadyAvailable
         }
         prewarmTask = task
         return task
@@ -1444,7 +1450,7 @@ final class LimiarAppModel {
         dailySessionStore.load(
             profileKey: sessionProfileKey(for: faithProfile),
             dayKey: dayKey,
-            expectedItemCount: faithProfile.explanationDepth.readingItemCount
+            expectedItemCount: recommender.expectedReadingItemCount(for: faithProfile)
         ) != nil
     }
 
@@ -1457,14 +1463,15 @@ final class LimiarAppModel {
 
     func prepareFreshPassageForForeground() {
         reapplyBlockIfNeeded()
-        guard hasCompletedOnboarding else { return }
+        guard hasCompletedOnboarding, !isReadingSessionActive else { return }
         readingTopResetID = UUID()
         guard aiContentState != .generating else { return }
         // Sessão utilizável em tela: não regenera a cada retorno ao foreground.
         // Isso mantém a leitura do dia estável, evita custo repetido de IA e
         // impede que o pool de trechos seja consumido sem o usuário ler.
         // Exceção: virada de dia — troca pela sessão pré-gerada do novo ciclo.
-        if currentSpiritualReadingItems.count >= faithProfile.explanationDepth.readingItemCount,
+        if !currentSpiritualReadingItems.isEmpty,
+           currentSpiritualReadingItems.count == recommender.expectedReadingItemCount(for: faithProfile),
            aiContentState != .fallback,
            currentSessionDayKey == DailyReadingSessionStore.todayKey() {
             if aiContentState == .localSession {
@@ -1776,7 +1783,7 @@ final class LimiarAppModel {
         // nada de nova geração (nem novo consumo de trechos) a cada abertura.
         if let saved = dailySessionStore.load(
             profileKey: sessionProfileKey(for: profile),
-            expectedItemCount: profile.explanationDepth.readingItemCount
+            expectedItemCount: recommender.expectedReadingItemCount(for: profile)
         ) {
             applyGeneratedSession(items: saved.items, reflection: saved.reflection, profile: profile)
             localSessionFailureReason = saved.failureReason
