@@ -29,6 +29,7 @@ jobs:
   ios:
     name: iOS (build em simulador)
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Build do app
@@ -39,3 +40,13 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             build
+      - name: Testes iOS completos
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | ruby -rjson -e 'devices = JSON.parse(STDIN.read)["devices"].values.flatten; puts devices.find { |d| d["name"].start_with?("iPhone") }.fetch("udid")')
+          xcodebuild test -project Limiar.xcodeproj \
+            -scheme Limiar \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -maximum-test-execution-time-allowance 120 \
+            CODE_SIGNING_ALLOWED=NO
