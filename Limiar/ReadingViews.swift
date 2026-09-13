@@ -174,6 +174,13 @@ struct AIReadingLocalSessionNotice: View {
     }
 }
 
+func readingDisplayReference(_ reference: String) -> String {
+    let suffix = " · BLIVRE"
+    return reference.hasSuffix(suffix)
+        ? String(reference.dropLast(suffix.count))
+        : reference
+}
+
 struct SpiritualReadingCard: View {
     let item: SpiritualReadingItem
     let isSaved: Bool
@@ -201,6 +208,10 @@ struct SpiritualReadingCard: View {
             .filter { !$0.isEmpty }
     }
 
+    private var displayReference: String {
+        readingDisplayReference(item.reference)
+    }
+
     private var narrationButtonTitle: String {
         if narrationState == .idle, let narrationIdleTitle {
             return narrationIdleTitle
@@ -211,7 +222,7 @@ struct SpiritualReadingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 12) {
-                Label(item.reference, systemImage: "quote.opening")
+                Label(displayReference, systemImage: "quote.opening")
                     .limiarFont(14, weight: .bold, relativeTo: .headline)
                     .foregroundStyle(Color.warmGold)
                     .fixedSize(horizontal: false, vertical: true)
@@ -261,7 +272,7 @@ struct SpiritualReadingCard: View {
 
             if showsReflection && item.hasExplanationContent {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Explicação espiritual \(item.reference)")
+                    Text("Explicação espiritual \(displayReference)")
                         .readingFont(
                             13,
                             textScale: readingTextScale,

@@ -51,27 +51,17 @@ module.exports = async function handler(req, res) {
     );
     const itemCount = sessionOptions.itemCount;
 
-    // Builds atuais enviam somente a seleção final. A posição dos trechos
-    // também faz parte do contrato da reflexão conjunta. Builds antigas que
-    // enviam um pool maior (ou omitem itemCount) seguem no seletor legado.
-    const finalClientSelection = sessionOptions.hasItemCount && passages.length === itemCount;
-    const selection = finalClientSelection
-      ? {
-          selected: passages,
-          selectionTier: "client-final",
-          reusedRecentCount: 0,
-          priorityCount: 0,
-          favoriteThemeCount: 0,
-          freshCount: 0,
-          candidateCount: passages.length
-        }
-      : selectSessionPassages({
-          profile,
-          passages,
-          recentPassageIDs,
-          count: itemCount,
-          seed: selectionSeed(rateLimit.context)
-        });
+    // Seleções finais do app mantêm a ordem recebida antes de gerar itens e
+    // reflexão. Pools maiores e clientes sem itemCount mantêm a seleção
+    // legada, incluindo filtros, preferências e rotação contra o histórico.
+    const selection = selectSessionPassages({
+      profile,
+      passages,
+      recentPassageIDs,
+      count: itemCount,
+      preserveInputOrder: sessionOptions.hasItemCount && passages.length === sessionOptions.requestedItemCount,
+      seed: selectionSeed(rateLimit.context)
+    });
 
     // The client expects the full requested session. Do not spend a provider
     // call on a shorter prompt or return a partial successful response.

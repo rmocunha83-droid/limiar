@@ -38,6 +38,7 @@ const {
   readingSessionExplanationSchema,
   resolveReadingSessionOptions,
   selectSessionPassages,
+  selectionSeed,
   spokenReference,
   validateExplanationFields,
   validateExplanationItems

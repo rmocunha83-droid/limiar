@@ -743,7 +743,9 @@ struct RemoteAIReadingSessionService {
     }
 
     static func orderedItems(_ items: [SpiritualReadingItem], for selected: [ScripturePassage]) throws -> [SpiritualReadingItem] {
-        guard items.count == selected.count else { throw URLError(.cannotParseResponse) }
+        guard !selected.isEmpty,
+              Set(selected.map(\.id)).count == selected.count,
+              items.count == selected.count else { throw URLError(.cannotParseResponse) }
         for (item, passage) in zip(items, selected) {
             guard item.passageID == passage.id,
                   item.reference == passage.reference,

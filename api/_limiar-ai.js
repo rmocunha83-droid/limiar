@@ -451,7 +451,7 @@ function passageMatchesTradition(profile, passage) {
 //    nesse caso, entra primeiro o menos recentemente usado (rotação LRU).
 // 3. Desempate estável por semente (dia + cliente) para variar entre dias sem
 //    perder determinismo dentro da mesma requisição.
-function selectSessionPassages({ profile, passages, recentPassageIDs = [], count = SESSION_ITEM_COUNT, seed = "" }) {
+function selectSessionPassages({ profile, passages, recentPassageIDs = [], count = SESSION_ITEM_COUNT, seed = "", preserveInputOrder = false }) {
   const recent = recentIdentitySet(recentPassageIDs);
   const recencyRank = new Map();
   compactList(recentPassageIDs, 80).forEach((value, index) => {
@@ -626,6 +626,13 @@ function selectSessionPassages({ profile, passages, recentPassageIDs = [], count
       selectedIndexes.add(themeCandidate.index);
       favoriteThemeCount = 1;
     }
+  }
+
+  // Clientes que enviam a seleção final já definiram a ordem dos cards.
+  // Reordene somente após os filtros e apenas para um conjunto completo;
+  // pools legados continuam usando a ordem produzida pelo seletor.
+  if (preserveInputOrder && passages.length === count && selected.length === count) {
+    selected.sort((lhs, rhs) => lhs.index - rhs.index);
   }
 
   return {

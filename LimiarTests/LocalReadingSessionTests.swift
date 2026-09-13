@@ -535,6 +535,14 @@ final class LocalReadingSessionTests: XCTestCase {
         )
     }
 
+    func testReadingReferenceHidesEditionWithoutChangingCanonicalValue() {
+        let reference = "Eclesiastes 11:2 · BLIVRE"
+        XCTAssertEqual(readingDisplayReference(reference), "Eclesiastes 11:2")
+        XCTAssertEqual(reference, "Eclesiastes 11:2 · BLIVRE")
+        XCTAssertEqual(readingDisplayReference("Salmo 23"), "Salmo 23")
+        XCTAssertEqual(readingDisplayReference("João 3:16 · Outra edição"), "João 3:16 · Outra edição")
+    }
+
     func testCompletionScreenUsesTurnSpecificIcons() {
         XCTAssertEqual(completionPresentation(turn: .morning).iconName, "sunrise.fill")
         XCTAssertEqual(completionPresentation(turn: .afternoon).iconName, "sun.max.fill")
