@@ -80,6 +80,12 @@ struct PassageRecommendationService {
         }
     }
 
+    /// Uses the same eligibility and deduplication rules as the actual selection.
+    /// History changes order, but never reduces the number of eligible passages.
+    func expectedReadingItemCount(for profile: UserFaithProfile) -> Int {
+        readingPlan(for: profile, history: []).count
+    }
+
     func nextPassage(
         for profile: UserFaithProfile,
         history: [ReadingHistoryItem],
@@ -309,10 +315,11 @@ struct DailyReadingSessionStore {
         dayKey: String = DailyReadingSessionStore.todayKey(),
         expectedItemCount: Int
     ) -> DailyReadingSessionSnapshot? {
+        guard expectedItemCount > 0 else { return nil }
         guard let snapshot = allSnapshots().first(where: { snapshot in
             snapshot.dayKey == dayKey
                 && snapshot.profileKey == profileKey
-                && snapshot.items.count >= expectedItemCount
+                && snapshot.items.count == expectedItemCount
         }) else { return nil }
         guard snapshot.reflectionOrderVersion == 0 else { return snapshot }
 

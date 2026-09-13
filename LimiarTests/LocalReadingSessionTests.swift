@@ -447,7 +447,51 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(service.readingPlan(for: selectionProfile, history: [completed], avoiding: "ab", recentlyShownPassageIDs: merged, minimumCount: 3).map(\.id), ["a", "b", "ab"])
     }
 
-    func testRemoteResponseCannotChangeSelectionOrOrder() throws {
+    func testRestrictedPoolsReuseDailyAndPrewarmedSessionsAtEveryDepth() throws {
+        let suite = "LimiarTests.restricted-cache.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let today = DailyReadingSessionStore.todayKey()
+        let tomorrow = DailyReadingSessionStore.todayKey(Date().addingTimeInterval(24 * 60 * 60))
+        for poolSize in 0...3 {
+            let eligible = (0..<poolSize).map { selectionPassage("p\($0)") }
+            // Ineligible books and duplicate IDs must not inflate the expectation.
+            let catalog = eligible + Array(eligible.prefix(1)) + [selectionPassage("excluded", book: .john)]
+            let recommender = PassageRecommendationService(passages: catalog)
+            for depth in ExplanationDepth.allCases {
+                var profile = selectionProfile
+                profile.explanationDepth = depth
+                let expected = recommender.expectedReadingItemCount(for: profile)
+                XCTAssertEqual(expected, min(poolSize, depth.readingItemCount))
+                let selection = recommender.readingPlan(for: profile, history: [], recentlyShownPassageIDs: eligible.map(\.id))
+                XCTAssertEqual(selection.count, expected)
+                let items = LocalReadingSessionFactory.items(from: selection, itemCount: depth.readingItemCount)
+                let store = DailyReadingSessionStore(defaults: defaults)
+                for source in [DailyReadingSessionSource.local, .remote] {
+                    for day in [today, tomorrow] {
+                        store.save(DailyReadingSessionSnapshot(dayKey: day, profileKey: "profile", items: items,
+                                                              reflection: emptyReflection, source: source))
+                    }
+                    let reopened = DailyReadingSessionStore(defaults: try XCTUnwrap(UserDefaults(suiteName: suite)))
+                    for day in [today, tomorrow] {
+                        let loaded = reopened.load(profileKey: "profile", dayKey: day, expectedItemCount: expected)
+                        if expected == 0 {
+                            XCTAssertNil(loaded)
+                        } else {
+                            XCTAssertEqual(loaded?.items, items)
+                            XCTAssertEqual(loaded?.source, source)
+                        }
+                        XCTAssertNil(reopened.load(profileKey: "profile", dayKey: day, expectedItemCount: expected + 1))
+                        if expected > 1 {
+                            XCTAssertNil(reopened.load(profileKey: "profile", dayKey: day, expectedItemCount: expected - 1))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testRemoteResponsePreservesExactOrderForOneTwoAndThreeItems() throws {
         for count in 1...3 {
             let selected = (0..<count).map { selectionPassage("p\($0)") }
             let items = LocalReadingSessionFactory.items(from: selected, itemCount: count)
