@@ -73,6 +73,14 @@ module.exports = async function handler(req, res) {
           seed: selectionSeed(rateLimit.context)
         });
 
+    // The client expects the full requested session. Do not spend a provider
+    // call on a shorter prompt or return a partial successful response.
+    if (selection.selected.length !== itemCount) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: "insufficient_eligible_passages" }));
+      return;
+    }
+
     logAIDiagnostic("reading_session_passages_selected", {
       endpoint: "reading-session",
       requestID: rateLimit.context.requestID,
