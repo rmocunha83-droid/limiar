@@ -374,6 +374,7 @@ enum SpiritualReadingCardPresentation {
 struct ReadingBlock: View {
     let title: String
     let text: String
+    var usesPassagePanel = false
     @AppStorage(
         ReadingTextScaleStore.key,
         store: ReadingTextScaleStore.appGroupDefaults
@@ -385,25 +386,36 @@ struct ReadingBlock: View {
 
     var body: some View {
         if !cleanedText.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .readingFont(
-                        14,
-                        textScale: readingTextScale,
-                        weight: .bold,
-                        relativeTo: .headline
-                    )
-                    .tracking(0.8)
-                    .foregroundStyle(Color.gold)
-                Text(cleanedText)
-                    .readingFont(17, textScale: readingTextScale, relativeTo: .body)
-                    .foregroundStyle(Color.softText)
-                    .lineSpacing(5)
+            if usesPassagePanel {
+                blockContent
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .limiarPanel()
+            } else {
+                blockContent
+                    .padding(16)
+                    .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
             }
-            .padding(16)
-            .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
-            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         }
+    }
+
+    private var blockContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .readingFont(
+                    14,
+                    textScale: readingTextScale,
+                    weight: .bold,
+                    relativeTo: .headline
+                )
+                .tracking(0.8)
+                .foregroundStyle(Color.gold)
+            Text(cleanedText)
+                .readingFont(17, textScale: readingTextScale, relativeTo: .body)
+                .foregroundStyle(Color.softText)
+                .lineSpacing(5)
+        }
+        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
     }
 }
 

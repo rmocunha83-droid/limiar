@@ -52,7 +52,7 @@ private struct LimiarScaledFontModifier: ViewModifier {
 
 enum ReadingTextScalePolicy {
     static let steps = [90, 100, 110, 125, 140, 160]
-    static let defaultValue = 100
+    static let defaultValue = 110
     static let minimumValue = steps[0]
     static let maximumValue = steps[steps.count - 1]
 

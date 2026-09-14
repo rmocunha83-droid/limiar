@@ -84,7 +84,7 @@ struct OnboardingView: View {
         static let verticalInset: CGFloat = 22
     }
 
-    private static let shortDepthRecommendation = "Recomendada para começar"
+    private static let mediumDepthRecommendation = "Recomendada para começar"
 
     init() {
         #if DEBUG
@@ -371,7 +371,7 @@ struct OnboardingView: View {
                     SelectableRow(
                         title: depth.title,
                         subtitle: reflectionDepthSubtitle(for: depth),
-                        emphasizedSubtitleText: depth == .short ? Self.shortDepthRecommendation : nil,
+                        emphasizedSubtitleText: depth == .medium ? Self.mediumDepthRecommendation : nil,
                         isSelected: model.faithProfile.explanationDepth == depth
                     ) {
                         model.selectExplanationDepth(depth)
@@ -567,9 +567,9 @@ struct OnboardingView: View {
 
         switch depth {
         case .short:
-            return "\(passageDescription). \(Self.shortDepthRecommendation) — breve, direta e fácil de concluir."
+            return "\(passageDescription). Uma pausa breve, direta e fácil de concluir."
         case .medium:
-            return "\(passageDescription). Para quem quer um passo além no dia a dia."
+            return "\(passageDescription). \(Self.mediumDepthRecommendation): tempo e profundidade em equilíbrio."
         case .deep:
             return "\(passageDescription), mais contexto e pergunta de meditação."
         }
