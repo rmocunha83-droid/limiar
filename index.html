@@ -158,7 +158,7 @@
           <div class="testimonials-carousel" data-testimonials-carousel aria-roledescription="carrossel" aria-label="Depoimentos de usuários do Limiar">
             <div class="testimonials-viewport">
               <div class="testimonials-track" data-testimonials-track>
-                <article class="testimonial-slide" aria-roledescription="slide" aria-label="1 de 5">
+                <article class="testimonial-slide" data-active="true" aria-hidden="false" aria-roledescription="slide" aria-label="1 de 5">
                   <div class="testimonial-card">
                     <span class="testimonial-stars" aria-label="Cinco estrelas">★★★★★</span>
                     <blockquote>“Não esperava tanto do aplicativo. Baixei sem grandes expectativas e me surpreendi. Prefiro prestar atenção no que estou fazendo e só depois olhar o celular. Com o Limiar consigo fazer essa pausa espiritual de forma natural. As reflexões personalizadas fazem toda a diferença. Já estou indicando para os amigos da igreja.”</blockquote>
@@ -372,7 +372,11 @@
 
           const render = (index) => {
             current = (index + slides.length) % slides.length;
-            track.style.transform = `translateX(-${current * 100}%)`;
+            slides.forEach((slide, slideIndex) => {
+              const isActive = slideIndex === current;
+              slide.dataset.active = String(isActive);
+              slide.setAttribute("aria-hidden", String(!isActive));
+            });
             dots.forEach((dot, dotIndex) => {
               dot.setAttribute("aria-current", String(dotIndex === current));
             });
