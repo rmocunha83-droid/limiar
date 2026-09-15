@@ -450,7 +450,7 @@ struct UserFaithProfile: Codable, Equatable {
         // O onboarding começa com os oito primeiros temas exibidos na grade.
         // Preferências já salvas não passam por essa configuração inicial.
         favoriteThemes: SpiritualTheme.defaultOnboardingThemes(for: .catholic),
-        explanationDepth: .short,
+        explanationDepth: .medium,
         selectedReadingCategoryIDs: ["evangelhos", "salmos", "sabedoria"]
     )
 

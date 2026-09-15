@@ -773,18 +773,19 @@ private struct DashboardView: View {
                     .foregroundStyle(Color.warmGold)
                     .padding(.top, 4)
                     .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-                ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary)
+                ReadingBlock(title: "Entenda o significado", text: model.currentReflection.summary, usesPassagePanel: true)
             }
-            ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning)
+            ReadingBlock(title: "Sentido espiritual", text: model.currentReflection.spiritualMeaning, usesPassagePanel: true)
                 .padding(.top, model.currentSpiritualReadingItems.count == 1 ? 4 : 0)
-            ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication)
-            ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion)
+            ReadingBlock(title: "Para levar para o dia", text: model.currentReflection.practicalApplication, usesPassagePanel: true)
+            ReadingBlock(title: "Pergunta para refletir", text: model.currentReflection.meditationQuestion, usesPassagePanel: true)
             RememberTodayBlock(
                 text: model.currentReflection.conclusion,
                 isSaved: model.currentSpiritualReadingItems.first.map { model.isFavorite($0) } ?? false,
                 saveAction: saveCurrentPassageFromReminder
             )
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func saveCurrentPassageFromReminder() {
@@ -1194,6 +1195,7 @@ struct RememberTodayBlock: View {
                 .tint(Color.sageButton)
             }
             .padding(17)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 LinearGradient(
                     colors: [Color.warmGold.opacity(0.12), Color.white.opacity(0.05)],

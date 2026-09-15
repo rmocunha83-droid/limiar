@@ -73,6 +73,9 @@ final class LocalReadingSessionTests: XCTestCase {
         }
         let store = ReadingTextScaleStore(defaults: defaults)
 
+        XCTAssertEqual(store.value, 110)
+
+        store.save(100)
         XCTAssertEqual(store.value, 100)
 
         store.save(125)
@@ -269,8 +272,9 @@ final class LocalReadingSessionTests: XCTestCase {
         XCTAssertEqual(ConversionTestimonials.onboardingTestimonials.last?.quote, testimonials.last?.quote)
     }
 
-    func testStarterProfileUsesShortExplanationDepth() {
-        XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .short)
+    func testStarterProfileUsesMediumExplanationDepth() {
+        XCTAssertEqual(UserFaithProfile.starter.explanationDepth, .medium)
+        XCTAssertEqual(UserFaithProfile.starter.explanationDepth.readingItemCount, 2)
     }
 
     func testExpandedCatalogDecodesFromAppBundleAndSupportsDefaultReadingPools() throws {
