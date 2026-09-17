@@ -1,6 +1,7 @@
 import Foundation
 import FamilyControls
 import Observation
+import UIKit
 
 enum FaithTradition: String, Codable, CaseIterable, Identifiable {
     case catholic
@@ -1295,6 +1296,16 @@ final class LimiarAppModel {
         let reflections = recentAIReflections
         let pauseTurn = pauseCycleTurn
         let requestID = UUID()
+        let pendingReason = "prewarm_pending:\(requestID.uuidString)"
+        let expectedItemCount = recommender.expectedReadingItemCount(for: profile)
+        let localItems = LocalReadingSessionFactory.items(from: candidates, itemCount: expectedItemCount)
+        guard expectedItemCount > 0, localItems.count == expectedItemCount else { return nil }
+        let placeholder = DailyReadingSessionSnapshot(
+            dayKey: dayKey, profileKey: profileKey, items: localItems,
+            reflection: emptyReflection(), source: .local, failureReason: pendingReason
+        )
+        guard dailySessionStore.saveIfAbsent(placeholder, expectedItemCount: expectedItemCount) else { return nil }
+        LimiarAIDiagnostics.log("prewarm_placeholder_saved", values: ["items": "\(localItems.count)"], persistForDiagnostics: true)
         prewarmRequestID = requestID
         prewarmDayKeyInFlight = dayKey
 
@@ -1304,7 +1315,17 @@ final class LimiarAppModel {
                 .merging(LimiarAIDiagnostics.profileSnapshot(profile)) { current, _ in current }
         )
 
+        let backgroundTask = UIApplication.shared.applicationState == .active
+            ? UIApplication.shared.beginBackgroundTask(withName: "Limiar reading prewarm") { [weak self] in
+                Task { @MainActor in self?.cancelPrewarmSession() }
+            }
+            : UIBackgroundTaskIdentifier.invalid
         let task = Task<LimiarPrewarmResult, Never> { [weak self, candidates, profile, profileKey, dayKey, recents, reflections, pauseTurn] in
+            defer {
+                if backgroundTask != .invalid {
+                    UIApplication.shared.endBackgroundTask(backgroundTask)
+                }
+            }
             let service = RemoteAIReadingSessionService()
             let outcome = await service.readingSession(
                 for: Array(candidates.prefix(36)),
@@ -1345,11 +1366,11 @@ final class LimiarAppModel {
             // Se as preferências mudaram durante a geração, descarta:
             // o fluxo normal gera de novo com o perfil atual.
             guard sessionProfileKey(for: faithProfile) == profileKey else {
-                LimiarAIDiagnostics.log("prewarm_discarded", values: ["reason": "profile_changed"])
+                LimiarAIDiagnostics.log("prewarm_discarded", values: ["reason": "profile_changed"], persistForDiagnostics: true)
                 clearPrewarmRequest(requestID)
                 return .profileChanged
             }
-            let saved = dailySessionStore.saveIfAbsent(
+            let saved = dailySessionStore.finishPrewarm(
                 DailyReadingSessionSnapshot(
                     dayKey: dayKey,
                     profileKey: profileKey,
@@ -1358,14 +1379,15 @@ final class LimiarAppModel {
                     source: source,
                     failureReason: failureReason
                 ),
-                expectedItemCount: recommender.expectedReadingItemCount(for: profile)
+                pendingReason: pendingReason,
+                expectedItemCount: expectedItemCount
             )
             if saved {
                 LimiarAIDiagnostics.log("prewarm_saved", values: [
                     "dayKey": dayKey,
                     "items": "\(session.items.count)",
                     "source": source.rawValue
-                ])
+                ], persistForDiagnostics: true)
             }
             clearPrewarmRequest(requestID)
             return saved ? (source == .remote ? .generated : .localFallback) : .alreadyAvailable
@@ -1785,8 +1807,10 @@ final class LimiarAppModel {
             profileKey: sessionProfileKey(for: profile),
             expectedItemCount: recommender.expectedReadingItemCount(for: profile)
         ) {
+            dailySessionStore.markPresented(saved)
             applyGeneratedSession(items: saved.items, reflection: saved.reflection, profile: profile)
-            localSessionFailureReason = saved.failureReason
+            localSessionFailureReason = saved.failureReason?.hasPrefix("prewarm_pending:") == true
+                ? "prewarm_incomplete" : saved.failureReason
             aiContentState = saved.source == .local
                 ? .localSession
                 : (isEssentialMode ? .essentialMode : .remoteReady)
