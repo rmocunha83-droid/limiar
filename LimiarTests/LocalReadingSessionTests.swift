@@ -685,6 +685,32 @@ final class LocalReadingSessionTests: XCTestCase {
         }
     }
 
+    func testPrewarmPlaceholderPersistsAndOnlyItsOwnerCanUpgradeIt() throws {
+        let suite = "LocalReadingSessionTests.PrewarmPersistence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let day = DailyReadingSessionStore.todayKey(Date().addingTimeInterval(86400))
+        for count in 1...3 {
+            let store = DailyReadingSessionStore(defaults: defaults)
+            store.clearAll()
+            let items = LocalReadingSessionFactory.items(from: (0..<count).map { selectionPassage("p\($0)") }, itemCount: count)
+            let pending = DailyReadingSessionSnapshot(dayKey: day, profileKey: "profile", items: items, reflection: emptyReflection,
+                                                      source: .local, failureReason: "prewarm_pending:owner")
+            XCTAssertTrue(store.saveIfAbsent(pending, expectedItemCount: count))
+            let reopened = DailyReadingSessionStore(defaults: try XCTUnwrap(UserDefaults(suiteName: suite)))
+            XCTAssertEqual(reopened.load(profileKey: "profile", dayKey: day, expectedItemCount: count)?.items.map(\.passageID), items.map(\.passageID))
+            let remote = DailyReadingSessionSnapshot(dayKey: day, profileKey: "profile", items: items, reflection: emptyReflection)
+            XCTAssertFalse(reopened.finishPrewarm(remote, pendingReason: "prewarm_pending:other", expectedItemCount: count))
+            XCTAssertTrue(reopened.finishPrewarm(remote, pendingReason: "prewarm_pending:owner", expectedItemCount: count))
+            XCTAssertEqual(reopened.load(profileKey: "profile", dayKey: day, expectedItemCount: count)?.source, .remote)
+            store.clearAll()
+            store.save(pending)
+            store.markPresented(pending)
+            XCTAssertFalse(store.finishPrewarm(remote, pendingReason: "prewarm_pending:owner", expectedItemCount: count))
+            XCTAssertEqual(store.load(profileKey: "profile", dayKey: day, expectedItemCount: count)?.source, .local)
+        }
+    }
+
     func testUpgradeOnlyRunsBeforeTraversalAndCycleCompletion() {
         XCTAssertTrue(
             LocalSessionUpgradePolicy.shouldAttempt(

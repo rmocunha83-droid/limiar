@@ -363,6 +363,28 @@ struct DailyReadingSessionStore {
         persist(allSnapshots().filter { $0.dayKey != dayKey })
     }
 
+    /// Only the speculative placeholder owned by this request may be upgraded.
+    @discardableResult
+    func finishPrewarm(_ snapshot: DailyReadingSessionSnapshot, pendingReason: String, expectedItemCount: Int) -> Bool {
+        guard let pending = load(profileKey: snapshot.profileKey, dayKey: snapshot.dayKey, expectedItemCount: expectedItemCount),
+              pending.source == .local,
+              pending.failureReason == pendingReason,
+              pending.items.map(\.passageID) == snapshot.items.map(\.passageID),
+              snapshot.items.count == expectedItemCount else { return false }
+        save(snapshot)
+        return true
+    }
+
+    func markPresented(_ snapshot: DailyReadingSessionSnapshot) {
+        guard snapshot.source == .local,
+              snapshot.failureReason?.hasPrefix("prewarm_pending:") == true else { return }
+        save(DailyReadingSessionSnapshot(
+            dayKey: snapshot.dayKey, profileKey: snapshot.profileKey,
+            items: snapshot.items, reflection: snapshot.reflection,
+            source: .local, failureReason: "prewarm_incomplete"
+        ))
+    }
+
     func clearAll() {
         defaults.removeObject(forKey: key)
         defaults.removeObject(forKey: legacyKey)

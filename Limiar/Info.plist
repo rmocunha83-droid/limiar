@@ -35,6 +35,10 @@
 	<array>
 		<string>com.romeucunha.Limiar.prewarm</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>FacebookAppID</key>
 	<string>27700219559573880</string>
 	<key>FacebookClientToken</key>
